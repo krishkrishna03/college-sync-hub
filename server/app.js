@@ -1,0 +1,95 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const compression = require('compression');
+require('dotenv').config();
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const studentRoutes = require('./routes/students');
+const facultyRoutes = require('./routes/faculty');
+const batchRoutes = require('./routes/batches');
+const branchRoutes = require('./routes/branches');
+const testRoutes = require('./routes/tests');
+const courseRoutes = require('./routes/courses');
+const announcementRoutes = require('./routes/announcements');
+const dashboardRoutes = require('./routes/dashboard');
+
+const app = express();
+
+// Security middleware
+app.use(helmet());
+app.use(compression());
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Logging
+app.use(morgan('combined'));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Database connection
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('Connected to MongoDB Atlas');
+})
+.catch((error) => {
+  console.error('MongoDB connection error:', error);
+  process.exit(1);
+});
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/faculty', facultyRoutes);
+app.use('/api/batches', batchRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/tests', testRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV 
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
+});
+
+module.exports = app;
