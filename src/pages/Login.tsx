@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { authAPI } from "@/lib/api";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,15 +30,27 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login API call
-    setTimeout(() => {
+    try {
+      const response = await authAPI.login(
+        formData.email, 
+        formData.password, 
+        formData.collegeCode
+      );
+      
       setIsLoading(false);
       toast({
         title: "Login Successful",
-        description: "Welcome to the College Admin Portal",
+        description: `Welcome back, ${response.user.name}!`,
       });
       navigate("/");
-    }, 1500);
+    } catch (error: any) {
+      setIsLoading(false);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

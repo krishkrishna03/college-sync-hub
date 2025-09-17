@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Eye, Edit, Trash2, Plus, CalendarIcon, ChevronLeft, ChevronRight, Bell, Check, X, CheckCheck } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { announcementsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface Announcement {
   id: string;
@@ -28,38 +31,6 @@ interface Announcement {
   createdAt: Date;
 }
 
-const mockAnnouncements: Announcement[] = [
-  {
-    id: "1",
-    title: "Mid-term Examination Schedule",
-    content: "The mid-term examinations will be conducted from March 15-25, 2024. Please check your individual schedules.",
-    targetAudience: "All Students",
-    scheduledFor: new Date("2024-03-10"),
-    status: "sent",
-    createdAt: new Date("2024-03-01")
-  },
-  {
-    id: "2",
-    title: "Faculty Meeting - Monthly Review",
-    content: "Monthly faculty meeting scheduled for discussion of curriculum updates and student progress.",
-    targetAudience: "All Faculty",
-    scheduledFor: new Date("2024-03-20"),
-    status: "sent", 
-    createdAt: new Date("2024-03-15")
-  },
-  {
-    id: "3",
-    title: "Workshop on Data Science",
-    content: "Special workshop on Data Science and Machine Learning for CSE students.",
-    targetAudience: "Specific Batch",
-    batch: "2025",
-    branch: "CSE",
-    section: "A",
-    scheduledFor: new Date("2024-03-25"),
-    status: "draft",
-    createdAt: new Date("2024-03-18")
-  }
-];
 
 interface Notification {
   id: string;
@@ -102,7 +73,9 @@ const mockNotifications: Notification[] = [
 ];
 
 export default function Announcements() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>(mockAnnouncements);
+  const { toast } = useToast();
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [showEntries, setShowEntries] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
@@ -122,6 +95,41 @@ export default function Announcements() {
     section: "",
     scheduledFor: new Date()
   });
+
+  // Fetch announcements on component mount
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      setLoading(true);
+      const response = await announcementsAPI.getAll();
+      const formattedAnnouncements = response.announcements.map((ann: any) => ({
+        id: ann._id,
+        title: ann.title,
+        content: ann.content,
+        targetAudience: ann.targetAudience === 'all' ? 'All Users' : 
+                       ann.targetAudience === 'students' ? 'All Students' :
+                       ann.targetAudience === 'faculty' ? 'All Faculty' : 'Specific Batch',
+        batch: ann.targetGroups?.batches?.[0],
+        branch: ann.targetGroups?.branches?.[0],
+        section: ann.targetGroups?.sections?.[0],
+        scheduledFor: new Date(ann.scheduledFor),
+        status: ann.status,
+        createdAt: new Date(ann.createdAt)
+      }));
+      setAnnouncements(formattedAnnouncements);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch announcements: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleView = (announcement: Announcement) => {
     setSelectedAnnouncement(announcement);
@@ -143,48 +151,96 @@ export default function Announcements() {
   };
 
   const handleDelete = (id: string) => {
-    setAnnouncements(announcements.filter(ann => ann.id !== id));
-  };
-
-  const handleSave = (isDraft: boolean) => {
-    const newAnnouncement: Announcement = {
-      id: Date.now().toString(),
-      title: formData.title,
-      content: formData.content,
-      targetAudience: getTargetAudienceDisplay(),
-      batch: formData.batch || undefined,
-      branch: formData.branch || undefined,
-      section: formData.section || undefined,
-      scheduledFor: formData.scheduledFor,
-      status: isDraft ? "draft" : "sent",
-      createdAt: new Date()
+    const deleteAnnouncement = async () => {
+      try {
+        await announcementsAPI.delete(id);
+        fetchAnnouncements();
+        toast({
+          title: "Announcement Deleted",
+          description: "Announcement has been deleted successfully"
+        });
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to delete announcement: " + error.message,
+          variant: "destructive"
+        });
+      }
     };
-
-    setAnnouncements([...announcements, newAnnouncement]);
-    resetForm();
-    setIsCreateOpen(false);
+    
+    deleteAnnouncement();
   };
 
-  const handleUpdate = (isDraft: boolean) => {
+  const handleSave = async (isDraft: boolean) => {
+    try {
+      const targetGroups = formData.targetAudience === "batch" ? {
+        batches: formData.batch ? [formData.batch] : [],
+        branches: formData.branch ? [formData.branch] : [],
+        sections: formData.section ? [formData.section] : []
+      } : {};
+      
+      await announcementsAPI.create({
+        title: formData.title,
+        content: formData.content,
+        targetAudience: formData.targetAudience === "all" ? "all" :
+                       formData.targetAudience === "faculty" ? "faculty" :
+                       formData.targetAudience === "students" ? "students" : "specific",
+        targetGroups,
+        scheduledFor: formData.scheduledFor.toISOString(),
+        isDraft
+      });
+      
+      fetchAnnouncements();
+      toast({
+        title: isDraft ? "Draft Saved" : "Announcement Sent",
+        description: isDraft ? "Announcement saved as draft" : "Announcement has been sent successfully"
+      });
+      resetForm();
+      setIsCreateOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to save announcement: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdate = async (isDraft: boolean) => {
     if (!selectedAnnouncement) return;
 
-    const updatedAnnouncement: Announcement = {
-      ...selectedAnnouncement,
-      title: formData.title,
-      content: formData.content,
-      targetAudience: getTargetAudienceDisplay(),
-      batch: formData.batch || undefined,
-      branch: formData.branch || undefined,
-      section: formData.section || undefined,
-      scheduledFor: formData.scheduledFor,
-      status: isDraft ? "draft" : "sent"
-    };
-
-    setAnnouncements(announcements.map(ann => 
-      ann.id === selectedAnnouncement.id ? updatedAnnouncement : ann
-    ));
-    resetForm();
-    setIsEditOpen(false);
+    try {
+      const targetGroups = formData.targetAudience === "batch" ? {
+        batches: formData.batch ? [formData.batch] : [],
+        branches: formData.branch ? [formData.branch] : [],
+        sections: formData.section ? [formData.section] : []
+      } : {};
+      
+      await announcementsAPI.update(selectedAnnouncement.id, {
+        title: formData.title,
+        content: formData.content,
+        targetAudience: formData.targetAudience === "all" ? "all" :
+                       formData.targetAudience === "faculty" ? "faculty" :
+                       formData.targetAudience === "students" ? "students" : "specific",
+        targetGroups,
+        scheduledFor: formData.scheduledFor.toISOString(),
+        status: isDraft ? "draft" : "sent"
+      });
+      
+      fetchAnnouncements();
+      toast({
+        title: "Announcement Updated",
+        description: "Announcement has been updated successfully"
+      });
+      resetForm();
+      setIsEditOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update announcement: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const getTargetAudienceDisplay = () => {
@@ -348,6 +404,19 @@ export default function Announcements() {
       </div>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading announcements...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

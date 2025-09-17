@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { Plus, Search, Filter, Download, Upload, MoreHorizontal, Edit, Trash2, UserCheck, FileText, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -37,60 +38,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { studentsAPI } from "@/lib/api";
 
-const initialStudents = [
-  {
-    id: 1,
-    name: "Alice Johnson",
-    email: "alice.johnson@college.edu",
-    studentId: "CS2024001",
-    stream: "Computer Science",
-    batch: "2024",
-    year: "1st Year",
-    section: "A",
-    status: "Active",
-    enrollmentDate: "2024-08-15",
-  },
-  {
-    id: 2,
-    name: "Bob Smith",
-    email: "bob.smith@college.edu", 
-    studentId: "ME2024002",
-    stream: "Mechanical Engineering",
-    batch: "2024",
-    year: "1st Year",
-    section: "B",
-    status: "Active",
-    enrollmentDate: "2024-08-15",
-  },
-  {
-    id: 3,
-    name: "Carol Davis",
-    email: "carol.davis@college.edu",
-    studentId: "EC2023015",
-    stream: "Electronics",
-    batch: "2023",
-    year: "2nd Year", 
-    section: "A",
-    status: "Inactive",
-    enrollmentDate: "2023-08-15",
-  },
-  {
-    id: 4,
-    name: "David Wilson",
-    email: "david.wilson@college.edu",
-    studentId: "CS2023020",
-    stream: "Computer Science",
-    batch: "2023",
-    year: "2nd Year",
-    section: "C",
-    status: "Active",
-    enrollmentDate: "2023-08-15",
-  },
-];
 
 export default function Students() {
-  const [students, setStudents] = useState(initialStudents);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStream, setFilterStream] = useState("all");
   const [filterBatch, setFilterBatch] = useState("all");
@@ -128,6 +81,55 @@ export default function Students() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Fetch students on component mount
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        ...(filterStream !== "all" && { stream: filterStream }),
+        ...(filterBatch !== "all" && { batch: filterBatch }),
+        ...(filterStatus !== "all" && { status: filterStatus }),
+        ...(searchTerm && { search: searchTerm })
+      };
+      
+      const response = await studentsAPI.getAll(filters);
+      const formattedStudents = response.students.map((student: any) => ({
+        id: student._id,
+        name: student.userId.name,
+        email: student.userId.email,
+        studentId: student.registrationNumber,
+        stream: student.branch,
+        batch: student.batch,
+        year: student.year,
+        section: student.section,
+        status: student.userId.status === 'active' ? 'Active' : 'Inactive',
+        enrollmentDate: new Date(student.enrollmentDate).toISOString().split('T')[0],
+      }));
+      setStudents(formattedStudents);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch students: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refetch when filters change
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchStudents();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, filterStream, filterBatch, filterStatus]);
+
   const filteredStudents = students.filter((student) => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -144,7 +146,7 @@ export default function Students() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const handleAddStudent = () => {
+  const handleAddStudent = async () => {
     // Validate form data
     const { name, email, studentId, stream, batch, yearSection, enrolledDate } = addStudentData;
     if (!name || !email || !studentId || !stream || !batch || !yearSection || !enrolledDate) {
@@ -156,12 +158,26 @@ export default function Students() {
       return;
     }
 
-    // Simulate account creation check and email sending
-    setTimeout(() => {
+    try {
+      const [year, section] = yearSection.split(' - ');
+      
+      await studentsAPI.create({
+        name,
+        email,
+        studentId,
+        batch,
+        branch: stream,
+        section,
+        year,
+        enrollmentDate: enrolledDate
+      });
+      
       toast({
         title: "Success",
         description: `Student account created for ${name}. Credentials sent to ${email}`,
       });
+      
+      fetchStudents(); // Refresh the list
       setShowAddStudent(false);
       setAddStudentData({
         name: "",
@@ -172,10 +188,16 @@ export default function Students() {
         yearSection: "",
         enrolledDate: ""
       });
-    }, 1000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to create student: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleBulkUpload = () => {
+  const handleBulkUpload = async () => {
     if (!bulkUploadData.file || !bulkUploadData.batch || !bulkUploadData.branch || !bulkUploadData.section) {
       toast({
         title: "Error",
@@ -185,24 +207,36 @@ export default function Students() {
       return;
     }
     
-    // Simulate processing bulk upload
-    setTimeout(() => {
-      // Mock results
-      const mockResults = {
+    try {
+      const formData = new FormData();
+      formData.append('file', bulkUploadData.file);
+      formData.append('batch', bulkUploadData.batch);
+      formData.append('branch', bulkUploadData.branch);
+      formData.append('section', bulkUploadData.section);
+      
+      const response = await studentsAPI.bulkUpload(formData);
+      
+      setBulkResults({
         collegeName: "PlantechX College",
         batch: bulkUploadData.batch,
         stream: bulkUploadData.branch,
-        totalStudents: 45,
-        accountsCreated: 42,
-        duplicates: 2,
-        errors: 1,
-        duplicatesList: ["john.doe@college.edu", "jane.smith@college.edu"]
-      };
+        totalStudents: response.totalRecords,
+        accountsCreated: response.accountsCreated,
+        duplicates: response.duplicatesFound,
+        errors: response.errors,
+        duplicatesList: response.duplicatesList || []
+      });
       
-      setBulkResults(mockResults);
+      fetchStudents(); // Refresh the list
       setShowBulkUpload(false);
       setShowBulkResults(true);
-    }, 2000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to upload students: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const handleReviewDuplicates = () => {
@@ -241,19 +275,23 @@ export default function Students() {
     setBulkUploadData({ batch: "", branch: "", section: "", file: null });
   };
 
-  const handleStudentAction = (action: string, student: any) => {
+  const handleStudentAction = async (action: string, student: any) => {
     switch (action) {
       case "activate":
-        // Activate student regardless of current status and fix any activation issues
-        setStudents(prev => prev.map(s => 
-          s.id === student.id 
-            ? { ...s, status: "Active" }
-            : s
-        ));
-        toast({
-          title: "Student Activated",
-          description: `${student.name}'s account has been activated and any issues resolved`
-        });
+        try {
+          await studentsAPI.update(student.id, { status: 'active' });
+          fetchStudents();
+          toast({
+            title: "Student Activated",
+            description: `${student.name}'s account has been activated`
+          });
+        } catch (error: any) {
+          toast({
+            title: "Error",
+            description: "Failed to activate student: " + error.message,
+            variant: "destructive"
+          });
+        }
         break;
       case "edit":
         setSelectedStudent(student);
@@ -263,28 +301,66 @@ export default function Students() {
         navigate(`/participation-report?student=${student.id}`);
         break;
       case "remove":
-        // Toggle student status between Active/Inactive
-        setStudents(prev => prev.map(s => 
-          s.id === student.id 
-            ? { ...s, status: s.status === "Active" ? "Inactive" : "Active" }
-            : s
-        ));
-        toast({
-          title: `Student ${student.status === "Active" ? "Deactivated" : "Activated"}`,
-          description: `${student.name}'s status changed to ${student.status === "Active" ? "Inactive" : "Active"}`
-        });
+        try {
+          const newStatus = student.status === "Active" ? "inactive" : "active";
+          await studentsAPI.update(student.id, { status: newStatus });
+          fetchStudents();
+          toast({
+            title: `Student ${newStatus === "active" ? "Activated" : "Deactivated"}`,
+            description: `${student.name}'s status changed to ${newStatus}`
+          });
+        } catch (error: any) {
+          toast({
+            title: "Error",
+            description: "Failed to update student: " + error.message,
+            variant: "destructive"
+          });
+        }
         break;
     }
   };
 
-  const handleEditStudent = () => {
-    toast({
-      title: "Student Updated",
-      description: "Student information has been updated successfully"
-    });
-    setShowEditStudent(false);
-    setSelectedStudent(null);
+  const handleEditStudent = async () => {
+    if (selectedStudent) {
+      try {
+        await studentsAPI.update(selectedStudent.id, {
+          name: selectedStudent.name,
+          email: selectedStudent.email,
+          batch: selectedStudent.batch,
+          branch: selectedStudent.stream,
+          section: selectedStudent.section,
+          year: selectedStudent.year
+        });
+        
+        fetchStudents();
+        toast({
+          title: "Student Updated",
+          description: "Student information has been updated successfully"
+        });
+        setShowEditStudent(false);
+        setSelectedStudent(null);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to update student: " + error.message,
+          variant: "destructive"
+        });
+      }
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6 animate-fade-in">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading students...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">

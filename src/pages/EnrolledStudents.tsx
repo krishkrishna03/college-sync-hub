@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Edit, Download, Search, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { coursesAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface EnrolledStudent {
   id: string;
@@ -25,75 +28,64 @@ interface EnrolledStudent {
 
 export default function EnrolledStudents() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
   const [batchFilter, setBatchFilter] = useState("all");
   const [branchFilter, setBranchFilter] = useState("all");
   const [sectionFilter, setSectionFilter] = useState("all");
   const [editingStudent, setEditingStudent] = useState<EnrolledStudent | null>(null);
-  const [students, setStudents] = useState<EnrolledStudent[]>([
-    {
-      id: "1",
-      name: "John Doe",
-      registrationId: "REG001",
-      batch: "2024-A",
-      stream: "Computer Science",
-      section: "A",
-      email: "john.doe@example.com",
-      enrolledDate: "2024-01-15",
-      status: "enrolled",
-      course: "Data Science"
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      registrationId: "REG002",
-      batch: "2024-A",
-      stream: "Information Technology",
-      section: "B",
-      email: "jane.smith@example.com",
-      enrolledDate: "2024-01-16",
-      status: "not-enrolled",
-      course: "Web Development"
-    },
-    {
-      id: "3",
-      name: "Mike Johnson",
-      registrationId: "REG003",
-      batch: "2024-B",
-      stream: "Computer Science",
-      section: "A",
-      email: "mike.johnson@example.com",
-      enrolledDate: "2024-01-17",
-      status: "enrolled",
-      course: "Data Science"
-    },
-    {
-      id: "4",
-      name: "Sarah Wilson",
-      registrationId: "REG004",
-      batch: "2023-A",
-      stream: "Electronics",
-      section: "C",
-      email: "sarah.wilson@example.com",
-      enrolledDate: "2024-01-18",
-      status: "enrolled",
-      course: "AI & ML"
-    },
-    {
-      id: "5",
-      name: "David Brown",
-      registrationId: "REG005",
-      batch: "2024-B",
-      stream: "Information Technology",
-      section: "B",
-      email: "david.brown@example.com",
-      enrolledDate: "2024-01-19",
-      status: "not-enrolled",
-      course: "Cybersecurity"
-    }
-  ]);
+  const [students, setStudents] = useState<EnrolledStudent[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch enrolled students on component mount
+  useEffect(() => {
+    fetchEnrolledStudents();
+  }, []);
+
+  const fetchEnrolledStudents = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        ...(courseFilter !== "all" && { course: courseFilter }),
+        ...(batchFilter !== "all" && { batch: batchFilter }),
+        ...(branchFilter !== "all" && { branch: branchFilter }),
+        ...(sectionFilter !== "all" && { section: sectionFilter })
+      };
+      
+      const response = await coursesAPI.getEnrolledStudents(filters);
+      const formattedStudents = response.students.map((student: any) => ({
+        id: student.id,
+        name: student.name,
+        registrationId: student.registrationId,
+        batch: student.batch,
+        stream: student.stream,
+        section: student.section,
+        email: student.email,
+        enrolledDate: new Date(student.enrolledDate).toISOString().split('T')[0],
+        status: student.status,
+        course: student.courses?.[0]?.category || 'General'
+      }));
+      setStudents(formattedStudents);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch enrolled students: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refetch when filters change
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchEnrolledStudents();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, courseFilter, batchFilter, branchFilter, sectionFilter]);
   // Filter students based on all criteria
   const filteredStudents = students.filter(student => {
     const matchesSearch = 
@@ -115,9 +107,12 @@ export default function EnrolledStudents() {
 
   const handleSaveStudent = () => {
     if (editingStudent) {
-      setStudents(students.map(s => 
-        s.id === editingStudent.id ? editingStudent : s
-      ));
+      // Update student in backend would go here
+      fetchEnrolledStudents();
+      toast({
+        title: "Student Updated",
+        description: "Student information has been updated successfully"
+      });
       setEditingStudent(null);
     }
   };
@@ -140,6 +135,19 @@ export default function EnrolledStudents() {
     a.click();
     document.body.removeChild(a);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading enrolled students...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">

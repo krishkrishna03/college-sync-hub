@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Search, Edit, Trash2, Eye, Upload, UserCheck, UserCog, ClipboardList, UserX } from "lucide-react";
 import { BulkUploadModal, BulkResultsModal } from "@/components/BulkUploadModal";
 import { useToast } from "@/hooks/use-toast";
+import { facultyAPI } from "@/lib/api";
 
 interface Faculty {
   id: number;
@@ -25,26 +27,8 @@ interface Faculty {
 
 export default function FacultyManagement() {
   const { toast } = useToast();
-  const [faculty, setFaculty] = useState<Faculty[]>([
-    {
-      id: 1,
-      name: "Dr. John Smith",
-      email: "john.smith@college.edu",
-      facultyId: "FAC001",
-      mobile: "+1234567890",
-      branchName: "CSE",
-      status: "Active"
-    },
-    {
-      id: 2,
-      name: "Prof. Sarah Johnson",
-      email: "sarah.johnson@college.edu",
-      facultyId: "FAC002",
-      mobile: "+1234567891",
-      branchName: "EEE",
-      status: "Active"
-    }
-  ]);
+  const [faculty, setFaculty] = useState<Faculty[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
@@ -87,6 +71,50 @@ export default function FacultyManagement() {
   const branches = ["EEE", "CSE", "IT"];
   const sections = ["All", "A", "B", "C"];
 
+  // Fetch faculty on component mount
+  useEffect(() => {
+    fetchFaculty();
+  }, []);
+
+  const fetchFaculty = async () => {
+    try {
+      setLoading(true);
+      const filters = {
+        ...(searchTerm && { search: searchTerm }),
+        ...(selectedStatus !== "all" && { status: selectedStatus })
+      };
+      
+      const response = await facultyAPI.getAll(filters);
+      const formattedFaculty = response.faculty.map((faculty: any) => ({
+        id: faculty._id,
+        name: faculty.userId.name,
+        email: faculty.userId.email,
+        facultyId: faculty.facultyId,
+        mobile: faculty.userId.profile?.phone || '',
+        branchName: faculty.department,
+        status: faculty.userId.status === 'active' ? 'Active' : 'Inactive',
+      }));
+      setFaculty(formattedFaculty);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch faculty: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refetch when search term changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchFaculty();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, selectedStatus]);
+
   const filteredFaculty = faculty.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,38 +125,22 @@ export default function FacultyManagement() {
 
   const handleAddFaculty = async () => {
     if (newFaculty.name && newFaculty.email && newFaculty.facultyId) {
-      // Check if faculty account exists
-      const existingFaculty = faculty.find(f => f.email === newFaculty.email || f.facultyId === newFaculty.facultyId);
-      
-      if (existingFaculty) {
-        toast({
-          title: "Faculty already exists",
-          description: "A faculty with this email or ID already exists",
-          variant: "destructive"
+      try {
+        const response = await facultyAPI.create({
+          name: newFaculty.name,
+          email: newFaculty.email,
+          facultyId: newFaculty.facultyId,
+          mobile: newFaculty.mobile,
+          department: newFaculty.branchName,
+          designation: 'Faculty'
         });
-        return;
-      }
-
-      // Simulate account creation and credential sending
-      toast({
-        title: "Creating Faculty Account",
-        description: "Please wait while we create the account and send credentials..."
-      });
-
-      setTimeout(() => {
-        const newFacultyMember = {
-          ...newFaculty,
-          id: Date.now(),
-          status: "Active" as const
-        };
-
-        setFaculty([...faculty, newFacultyMember]);
         
         toast({
           title: "Faculty Account Created",
           description: `Account created successfully. Credentials sent to ${newFaculty.email}`
         });
 
+        fetchFaculty(); // Refresh the list
         setNewFaculty({
           name: "",
           email: "",
@@ -137,67 +149,99 @@ export default function FacultyManagement() {
           branchName: ""
         });
         setIsAddModalOpen(false);
-      }, 2000);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to create faculty: " + error.message,
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const handleEditFaculty = () => {
+  const handleEditFaculty = async () => {
     if (selectedFaculty && newFaculty.name && newFaculty.email && newFaculty.facultyId) {
-      setFaculty(faculty.map(member => 
-        member.id === selectedFaculty.id 
-          ? { ...member, ...newFaculty }
-          : member
-      ));
-      setIsEditModalOpen(false);
-      setSelectedFaculty(null);
+      try {
+        await facultyAPI.update(selectedFaculty.id, {
+          name: newFaculty.name,
+          email: newFaculty.email,
+          department: newFaculty.branchName,
+          mobile: newFaculty.mobile
+        });
+        
+        fetchFaculty();
+        toast({
+          title: "Faculty Updated",
+          description: "Faculty information has been updated successfully"
+        });
+        setIsEditModalOpen(false);
+        setSelectedFaculty(null);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to update faculty: " + error.message,
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const handleFacultyActivation = (id: number) => {
-    setFaculty(faculty.map(member => 
-      member.id === id 
-        ? { ...member, status: member.status === "Active" ? "Inactive" : "Active" as const }
-        : member
-    ));
-  };
-
-  const handleRemoveFaculty = (id: number) => {
-    setFaculty(faculty.map(member => 
-      member.id === id 
-        ? { ...member, status: "Inactive" as const }
-        : member
-    ));
-  };
-
-  const handleBulkUpload = (file: File) => {
-    toast({
-      title: "Processing file",
-      description: "Creating faculty accounts and checking for duplicates..."
-    });
-
-    // Simulate file processing
-    setTimeout(() => {
-      const mockResults = {
-        totalRecords: 10,
-        accountsCreated: 8,
-        duplicatesFound: 2,
-        errors: 0,
-        facultyData: [
-          { name: "Dr. Alice Brown", email: "alice@college.edu", facultyId: "FAC003", branch: "CSE", mobile: "+1234567892" },
-          { name: "Prof. Bob Wilson", email: "bob@college.edu", facultyId: "FAC004", branch: "IT", mobile: "+1234567893" },
-          { name: "Dr. Carol Davis", email: "carol@college.edu", facultyId: "FAC005", branch: "EEE", mobile: "+1234567894" },
-          { name: "Prof. David Miller", email: "david@college.edu", facultyId: "FAC006", branch: "CSE", mobile: "+1234567895" },
-          { name: "Dr. Emma Taylor", email: "emma@college.edu", facultyId: "FAC007", branch: "IT", mobile: "+1234567896" },
-          { name: "Prof. Frank Moore", email: "frank@college.edu", facultyId: "FAC008", branch: "EEE", mobile: "+1234567897" },
-          { name: "Dr. Grace Lee", email: "grace@college.edu", facultyId: "FAC009", branch: "CSE", mobile: "+1234567898" },
-          { name: "Prof. Henry Clark", email: "henry@college.edu", facultyId: "FAC010", branch: "IT", mobile: "+1234567899" }
-        ]
-      };
+  const handleFacultyActivation = async (id: number) => {
+    const member = faculty.find(f => f.id === id);
+    if (!member) return;
+    
+    try {
+      const newStatus = member.status === "Active" ? "inactive" : "active";
+      await facultyAPI.update(id.toString(), { status: newStatus });
       
-      setBulkResults(mockResults);
+      fetchFaculty();
+      toast({
+        title: `Faculty ${newStatus === "active" ? "Activated" : "Deactivated"}`,
+        description: `${member.name}'s status changed to ${newStatus}`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update faculty status: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveFaculty = async (id: number) => {
+    try {
+      await facultyAPI.delete(id.toString());
+      fetchFaculty();
+      toast({
+        title: "Faculty Removed",
+        description: "Faculty member has been removed successfully"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to remove faculty: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkUploadFile = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await facultyAPI.bulkUpload(formData);
+      setBulkResults(response);
+      fetchFaculty(); // Refresh the list
       setIsBulkUploadOpen(false);
       setShowBulkResults(true);
-    }, 3000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to upload faculty: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const handleReviewDuplicates = () => {
@@ -212,54 +256,55 @@ export default function FacultyManagement() {
   const handleSendInvitations = () => {
     toast({
       title: "Sending Invitations",
-      description: "Sending credentials to all faculty members..."
+      description: `Credentials sent to ${bulkResults.accountsCreated} faculty members successfully`
     });
     
-    // Add created faculty to the main list
-    const newFacultyMembers = bulkResults.facultyData.map((faculty, index) => ({
-      id: Date.now() + index,
-      name: faculty.name,
-      email: faculty.email,
-      facultyId: faculty.facultyId,
-      mobile: faculty.mobile,
-      branchName: faculty.branch,
-      status: "Active" as const
-    }));
-
-    setFaculty(prev => [...prev, ...newFacultyMembers]);
-
-    setTimeout(() => {
-      // Simulate CSV download
-      const csvContent = "data:text/csv;charset=utf-8,Name,Email,Faculty ID,Password,Branch\n" + 
-        bulkResults.facultyData.map(f => `${f.name},${f.email},${f.facultyId},temp123,${f.branch}`).join('\n');
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "faculty_credentials.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast({
-        title: "Success!",
-        description: `Credentials sent to ${bulkResults.accountsCreated} faculty members. CSV downloaded.`
-      });
-    }, 2000);
+    // Generate CSV download
+    const csvContent = "data:text/csv;charset=utf-8,Name,Email,Faculty ID,Password,Branch\n" + 
+      bulkResults.facultyData.map(f => `${f.name},${f.email},${f.facultyId},temp123,${f.branch}`).join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "faculty_credentials.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     
     setShowBulkResults(false);
   };
 
-  const handleTaskAssignment = () => {
+  const handleTaskAssignment = async () => {
     if (taskData.description && selectedFaculty) {
-      // Process task assignment here
-      setIsTaskModalOpen(false);
-      setTaskData({
-        batches: [],
-        branches: [],
-        sections: [],
-        description: ""
-      });
-      setSelectedFaculty(null);
+      try {
+        await facultyAPI.assignTask(selectedFaculty.id.toString(), {
+          title: "Task Assignment",
+          description: taskData.description,
+          batches: taskData.batches,
+          branches: taskData.branches,
+          sections: taskData.sections,
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+        });
+        
+        toast({
+          title: "Task Assigned",
+          description: `Task assigned to ${selectedFaculty.name} successfully`
+        });
+        
+        setIsTaskModalOpen(false);
+        setTaskData({
+          batches: [],
+          branches: [],
+          sections: [],
+          description: ""
+        });
+        setSelectedFaculty(null);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to assign task: " + error.message,
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -279,6 +324,19 @@ export default function FacultyManagement() {
     setSelectedFaculty(member);
     setIsTaskModalOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading faculty...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -621,7 +679,7 @@ export default function FacultyManagement() {
       <BulkUploadModal
         isOpen={isBulkUploadOpen}
         onClose={() => setIsBulkUploadOpen(false)}
-        onUpload={handleBulkUpload}
+        onUpload={handleBulkUploadFile}
       />
 
       {/* Bulk Results Modal */}

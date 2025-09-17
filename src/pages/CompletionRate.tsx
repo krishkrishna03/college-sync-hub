@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Users, TrendingUp, Award, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { coursesAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface CourseCompletion {
   id: string;
@@ -18,88 +21,38 @@ interface CourseCompletion {
 
 export default function CompletionRate() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
-  const overallStats = {
+  const [overallStats, setOverallStats] = useState({
     totalEnrolled: 1000,
     assignmentsCompleted: 798,
     overallCompletion: 79.8,
     studentsCertified: 679
-  };
+  });
+  const [courseCompletions, setCourseCompletions] = useState<CourseCompletion[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const courseCompletions: CourseCompletion[] = [
-    {
-      id: "1",
-      courseName: "Full Stack Web Development",
-      totalEnrolled: 189,
-      assignmentsCompleted: 165,
-      studentsCertified: 142,
-      completionRate: 87.3,
-      certificationRate: 75.1
-    },
-    {
-      id: "2",
-      courseName: "Data Science & Analytics",
-      totalEnrolled: 156,
-      assignmentsCompleted: 134,
-      studentsCertified: 118,
-      completionRate: 85.9,
-      certificationRate: 75.6
-    },
-    {
-      id: "3",
-      courseName: "Machine Learning Fundamentals",
-      totalEnrolled: 143,
-      assignmentsCompleted: 112,
-      studentsCertified: 98,
-      completionRate: 78.3,
-      certificationRate: 68.5
-    },
-    {
-      id: "4",
-      courseName: "Cloud Computing Essentials",
-      totalEnrolled: 127,
-      assignmentsCompleted: 95,
-      studentsCertified: 82,
-      completionRate: 74.8,
-      certificationRate: 64.6
-    },
-    {
-      id: "5",
-      courseName: "Cybersecurity Fundamentals",
-      totalEnrolled: 115,
-      assignmentsCompleted: 89,
-      studentsCertified: 76,
-      completionRate: 77.4,
-      certificationRate: 66.1
-    },
-    {
-      id: "6",
-      courseName: "Mobile App Development",
-      totalEnrolled: 98,
-      assignmentsCompleted: 74,
-      studentsCertified: 63,
-      completionRate: 75.5,
-      certificationRate: 64.3
-    },
-    {
-      id: "7",
-      courseName: "AI & Deep Learning",
-      totalEnrolled: 89,
-      assignmentsCompleted: 67,
-      studentsCertified: 56,
-      completionRate: 75.3,
-      certificationRate: 62.9
-    },
-    {
-      id: "8",
-      courseName: "DevOps & Infrastructure",
-      totalEnrolled: 83,
-      assignmentsCompleted: 62,
-      studentsCertified: 44,
-      completionRate: 74.7,
-      certificationRate: 53.0
+  // Fetch completion data on component mount
+  useEffect(() => {
+    fetchCompletionData();
+  }, []);
+
+  const fetchCompletionData = async () => {
+    try {
+      setLoading(true);
+      const response = await coursesAPI.getCompletionRate();
+      setOverallStats(response.overallStats);
+      setCourseCompletions(response.courseCompletions);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch completion data: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getCompletionBadge = (rate: number) => {
     if (rate >= 85) return { label: "Excellent", variant: "default" as const, icon: "↗️", color: "bg-blue-100 text-blue-700 border-blue-200" };
@@ -107,6 +60,19 @@ export default function CompletionRate() {
     if (rate >= 65) return { label: "Average", variant: "outline" as const, icon: "→", color: "bg-yellow-100 text-yellow-700 border-yellow-200" };
     return { label: "Needs Improvement", variant: "destructive" as const, icon: "↘️", color: "bg-red-100 text-red-700 border-red-200" };
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading completion data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 p-6">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/contexts/ProfileContext";
 import { User, Shield, Activity, Building2, Users, FileText, Megaphone } from "lucide-react";
+import { authAPI } from "@/lib/api";
 
 export default function Profile() {
   const { toast } = useToast();
@@ -16,6 +18,8 @@ export default function Profile() {
   
   // Local state for form
   const [localProfileData, setLocalProfileData] = useState(profileData);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   // Password state
   const [passwordData, setPasswordData] = useState({
@@ -23,6 +27,32 @@ export default function Profile() {
     newPassword: "",
     confirmPassword: ""
   });
+
+  // Fetch current user data
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const user = await authAPI.getCurrentUser();
+      setCurrentUser(user);
+      setLocalProfileData({
+        fullName: user.name,
+        email: user.email,
+        phone: user.profile?.phone || '',
+        department: user.profile?.department || ''
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch user data: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Sample activity log data
   const activityLogs = [
@@ -58,15 +88,29 @@ export default function Profile() {
     }
   ];
 
-  const handleProfileUpdate = () => {
-    updateProfile(localProfileData);
-    toast({
-      title: "Profile Updated",
-      description: "Your profile information has been updated successfully.",
-    });
+  const handleProfileUpdate = async () => {
+    try {
+      await authAPI.updateProfile({
+        name: localProfileData.fullName,
+        phone: localProfileData.phone,
+        department: localProfileData.department
+      });
+      
+      updateProfile(localProfileData);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
       toast({
         title: "Error",
@@ -85,16 +129,26 @@ export default function Profile() {
       return;
     }
 
-    toast({
-      title: "Password Changed",
-      description: "Your password has been changed successfully.",
-    });
-    
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: ""
-    });
+    try {
+      await authAPI.changePassword(passwordData.currentPassword, passwordData.newPassword);
+      
+      toast({
+        title: "Password Changed",
+        description: "Your password has been changed successfully.",
+      });
+      
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to change password: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -106,6 +160,19 @@ export default function Profile() {
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-6xl">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
@@ -198,15 +265,15 @@ export default function Profile() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>College Name</Label>
-                  <Input value="ABC Engineering College" readOnly className="bg-muted" />
+                  <Input value={currentUser?.profile?.collegeName || "PlantechX College"} readOnly className="bg-muted" />
                 </div>
                 <div className="space-y-2">
                   <Label>Role</Label>
-                  <Input value="Administrator" readOnly className="bg-muted" />
+                  <Input value={currentUser?.role === 'admin' ? 'Administrator' : currentUser?.role || 'User'} readOnly className="bg-muted" />
                 </div>
                 <div className="space-y-2">
                   <Label>Join Date</Label>
-                  <Input value="2023-01-15" readOnly className="bg-muted" />
+                  <Input value={currentUser?.createdAt ? new Date(currentUser.createdAt).toISOString().split('T')[0] : '2023-01-15'} readOnly className="bg-muted" />
                 </div>
                 
                 {/* Quick Stats */}

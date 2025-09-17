@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Trash2, Eye, ChevronDown, ChevronUp, FileText, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { batchesAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface Branch {
   id: number;
@@ -28,29 +31,10 @@ interface BatchYear {
 
 export default function BatchYears() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
-  const [batchYears, setBatchYears] = useState<BatchYear[]>([
-    {
-      id: 1,
-      year: "2026",
-      isExpanded: false,
-      branches: [
-        { id: 1, name: "CSE", batchCount: 3, userCount: 180 },
-        { id: 2, name: "EEE", batchCount: 2, userCount: 120 },
-        { id: 3, name: "MECH", batchCount: 2, userCount: 100 }
-      ]
-    },
-    {
-      id: 2,
-      year: "2027",
-      isExpanded: false,
-      branches: [
-        { id: 4, name: "CSE", batchCount: 4, userCount: 240 },
-        { id: 5, name: "IT", batchCount: 2, userCount: 120 },
-        { id: 6, name: "EEE", batchCount: 1, userCount: 60 }
-      ]
-    }
-  ]);
+  const [batchYears, setBatchYears] = useState<BatchYear[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
@@ -66,6 +50,38 @@ export default function BatchYears() {
   });
   const [isEditBranchModalOpen, setIsEditBranchModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<{id: number, name: string, batchId: number} | null>(null);
+
+  // Fetch batches on component mount
+  useEffect(() => {
+    fetchBatches();
+  }, []);
+
+  const fetchBatches = async () => {
+    try {
+      setLoading(true);
+      const response = await batchesAPI.getAll();
+      const formattedBatches = response.batches.map((batch: any) => ({
+        id: batch._id,
+        year: batch.year,
+        isExpanded: false,
+        branches: batch.branches.map((branch: any) => ({
+          id: branch._id,
+          name: branch.name,
+          batchCount: branch.sections?.length || 0,
+          userCount: branch.totalStudents || 0
+        }))
+      }));
+      setBatchYears(formattedBatches);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch batches: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredBatchYears = batchYears.filter(batch =>
     batch.year.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -84,49 +100,86 @@ export default function BatchYears() {
     ));
   };
 
-  const handleAddBatchYear = () => {
+  const handleAddBatchYear = async () => {
     if (newBatchYear.trim()) {
-      setBatchYears(prev => [...prev, {
-        id: Date.now(),
-        year: newBatchYear,
-        branches: [],
-        isExpanded: false
-      }]);
-      setNewBatchYear("");
-      setIsAddBatchModalOpen(false);
+      try {
+        await batchesAPI.create({ year: newBatchYear });
+        fetchBatches();
+        toast({
+          title: "Batch Created",
+          description: `Batch year ${newBatchYear} has been created successfully`
+        });
+        setNewBatchYear("");
+        setIsAddBatchModalOpen(false);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to create batch: " + error.message,
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const handleAddBranch = () => {
+  const handleAddBranch = async () => {
     if (newBranch.batchYear && newBranch.name.trim()) {
-      setBatchYears(prev => prev.map(batch =>
-        batch.year === newBranch.batchYear
-          ? {
-              ...batch,
-              branches: [...batch.branches, {
-                id: Date.now(),
-                name: newBranch.name,
-                batchCount: newBranch.batchCount,
-                userCount: newBranch.userCount
-              }]
-            }
-          : batch
-      ));
-      setNewBranch({ batchYear: "", name: "", batchCount: 0, userCount: 0 });
-      setIsAddBranchModalOpen(false);
+      try {
+        const batch = batchYears.find(b => b.year === newBranch.batchYear);
+        if (batch) {
+          await batchesAPI.addBranch(batch.id.toString(), {
+            name: newBranch.name,
+            sections: []
+          });
+          fetchBatches();
+          toast({
+            title: "Branch Added",
+            description: `Branch ${newBranch.name} has been added successfully`
+          });
+          setNewBranch({ batchYear: "", name: "", batchCount: 0, userCount: 0 });
+          setIsAddBranchModalOpen(false);
+        }
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to add branch: " + error.message,
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const handleDeleteBatch = (batchId: number) => {
-    setBatchYears(prev => prev.filter(batch => batch.id !== batchId));
+  const handleDeleteBatch = async (batchId: number) => {
+    try {
+      await batchesAPI.delete(batchId.toString());
+      fetchBatches();
+      toast({
+        title: "Batch Deleted",
+        description: "Batch has been deleted successfully"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete batch: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleDeleteBranch = (batchId: number, branchId: number) => {
-    setBatchYears(prev => prev.map(batch =>
-      batch.id === batchId
-        ? { ...batch, branches: batch.branches.filter(branch => branch.id !== branchId) }
-        : batch
-    ));
+  const handleDeleteBranch = async (batchId: number, branchId: number) => {
+    try {
+      await batchesAPI.deleteBranch(batchId.toString(), branchId.toString());
+      fetchBatches();
+      toast({
+        title: "Branch Deleted",
+        description: "Branch has been deleted successfully"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete branch: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const handleEditBranch = (batchId: number, branchId: number, branchName: string) => {
@@ -134,22 +187,28 @@ export default function BatchYears() {
     setIsEditBranchModalOpen(true);
   };
 
-  const handleSaveEditBranch = () => {
+  const handleSaveEditBranch = async () => {
     if (editingBranch && editingBranch.name.trim()) {
-      setBatchYears(prev => prev.map(batch =>
-        batch.id === editingBranch.batchId
-          ? {
-              ...batch,
-              branches: batch.branches.map(branch =>
-                branch.id === editingBranch.id
-                  ? { ...branch, name: editingBranch.name }
-                  : branch
-              )
-            }
-          : batch
-      ));
-      setEditingBranch(null);
-      setIsEditBranchModalOpen(false);
+      try {
+        await batchesAPI.updateBranch(
+          editingBranch.batchId.toString(),
+          editingBranch.id.toString(),
+          { name: editingBranch.name }
+        );
+        fetchBatches();
+        toast({
+          title: "Branch Updated",
+          description: "Branch has been updated successfully"
+        });
+        setEditingBranch(null);
+        setIsEditBranchModalOpen(false);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to update branch: " + error.message,
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -157,6 +216,19 @@ export default function BatchYears() {
     // Navigate to performance reports with batch year context
     navigate(`/reports?batch=${batchYear}`);
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading batches...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
