@@ -1,7 +1,10 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface ProfileData {
+<<<<<<< HEAD
   avatarUrl: string;
+=======
+>>>>>>> a655124e77d653c08f2b61172894d4d4f8b7064c
   fullName: string;
   email: string;
   phone: string;

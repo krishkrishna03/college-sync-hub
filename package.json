@@ -48,11 +48,18 @@
     "cmdk": "^1.0.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
+<<<<<<< HEAD
     "csv-parser": "^3.2.0",
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.2",
     "embla-carousel-react": "^8.3.0",
     "express": "^4.21.2",
+=======
+    "date-fns": "^3.6.0",
+    "dotenv": "^17.2.2",
+    "embla-carousel-react": "^8.3.0",
+    "express": "^5.1.0",
+>>>>>>> a655124e77d653c08f2b61172894d4d4f8b7064c
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "input-otp": "^1.2.4",
@@ -60,7 +67,11 @@
     "lucide-react": "^0.462.0",
     "mongoose": "^8.18.1",
     "morgan": "^1.10.1",
+<<<<<<< HEAD
     "multer": "^1.4.5-lts.1",
+=======
+    "multer": "^2.0.2",
+>>>>>>> a655124e77d653c08f2b61172894d4d4f8b7064c
     "next-themes": "^0.3.0",
     "nodemailer": "^7.0.6",
     "react": "^18.3.1",

@@ -81,12 +81,19 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler
+<<<<<<< HEAD
 // 404 handler (for Express 5+)
 app.use('/*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
 
+=======
+app.use('*', (req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+>>>>>>> a655124e77d653c08f2b61172894d4d4f8b7064c
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
