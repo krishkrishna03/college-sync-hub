@@ -27,7 +27,6 @@ router.get('/', auth, async (req, res) => {
       limit = 10 
     } = req.query;
 
-    // Build filter object
     let filter = {};
     let userFilter = { role: 'student' };
 
@@ -44,7 +43,6 @@ router.get('/', auth, async (req, res) => {
     if (section) filter.section = section;
     if (status) userFilter.status = status;
 
-    // Get students with user data
     const students = await Student.find(filter)
       .populate({
         path: 'userId',
@@ -55,7 +53,6 @@ router.get('/', auth, async (req, res) => {
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
 
-    // Filter out students where userId is null (didn't match userFilter)
     const validStudents = students.filter(student => student.userId);
 
     const total = await Student.countDocuments(filter);
@@ -84,7 +81,7 @@ router.post('/', [auth, adminAuth], [
   body('batch').notEmpty(),
   body('branch').notEmpty(),
   body('section').notEmpty(),
-  body('year').notEmpty()
+ body('year').notEmpty()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -127,33 +124,40 @@ router.post('/', [auth, adminAuth], [
 
     await user.save();
 
-    // Create student record
-    const student = new Student({
-      userId: user._id,
-      registrationNumber: studentId,
-      batch,
-      branch,
-      section,
-      year,
-      enrollmentDate: enrollmentDate || new Date()
-    });
+    try {
+      // Create student record
+      const student = new Student({
+        userId: user._id,
+        registrationNumber: studentId,
+        batch,
+        branch,
+        section,
+        year,
+        enrollmentDate: enrollmentDate || new Date()
+      });
 
-    await student.save();
+      await student.save();
 
-    res.status(201).json({
-      message: 'Student created successfully',
-      student: {
-        id: student._id,
-        name: user.name,
-        email: user.email,
-        studentId: student.registrationNumber,
-        batch: student.batch,
-        branch: student.branch,
-        section: student.section,
-        year: student.year,
-        tempPassword
-      }
-    });
+      res.status(201).json({
+        message: 'Student created successfully',
+        student: {
+          id: student._id,
+          name: user.name,
+          email: user.email,
+          studentId: student.registrationNumber,
+          batch: student.batch,
+          branch: student.branch,
+          section: student.section,
+          year: student.year,
+          tempPassword
+        }
+      });
+    } catch (studentError) {
+      // If student creation fails, delete the user to avoid orphaned user
+      await User.findByIdAndDelete(user._id);
+      console.error('Create student error:', studentError);
+      res.status(500).json({ message: 'Server error' });
+    }
   } catch (error) {
     console.error('Create student error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -192,6 +196,7 @@ router.post('/bulk-upload', [auth, adminAuth], upload.single('file'), async (req
         results.totalRecords = students.length;
 
         for (const studentData of students) {
+          let user = null;
           try {
             const { name, email, studentId, mobile } = studentData;
             
@@ -209,7 +214,7 @@ router.post('/bulk-upload', [auth, adminAuth], upload.single('file'), async (req
             const tempPassword = Math.random().toString(36).slice(-8);
 
             // Create user
-            const user = new User({
+            user = new User({
               name,
               email,
               password: tempPassword,
@@ -225,30 +230,37 @@ router.post('/bulk-upload', [auth, adminAuth], upload.single('file'), async (req
 
             await user.save();
 
-            // Create student record
-            const student = new Student({
-              userId: user._id,
-              registrationNumber: studentId,
-              batch,
-              branch,
-              section,
-              year: '1st Year' // Default for new students
-            });
+            try {
+              // Create student record
+              const student = new Student({
+                userId: user._id,
+                registrationNumber: studentId,
+                batch,
+                branch,
+                section,
+                year: '1st Year'
+              });
 
-            await student.save();
+              await student.save();
 
-            results.accountsCreated++;
-            results.studentData.push({
-              name,
-              email,
-              studentId,
-              branch,
-              mobile,
-              tempPassword
-            });
-
+              results.accountsCreated++;
+              results.studentData.push({
+                name,
+                email,
+                studentId,
+                branch,
+                mobile,
+                tempPassword
+              });
+            } catch (studentError) {
+              // If student creation fails, delete the user
+              await User.findByIdAndDelete(user._id);
+              console.error('Error creating student record:', studentError);
+              results.errors++;
+            }
           } catch (error) {
-            console.error('Error creating student:', error);
+            // If user creation fails, nothing to clean up
+            console.error('Error creating user:', error);
             results.errors++;
           }
         }
