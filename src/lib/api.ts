@@ -1,15 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Check if we're in development and backend is available
-const checkBackendConnection = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/api/health`);
-    return response.ok;
-  } catch {
-    return false;
-  }
-};
-
 // Get auth token from localStorage
 const getAuthToken = () => {
   return localStorage.getItem('authToken');
@@ -28,12 +18,6 @@ const removeAuthToken = () => {
 // API request helper
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = getAuthToken();
-  
-  // Check backend connection first
-  const isBackendAvailable = await checkBackendConnection();
-  if (!isBackendAvailable) {
-    throw new Error('Backend server is not running. Please start the server with: cd server && npm run dev');
-  }
   
   const config: RequestInit = {
     headers: {
@@ -54,9 +38,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
     return await response.json();
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error('Cannot connect to server. Please ensure the backend is running on port 5000.');
-    }
+    console.error('API request error:', error);
     throw error;
   }
 };
@@ -153,6 +135,13 @@ export const studentsAPI = {
 
   getReport: async (id: string) => {
     return apiRequest(`/students/${id}/report`);
+  },
+
+  sendInvitations: async (params: any) => {
+    return apiRequest('/students/send-invitations', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
   }
 };
 
