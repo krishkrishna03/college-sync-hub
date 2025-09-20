@@ -72,6 +72,7 @@ export default function Students() {
     collegeName: "PlantechX College",
     batch: "",
     stream: "",
+    section: "", // <-- Added section property
     totalStudents: 0,
     accountsCreated: 0,
     duplicates: 0,
@@ -220,6 +221,7 @@ export default function Students() {
         collegeName: "PlantechX College",
         batch: bulkUploadData.batch,
         stream: bulkUploadData.branch,
+        section: bulkUploadData.section, // <-- Set section here
         totalStudents: response.totalRecords,
         accountsCreated: response.accountsCreated,
         duplicates: response.duplicatesFound,
@@ -248,32 +250,51 @@ export default function Students() {
     });
   };
 
-  const handleSendInvitations = () => {
+  const handleSendInvitations = async () => {
+  try {
+    // Call backend to send invitations and get credentials for the created students
+    const credentials = await studentsAPI.sendInvitations({
+      batch: bulkResults.batch,
+      branch: bulkResults.stream,
+      section: bulkResults.duplicatesList.length === 0 ? bulkResults.section : undefined // or pass section if needed
+    });
+
     toast({
       title: "Invitations Sent",
       description: `Credentials sent to ${bulkResults.accountsCreated} students successfully`
     });
-    
-    // Simulate CSV download
-    setTimeout(() => {
-      const csvContent = "data:text/csv;charset=utf-8,Name,Email,Student ID,Password\nJohn Doe,john@example.com,CS001,temp123\nJane Smith,jane@example.com,CS002,temp456";
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "student_credentials.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast({
-        title: "Download Ready",
-        description: "Student credentials CSV file downloaded successfully"
-      });
-    }, 1000);
-    
+
+    // Generate CSV from backend response
+    const csvRows = [
+      "Name,Email,Student ID,Password",
+      ...credentials.map(
+        (s: any) => `${s.name},${s.email},${s.studentId},${s.tempPassword}`
+      )
+    ];
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "student_credentials.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Download Ready",
+      description: "Student credentials CSV file downloaded successfully"
+    });
+
     setShowBulkResults(false);
     setBulkUploadData({ batch: "", branch: "", section: "", file: null });
-  };
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error?.response?.data?.message || "Failed to send invitations or download credentials.",
+      variant: "destructive"
+    });
+  }
+};
 
   const handleStudentAction = async (action: string, student: any) => {
     switch (action) {
