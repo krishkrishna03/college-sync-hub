@@ -52,18 +52,18 @@ mongoose.connect(process.env.MONGODB_URI, {
 });
 
 // Routes
-app.use('/auth', authRoutes);
-app.use('/students', studentRoutes);
-app.use('/faculty', facultyRoutes);
-app.use('/batches', batchRoutes);
-app.use('/branches', branchRoutes);
-app.use('/tests', testRoutes);
-app.use('/courses', courseRoutes);
-app.use('/announcements', announcementRoutes);
-app.use('/dashboard', dashboardRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/faculty', facultyRoutes);
+app.use('/api/batches', batchRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/tests', testRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
