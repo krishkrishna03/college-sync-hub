@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,34 +15,20 @@ import { dashboardAPI, authAPI } from "@/lib/api";
 
 export function Header() {
   const navigate = useNavigate();
-  const { profileData, setProfileData } = useProfile();
+  const { profileData } = useProfile();
   const [notificationCount, setNotificationCount] = useState(0);
 
   // Fetch unread notifications / announcements
-  const fetchNotifications = async () => {
-    try {
-      const stats = await dashboardAPI.getStats();
-      setNotificationCount(stats.unreadAnnouncements || 0);
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
-    }
-  };
-
-  // Fetch profile data if not already loaded
-  const fetchProfile = async () => {
-    if (!profileData.fullName) {
+  useEffect(() => {
+    async function fetchNotifications() {
       try {
-        const user = await authAPI.getCurrentUser();
-        setProfileData(user);
+        const stats = await dashboardAPI.getStats();
+        setNotificationCount(stats.unreadAnnouncements || 0);
       } catch (error) {
-        console.error("Failed to fetch profile:", error);
+        console.error("Failed to fetch notifications:", error);
       }
     }
-  };
-
-  useEffect(() => {
     fetchNotifications();
-    fetchProfile();
   }, []);
 
   // Handlers
@@ -72,8 +57,8 @@ export function Header() {
               className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs"
             >
               {notificationCount}
-          </Badge>
-        )}
+            </Badge>
+          )}
         </Button>
 
         {/* Profile Dropdown */}
@@ -82,10 +67,16 @@ export function Header() {
             <div className="flex items-center gap-3 cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-lg p-2 transition-colors">
               <div className="text-right">
                 <p className="text-sm font-medium">
-                  {profileData.fullName || "User"}
+                  {profileData.fullName
+                    ? profileData.fullName
+                    : "Loading..."}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {profileData.role === "admin" ? "College Administrator" : profileData.role}
+                  {profileData.role
+                    ? profileData.role === "admin"
+                      ? "College Administrator"
+                      : profileData.role.charAt(0).toUpperCase() + profileData.role.slice(1)
+                    : "Loading..."}
                 </p>
               </div>
               <Avatar>
@@ -117,4 +108,3 @@ export function Header() {
     </header>
   );
 }
-
