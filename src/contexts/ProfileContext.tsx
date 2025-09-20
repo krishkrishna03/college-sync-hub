@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authAPI } from "@/lib/api";
 
 interface ProfileData {
   avatarUrl: string;
@@ -6,25 +7,54 @@ interface ProfileData {
   email: string;
   phone: string;
   department: string;
+  role?: string;
 }
 
 interface ProfileContextType {
   profileData: ProfileData;
-  updateProfile: (data: ProfileData) => void;
+  updateProfile: (data: ProfileData) => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profileData, setProfileData] = useState<ProfileData>({
-    fullName: "John Doe",
-    email: "john.doe@abcengineering.edu",
-    phone: "+1 234 567 8900",
-    department: "Computer Science"
+    avatarUrl: "",
+    fullName: "",
+    email: "",
+    phone: "",
+    department: "",
+    role: "",
   });
 
-  const updateProfile = (data: ProfileData) => {
-    setProfileData(data);
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const user = await authAPI.getCurrentUser();
+        // Map backend fields to ProfileData
+        setProfileData({
+          avatarUrl: user.avatarUrl || user.avatar || "",
+          fullName: user.fullName || user.name || user.username || "",
+          email: user.email || "",
+          phone: user.phone || "",
+          department: user.department || "",
+          role: user.role || "",
+        });
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    }
+    fetchProfile();
+  }, []);
+
+  const updateProfile = async (data: ProfileData) => {
+    try {
+      await authAPI.updateProfile(data);
+      setProfileData(data);
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      throw error;
+    }
   };
 
   return (
