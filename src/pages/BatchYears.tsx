@@ -67,7 +67,7 @@ export default function BatchYears() {
         branches: batch.branches.map((branch: any) => ({
           id: branch._id,
           name: branch.name,
-          batchCount: branch.sections?.length || 0,
+          batchCount: branch.sectionCount || branch.sections?.length || 0 ,
           userCount: branch.totalStudents || 0
         }))
       }));
