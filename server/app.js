@@ -52,18 +52,18 @@ mongoose.connect(process.env.MONGODB_URI, {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/faculty', facultyRoutes);
-app.use('/api/batches', batchRoutes);
-app.use('/api/branches', branchRoutes);
-app.use('/api/tests', testRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/announcements', announcementRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/auth', authRoutes);
+app.use('/students', studentRoutes);
+app.use('/faculty', facultyRoutes);
+app.use('/batches', batchRoutes);
+app.use('/branches', branchRoutes);
+app.use('/tests', testRoutes);
+app.use('/courses', courseRoutes);
+app.use('/announcements', announcementRoutes);
+app.use('/dashboard', dashboardRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
@@ -80,20 +80,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-<<<<<<< HEAD
-// 404 handler (for Express 5+)
-app.use('/*', (req, res) => {
+// 404 handler (compatible with Express 5+)
+app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-
-=======
-app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
-
->>>>>>> a655124e77d653c08f2b61172894d4d4f8b7064c
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
