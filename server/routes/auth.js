@@ -3,7 +3,11 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const College = require('../models/College');
+const Student = require('../models/Student');
+const Faculty = require('../models/Faculty');
 const { auth } = require('../middleware/auth');
+const { sendInvitationEmail } = require('../utils/emailService');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -15,11 +19,11 @@ const generateToken = (userId) => {
 };
 
 // @route   POST /api/auth/login
-// @desc    Login user
+// @desc    Login user with role-based access
 // @access  Public
 router.post('/login', [
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 })
+  body('password').isLength({ min: 1 })
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -33,6 +37,11 @@ router.post('/login', [
     const user = await User.findOne({ email }).populate('collegeId', 'name code isActive');
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Check if account is activated
+    if (user.status === 'pending') {
+      return res.status(400).json({ message: 'Account not activated. Please check your email for invitation.' });
     }
 
     // Check password
@@ -76,14 +85,13 @@ router.post('/login', [
   }
 });
 
-// @route   POST /api/auth/register
-// @desc    Register new user
-// @access  Public (for admin registration)
-router.post('/register', [
+// @route   POST /api/auth/register-admin
+// @desc    Register master admin (only for initial setup)
+// @access  Public
+router.post('/register-admin', [
   body('name').notEmpty().trim(),
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
-  body('role').isIn(['admin'])
+  body('password').isLength({ min: 6 })
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -91,12 +99,13 @@ router.post('/register', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, email, password, role, profile } = req.body;
-
-    // Only allow admin registration through this endpoint
-    if (role !== 'admin') {
-      return res.status(400).json({ message: 'Only admin registration allowed through this endpoint' });
+    // Check if any admin already exists
+    const existingAdmin = await User.findOne({ role: 'admin' });
+    if (existingAdmin) {
+      return res.status(400).json({ message: 'Admin already exists' });
     }
+
+    const { name, email, password } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -104,13 +113,13 @@ router.post('/register', [
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create new user
+    // Create admin user
     const user = new User({
       name,
       email,
       password,
-      role,
-      profile: profile || {}
+      role: 'admin',
+      status: 'active'
     });
 
     await user.save();
@@ -124,12 +133,99 @@ router.post('/register', [
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        profile: user.profile
+        role: user.role
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Admin registration error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/accept-invitation/:token
+// @desc    Accept invitation and activate account
+// @access  Public
+router.post('/accept-invitation/:token', [
+  body('password').isLength({ min: 6 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { token } = req.params;
+    const { password } = req.body;
+
+    // Find user with invitation token
+    const user = await User.findOne({ 
+      invitationToken: token,
+      status: 'pending',
+      invitationExpires: { $gt: new Date() }
+    }).populate('collegeId', 'name code');
+
+    if (!user) {
+      return res.status(404).json({ message: 'Invalid or expired invitation' });
+    }
+
+    // Set password and activate account
+    user.password = password;
+    user.status = 'active';
+    user.invitationToken = undefined;
+    user.invitationExpires = undefined;
+
+    await user.save();
+
+    // Generate token
+    const authToken = generateToken(user._id);
+
+    res.json({
+      message: 'Account activated successfully',
+      token: authToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        collegeId: user.collegeId?._id,
+        collegeName: user.collegeId?.name,
+        collegeCode: user.collegeId?.code
+      }
+    });
+  } catch (error) {
+    console.error('Accept invitation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/auth/verify-invitation/:token
+// @desc    Verify invitation token
+// @access  Public
+router.get('/verify-invitation/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await User.findOne({ 
+      invitationToken: token,
+      status: 'pending',
+      invitationExpires: { $gt: new Date() }
+    }).populate('collegeId', 'name code');
+
+    if (!user) {
+      return res.status(404).json({ message: 'Invalid or expired invitation' });
+    }
+
+    res.json({
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        collegeName: user.collegeId?.name,
+        collegeCode: user.collegeId?.code
+      }
+    });
+  } catch (error) {
+    console.error('Verify invitation error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

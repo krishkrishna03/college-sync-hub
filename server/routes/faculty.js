@@ -61,8 +61,8 @@ router.get('/', [auth, adminAuth], async (req, res) => {
 
 // @route   POST /api/faculty
 // @desc    Create new faculty member
-// @access  Private (Admin)
-router.post('/', [auth, adminAuth], [
+// @access  Private (College Admin)
+router.post('/', [auth, collegeAuth], [
   body('name').notEmpty().trim(),
   body('email').isEmail().normalizeEmail(),
   body('facultyId').notEmpty(),
@@ -89,15 +89,19 @@ router.post('/', [auth, adminAuth], [
       return res.status(400).json({ message: 'Faculty with this ID already exists' });
     }
 
-    // Generate temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
+    // Generate invitation token
+    const invitationToken = crypto.randomBytes(32).toString('hex');
+    const invitationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     // Create user account
     const user = new User({
       name,
       email,
-      password: tempPassword,
       role: 'faculty',
+      collegeId: req.user.collegeId,
+      status: 'pending',
+      invitationToken,
+      invitationExpires,
       profile: {
         phone: mobile,
         department,
@@ -120,8 +124,12 @@ router.post('/', [auth, adminAuth], [
 
     await faculty.save();
 
+    // Send invitation email
+    const college = await College.findById(req.user.collegeId);
+    await sendInvitationEmail(email, name, invitationToken, 'faculty', college.name);
+
     res.status(201).json({
-      message: 'Faculty created successfully',
+      message: 'Faculty invitation sent successfully',
       faculty: {
         id: faculty._id,
         name: user.name,
@@ -129,7 +137,7 @@ router.post('/', [auth, adminAuth], [
         facultyId: faculty.facultyId,
         department: faculty.department,
         designation: faculty.designation,
-        tempPassword
+        status: 'pending'
       }
     });
   } catch (error) {

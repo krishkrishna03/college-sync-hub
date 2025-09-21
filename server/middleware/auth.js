@@ -18,11 +18,11 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'Token is not valid' });
     }
 
-    if (user.status === 'inactive') {
-      return res.status(401).json({ message: 'Account is inactive' });
+    if (user.status !== 'active') {
+      return res.status(401).json({ message: 'Account is not active' });
     }
 
-    // Check if college is active (for non-admin users)
+    // Check if college is active (for college-related users)
     if (user.role !== 'admin' && user.collegeId && !user.collegeId.isActive) {
       return res.status(401).json({ message: 'College account is inactive' });
     }
@@ -43,15 +43,15 @@ const adminAuth = (req, res, next) => {
 };
 
 const collegeAuth = (req, res, next) => {
-  if (req.user.role !== 'college' && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'College admin or admin access required' });
+  if (req.user.role !== 'college-admin' && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'College admin or master admin access required' });
   }
   next();
 };
 
 const facultyAuth = (req, res, next) => {
-  if (req.user.role !== 'faculty' && req.user.role !== 'college' && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Faculty, college admin or admin access required' });
+  if (!['faculty', 'college-admin', 'admin'].includes(req.user.role)) {
+    return res.status(403).json({ message: 'Faculty, college admin or master admin access required' });
   }
   next();
 };
@@ -66,7 +66,7 @@ const studentAuth = (req, res, next) => {
 // Middleware to ensure user belongs to the same college
 const sameCollegeAuth = (req, res, next) => {
   if (req.user.role === 'admin') {
-    return next(); // Admin can access all colleges
+    return next(); // Master admin can access all colleges
   }
   
   // For college-specific operations, ensure user belongs to the college

@@ -2,7 +2,6 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const College = require('../models/College');
 const User = require('../models/User');
-const Invitation = require('../models/Invitation');
 const { auth, adminAuth } = require('../middleware/auth');
 const { sendInvitationEmail } = require('../utils/emailService');
 const crypto = require('crypto');
@@ -31,7 +30,7 @@ router.get('/', [auth, adminAuth], async (req, res) => {
     }
 
     const colleges = await College.find(filter)
-      .populate('adminUserId', 'name email')
+      .populate('adminUserId', 'name email status')
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
@@ -53,7 +52,7 @@ router.get('/', [auth, adminAuth], async (req, res) => {
 });
 
 // @route   POST /api/colleges
-// @desc    Create new college (Admin only)
+// @desc    Create new college with admin invitation (Admin only)
 // @access  Private (Admin)
 router.post('/', [auth, adminAuth], [
   body('name').notEmpty().trim(),
@@ -72,7 +71,7 @@ router.post('/', [auth, adminAuth], [
 
     // Check if college code or email already exists
     const existingCollege = await College.findOne({
-      $or: [{ code }, { email }]
+      $or: [{ code: code.toUpperCase() }, { email }]
     });
     if (existingCollege) {
       return res.status(400).json({ message: 'College with this code or email already exists' });
@@ -84,15 +83,18 @@ router.post('/', [auth, adminAuth], [
       return res.status(400).json({ message: 'Admin email already exists' });
     }
 
-    // Generate temporary password for college admin
-    const tempPassword = crypto.randomBytes(8).toString('hex');
+    // Generate invitation token
+    const invitationToken = crypto.randomBytes(32).toString('hex');
+    const invitationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Create college admin user
+    // Create college admin user (pending status)
     const adminUser = new User({
       name: adminName,
       email: adminEmail,
-      password: tempPassword,
-      role: 'college'
+      role: 'college-admin',
+      status: 'pending',
+      invitationToken,
+      invitationExpires
     });
 
     await adminUser.save();
@@ -113,19 +115,18 @@ router.post('/', [auth, adminAuth], [
     adminUser.collegeId = college._id;
     await adminUser.save();
 
-    // Send invitation email to college admin
-    await sendInvitationEmail(adminEmail, adminName, tempPassword, 'college');
+    // Send invitation email
+    await sendInvitationEmail(adminEmail, adminName, invitationToken, 'college-admin', name);
 
     res.status(201).json({
-      message: 'College created successfully',
+      message: 'College created successfully. Invitation sent to admin.',
       college: {
         id: college._id,
         name: college.name,
         code: college.code,
         email: college.email,
         adminName,
-        adminEmail,
-        tempPassword
+        adminEmail
       }
     });
   } catch (error) {
@@ -163,7 +164,7 @@ router.put('/:id', [auth, adminAuth], async (req, res) => {
 });
 
 // @route   DELETE /api/colleges/:id
-// @desc    Delete college (Admin only)
+// @desc    Delete college and all associated data (Admin only)
 // @access  Private (Admin)
 router.delete('/:id', [auth, adminAuth], async (req, res) => {
   try {
@@ -173,12 +174,24 @@ router.delete('/:id', [auth, adminAuth], async (req, res) => {
     }
 
     // Delete all users associated with this college
+    const users = await User.find({ collegeId: college._id });
+    
+    // Delete student and faculty records
+    for (const user of users) {
+      if (user.role === 'student') {
+        await Student.deleteMany({ userId: user._id });
+      } else if (user.role === 'faculty') {
+        await Faculty.deleteMany({ userId: user._id });
+      }
+    }
+    
+    // Delete all users
     await User.deleteMany({ collegeId: college._id });
     
     // Delete the college
     await College.findByIdAndDelete(req.params.id);
 
-    res.json({ message: 'College deleted successfully' });
+    res.json({ message: 'College and all associated data deleted successfully' });
   } catch (error) {
     console.error('Delete college error:', error);
     res.status(500).json({ message: 'Server error' });
