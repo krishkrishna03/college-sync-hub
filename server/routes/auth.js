@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const College = require('../models/College');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -26,10 +27,10 @@ router.post('/login', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password, collegeCode } = req.body;
+    const { email, password } = req.body;
 
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).populate('collegeId', 'name code isActive');
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -45,6 +46,11 @@ router.post('/login', [
       return res.status(400).json({ message: 'Account is inactive' });
     }
 
+    // Check if college is active (for non-admin users)
+    if (user.role !== 'admin' && user.collegeId && !user.collegeId.isActive) {
+      return res.status(400).json({ message: 'College account is inactive' });
+    }
+
     // Update last login
     await user.updateLastLogin();
 
@@ -58,6 +64,9 @@ router.post('/login', [
         name: user.name,
         email: user.email,
         role: user.role,
+        collegeId: user.collegeId?._id,
+        collegeName: user.collegeId?.name,
+        collegeCode: user.collegeId?.code,
         profile: user.profile
       }
     });
@@ -74,7 +83,7 @@ router.post('/register', [
   body('name').notEmpty().trim(),
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 6 }),
-  body('role').isIn(['admin', 'faculty', 'student'])
+  body('role').isIn(['admin'])
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -83,6 +92,11 @@ router.post('/register', [
     }
 
     const { name, email, password, role, profile } = req.body;
+
+    // Only allow admin registration through this endpoint
+    if (role !== 'admin') {
+      return res.status(400).json({ message: 'Only admin registration allowed through this endpoint' });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -125,7 +139,9 @@ router.post('/register', [
 // @access  Private
 router.get('/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
+    const user = await User.findById(req.user._id)
+      .select('-password')
+      .populate('collegeId', 'name code');
     res.json(user);
   } catch (error) {
     console.error('Get user error:', error);

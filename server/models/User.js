@@ -21,8 +21,15 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'faculty', 'student'],
+    enum: ['admin', 'college', 'faculty', 'student'],
     required: true
+  },
+  collegeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'College',
+    required: function() {
+      return this.role !== 'admin';
+    }
   },
   status: {
     type: String,

@@ -10,7 +10,9 @@ const auth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
+    const user = await User.findById(decoded.userId)
+      .select('-password')
+      .populate('collegeId', 'name code isActive');
     
     if (!user) {
       return res.status(401).json({ message: 'Token is not valid' });
@@ -18,6 +20,11 @@ const auth = async (req, res, next) => {
 
     if (user.status === 'inactive') {
       return res.status(401).json({ message: 'Account is inactive' });
+    }
+
+    // Check if college is active (for non-admin users)
+    if (user.role !== 'admin' && user.collegeId && !user.collegeId.isActive) {
+      return res.status(401).json({ message: 'College account is inactive' });
     }
 
     req.user = user;
@@ -35,11 +42,41 @@ const adminAuth = (req, res, next) => {
   next();
 };
 
-const facultyAuth = (req, res, next) => {
-  if (req.user.role !== 'faculty' && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Faculty or admin access required' });
+const collegeAuth = (req, res, next) => {
+  if (req.user.role !== 'college' && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'College admin or admin access required' });
   }
   next();
 };
 
-module.exports = { auth, adminAuth, facultyAuth };
+const facultyAuth = (req, res, next) => {
+  if (req.user.role !== 'faculty' && req.user.role !== 'college' && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Faculty, college admin or admin access required' });
+  }
+  next();
+};
+
+const studentAuth = (req, res, next) => {
+  if (req.user.role !== 'student') {
+    return res.status(403).json({ message: 'Student access required' });
+  }
+  next();
+};
+
+// Middleware to ensure user belongs to the same college
+const sameCollegeAuth = (req, res, next) => {
+  if (req.user.role === 'admin') {
+    return next(); // Admin can access all colleges
+  }
+  
+  // For college-specific operations, ensure user belongs to the college
+  const collegeId = req.params.collegeId || req.body.collegeId || req.user.collegeId;
+  
+  if (req.user.collegeId && req.user.collegeId.toString() !== collegeId.toString()) {
+    return res.status(403).json({ message: 'Access denied to this college' });
+  }
+  
+  next();
+};
+
+module.exports = { auth, adminAuth, collegeAuth, facultyAuth, studentAuth, sameCollegeAuth };
