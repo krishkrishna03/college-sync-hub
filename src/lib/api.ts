@@ -1,4 +1,5 @@
-const API_BASE_URL = 'https://college-management-backend.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://college-sync-hub.onrender.com';
+
 
 // Get auth token from localStorage
 const getAuthToken = () => {
