@@ -19,39 +19,42 @@ const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
-// Security middleware
+/* -------------------- Security -------------------- */
 app.use(helmet());
 app.use(compression());
 
-// CORS configuration
+/* -------------------- CORS Config -------------------- */
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:8080',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token']
 }));
 
-// Logging
+// Handle preflight requests
+app.options('*', cors());
+
+/* -------------------- Logging -------------------- */
 app.use(morgan('combined'));
 
-// Body parsing middleware
+/* -------------------- Body Parsing -------------------- */
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Database connection
+/* -------------------- Database -------------------- */
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => {
-  console.log('Connected to MongoDB Atlas');
+  console.log('✅ Connected to MongoDB Atlas');
 })
 .catch((error) => {
-  console.error('MongoDB connection error:', error);
+  console.error('❌ MongoDB connection error:', error);
   process.exit(1);
 });
 
-// Routes
+/* -------------------- Routes -------------------- */
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/faculty', facultyRoutes);
@@ -62,34 +65,41 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// Health check endpoint
+// Debug CORS check route
+app.get('/api/test-cors', (req, res) => {
+  res.json({ message: 'CORS working!' });
+});
+
+/* -------------------- Health Check -------------------- */
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV 
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
-// Error handling middleware
+/* -------------------- Error Handling -------------------- */
+// 404 handler
+app.use((req, res, next) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+// Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('❌ Error stack:', err.stack);
   res.status(500).json({ 
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
 
-// 404 handler (compatible with Express 5+)
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
-
+/* -------------------- Server -------------------- */
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;
