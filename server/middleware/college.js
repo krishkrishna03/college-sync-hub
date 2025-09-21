@@ -8,4 +8,4 @@ function collegeAuth(req, res, next) {
   next();
 }
 
-module.exports = { collegeAuth };
+module.exports =collegeAuth ;
