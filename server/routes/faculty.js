@@ -10,14 +10,100 @@ const fs = require('fs');
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
+// @route   GET /api/faculty/my-students
+// @desc    Get students from faculty's college
+// @access  Private (Faculty)
+router.get('/my-students', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' });
+    }
+
+    const students = await Student.find()
+      .populate({
+        path: 'userId',
+        match: { collegeId: req.user.collegeId },
+        select: '-password'
+      })
+      .populate('testResults.testId')
+      .populate('courses.courseId');
+
+    const validStudents = students.filter(student => student.userId);
+
+    res.json({ students: validStudents });
+  } catch (error) {
+    console.error('Get faculty students error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/faculty/my-tasks
+// @desc    Get current faculty's tasks
+// @access  Private (Faculty)
+router.get('/my-tasks', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' });
+    }
+
+    const faculty = await Faculty.findOne({ userId: req.user._id })
+      .populate('tasks.assignedBy', 'name');
+
+    if (!faculty) {
+      return res.status(404).json({ message: 'Faculty not found' });
+    }
+
+    res.json({ tasks: faculty.tasks });
+  } catch (error) {
+    console.error('Get faculty tasks error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   PUT /api/faculty/tasks/:taskId
+// @desc    Update task status
+// @access  Private (Faculty)
+router.put('/tasks/:taskId', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' });
+    }
+
+    const { status } = req.body;
+    
+    const faculty = await Faculty.findOne({ userId: req.user._id });
+    if (!faculty) {
+      return res.status(404).json({ message: 'Faculty not found' });
+    }
+
+    const task = faculty.tasks.id(req.params.taskId);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    task.status = status;
+    await faculty.save();
+
+    res.json({ message: 'Task status updated successfully' });
+  } catch (error) {
+    console.error('Update task status error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/faculty
 // @desc    Get all faculty members
 // @access  Private (Admin)
 router.get('/', [auth, adminAuth], async (req, res) => {
   try {
-    const { search, department, status, page = 1, limit = 10 } = req.query;
+    const { search, department, status, collegeId, page = 1, limit = 10 } = req.query;
 
     let userFilter = { role: 'faculty' };
+    
+    // Filter by college for college admins
+    if (req.user.role === 'college-admin' || collegeId) {
+      userFilter.collegeId = collegeId || req.user.collegeId;
+    }
     
     if (search) {
       userFilter.$or = [
@@ -62,7 +148,7 @@ router.get('/', [auth, adminAuth], async (req, res) => {
 // @route   POST /api/faculty
 // @desc    Create new faculty member
 // @access  Private (College Admin)
-router.post('/', [auth, collegeAuth], [
+router.post('/', [auth], [
   body('name').notEmpty().trim(),
   body('email').isEmail().normalizeEmail(),
   body('facultyId').notEmpty(),
@@ -70,6 +156,11 @@ router.post('/', [auth, collegeAuth], [
   body('designation').notEmpty()
 ], async (req, res) => {
   try {
+    // Check if user has permission to create faculty
+    if (req.user.role !== 'college-admin' && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'College admin or master admin access required' });
+    }
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -98,7 +189,7 @@ router.post('/', [auth, collegeAuth], [
       name,
       email,
       role: 'faculty',
-      collegeId: req.user.collegeId,
+      collegeId: req.user.role === 'admin' ? req.body.collegeId : req.user.collegeId,
       status: 'pending',
       invitationToken,
       invitationExpires,
@@ -125,7 +216,7 @@ router.post('/', [auth, collegeAuth], [
     await faculty.save();
 
     // Send invitation email
-    const college = await College.findById(req.user.collegeId);
+    const college = await College.findById(user.collegeId);
     await sendInvitationEmail(email, name, invitationToken, 'faculty', college.name);
 
     res.status(201).json({

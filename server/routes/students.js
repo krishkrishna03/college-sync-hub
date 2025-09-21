@@ -12,6 +12,70 @@ const router = express.Router();
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
 
+// @route   GET /api/students/my-profile
+// @desc    Get current student's profile
+// @access  Private (Student)
+router.get('/my-profile', auth, async (req, res) => {
+  try {
+    const student = await Student.findOne({ userId: req.user._id })
+      .populate('userId', '-password')
+      .populate('courses.courseId')
+      .populate('testResults.testId');
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student profile not found' });
+    }
+
+    res.json({
+      student: {
+        id: student._id,
+        name: student.userId.name,
+        email: student.userId.email,
+        registrationNumber: student.registrationNumber,
+        batch: student.batch,
+        branch: student.branch,
+        section: student.section,
+        year: student.year,
+        enrollmentDate: student.enrollmentDate,
+        academicStatus: student.academicStatus,
+        courses: student.courses,
+        testResults: student.testResults,
+        performance: student.performance
+      }
+    });
+  } catch (error) {
+    console.error('Get student profile error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/students/my-tests
+// @desc    Get tests assigned to current student
+// @access  Private (Student)
+router.get('/my-tests', auth, async (req, res) => {
+  try {
+    const student = await Student.findOne({ userId: req.user._id });
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    // Find tests assigned to student's batch, branch, and section
+    const tests = await Test.find({
+      $or: [
+        { 'assignedTo.batches': student.batch },
+        { 'assignedTo.branches': student.branch },
+        { 'assignedTo.sections': student.section }
+      ],
+      isActive: true
+    }).populate('createdBy', 'name');
+
+    res.json({ tests });
+  } catch (error) {
+    console.error('Get student tests error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/students
 // @desc    Get all students with filters
 // @access  Private (Admin/Faculty)
@@ -23,12 +87,29 @@ router.get('/', auth, async (req, res) => {
       batch, 
       section, 
       status, 
+      collegeId,
+      userId,
       page = 1, 
       limit = 10 
     } = req.query;
 
     let filter = {};
     let userFilter = { role: 'student' };
+
+    // Filter by college for faculty users
+    if (req.user.role === 'faculty' || req.user.role === 'college-admin') {
+      userFilter.collegeId = req.user.collegeId;
+    }
+
+    // Filter by specific user ID for student profile
+    if (userId) {
+      userFilter._id = userId;
+    }
+
+    // Filter by college ID if provided
+    if (collegeId) {
+      userFilter.collegeId = collegeId;
+    }
 
     if (search) {
       userFilter.$or = [

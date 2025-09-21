@@ -6,18 +6,101 @@ const { auth, adminAuth, facultyAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
+// @route   GET /api/tests/assigned
+// @desc    Get tests assigned to specific student or college
+// @access  Private
+router.get('/assigned', auth, async (req, res) => {
+  try {
+    const { studentId, collegeId, batch, branch, section } = req.query;
+    
+    let filter = { isActive: true };
+    
+    if (studentId) {
+      // Get student details to find their batch/branch/section
+      const student = await Student.findById(studentId);
+      if (student) {
+        filter.$or = [
+          { 'assignedTo.batches': student.batch },
+          { 'assignedTo.branches': student.branch },
+          { 'assignedTo.sections': student.section }
+        ];
+      }
+    } else if (batch || branch || section) {
+      filter.$or = [];
+      if (batch) filter.$or.push({ 'assignedTo.batches': batch });
+      if (branch) filter.$or.push({ 'assignedTo.branches': branch });
+      if (section) filter.$or.push({ 'assignedTo.sections': section });
+    }
+
+    const tests = await Test.find(filter)
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.json({ tests });
+  } catch (error) {
+    console.error('Get assigned tests error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/tests/college/:collegeId
+// @desc    Get tests available for a specific college
+// @access  Private (Faculty/College Admin)
+router.get('/college/:collegeId', auth, async (req, res) => {
+  try {
+    const { collegeId } = req.params;
+    
+    // Verify user has access to this college
+    if (req.user.role !== 'admin' && req.user.collegeId.toString() !== collegeId) {
+      return res.status(403).json({ message: 'Access denied to this college' });
+    }
+
+    const tests = await Test.find({ isActive: true })
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.json({ tests });
+  } catch (error) {
+    console.error('Get college tests error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/tests
 // @desc    Get all tests with filters
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const { category, subject, difficulty, status, page = 1, limit = 10 } = req.query;
+    const { category, subject, difficulty, status, collegeId, batch, branch, section, page = 1, limit = 10 } = req.query;
 
     let filter = {};
+    
+    // Role-based filtering
+    if (req.user.role === 'faculty' || req.user.role === 'college-admin') {
+      // Faculty and college admins see tests for their college
+      const students = await Student.find()
+        .populate('userId', 'collegeId')
+        .where('userId.collegeId').equals(req.user.collegeId);
+      
+      const collegeBatches = [...new Set(students.map(s => s.batch))];
+      const collegeBranches = [...new Set(students.map(s => s.branch))];
+      const collegeSections = [...new Set(students.map(s => s.section))];
+      
+      filter.$or = [
+        { 'assignedTo.batches': { $in: collegeBatches } },
+        { 'assignedTo.branches': { $in: collegeBranches } },
+        { 'assignedTo.sections': { $in: collegeSections } },
+        { 'assignedTo.batches': { $exists: false, $eq: [] } } // Unassigned tests
+      ];
+    }
     
     if (category) filter.category = category;
     if (subject) filter.subject = subject;
     if (difficulty) filter.difficulty = difficulty;
+    if (batch) filter['assignedTo.batches'] = batch;
+    if (branch) filter['assignedTo.branches'] = branch;
+    if (section) filter['assignedTo.sections'] = section;
+    
     if (status) {
       if (status === 'assigned') {
         filter['assignedTo.batches'] = { $exists: true, $ne: [] };

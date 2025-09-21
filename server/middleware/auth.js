@@ -63,6 +63,23 @@ const studentAuth = (req, res, next) => {
   next();
 };
 
+// Middleware to check if user belongs to the same college as the resource
+const collegeResourceAuth = async (req, res, next) => {
+  if (req.user.role === 'admin') {
+    return next(); // Master admin can access all resources
+  }
+  
+  // For college-specific operations, ensure user belongs to the college
+  const resourceCollegeId = req.params.collegeId || req.body.collegeId;
+  
+  if (resourceCollegeId && req.user.collegeId && 
+      req.user.collegeId.toString() !== resourceCollegeId.toString()) {
+    return res.status(403).json({ message: 'Access denied to this college resource' });
+  }
+  
+  next();
+};
+
 // Middleware to ensure user belongs to the same college
 const sameCollegeAuth = (req, res, next) => {
   if (req.user.role === 'admin') {
@@ -79,4 +96,4 @@ const sameCollegeAuth = (req, res, next) => {
   next();
 };
 
-module.exports = { auth, adminAuth, collegeAuth, facultyAuth, studentAuth, sameCollegeAuth };
+module.exports = { auth, adminAuth, collegeAuth, facultyAuth, studentAuth, sameCollegeAuth, collegeResourceAuth };

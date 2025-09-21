@@ -31,6 +31,14 @@ export default function Dashboard() {
       navigate('/college');
       return;
     }
+    if (profileData.role === 'faculty') {
+      navigate('/faculty-dashboard');
+      return;
+    }
+    if (profileData.role === 'student') {
+      navigate('/student-dashboard');
+      return;
+    }
   }, [profileData.role, navigate]);
 
   useEffect(() => {

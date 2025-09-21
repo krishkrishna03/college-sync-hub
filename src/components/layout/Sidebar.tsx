@@ -114,6 +114,26 @@ export function Sidebar() {
       ];
     }
     
+    if (role === 'faculty') {
+      return [
+        { name: "Faculty Dashboard", href: "/faculty-dashboard", icon: LayoutDashboard },
+        { name: "My Students", href: "/students", icon: Users },
+        { name: "Test Management", href: "/exam-management", icon: ClipboardList },
+        { name: "Announcements", href: "/announcements", icon: Bell },
+        { name: "Profile", href: "/profile", icon: User },
+      ];
+    }
+    
+    if (role === 'student') {
+      return [
+        { name: "Student Dashboard", href: "/student-dashboard", icon: LayoutDashboard },
+        { name: "My Tests", href: "/my-tests", icon: ClipboardList },
+        { name: "My Courses", href: "/my-courses", icon: BookOpen },
+        { name: "Announcements", href: "/announcements", icon: Bell },
+        { name: "Profile", href: "/profile", icon: User },
+      ];
+    }
+    
     // Default navigation for faculty and students
     return navigationItems;
   };

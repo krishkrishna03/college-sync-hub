@@ -174,6 +174,18 @@ export const studentsAPI = {
     return apiRequest(`/students?${queryParams}`);
   },
 
+  getMyProfile: async () => {
+    return apiRequest('/students/my-profile');
+  },
+
+  getMyTests: async () => {
+    return apiRequest('/students/my-tests');
+  },
+
+  getMyTestResults: async () => {
+    return apiRequest('/students/my-test-results');
+  },
+
   create: async (studentData: any) => {
     return apiRequest('/students', {
       method: 'POST',
@@ -231,6 +243,21 @@ export const facultyAPI = {
     return apiRequest(`/faculty?${queryParams}`);
   },
 
+  getMyStudents: async () => {
+    return apiRequest('/faculty/my-students');
+  },
+
+  getMyTasks: async () => {
+    return apiRequest('/faculty/my-tasks');
+  },
+
+  updateTaskStatus: async (taskId: string, status: string) => {
+    return apiRequest(`/faculty/tasks/${taskId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  },
+
   create: async (facultyData: any) => {
     return apiRequest('/faculty', {
       method: 'POST',
@@ -282,6 +309,17 @@ export const testsAPI = {
   getAll: async (filters: any = {}) => {
     const queryParams = new URLSearchParams(filters).toString();
     return apiRequest(`/tests?${queryParams}`);
+  },
+
+  getAssignedTests: async (studentId?: string, collegeId?: string) => {
+    const params = new URLSearchParams();
+    if (studentId) params.append('studentId', studentId);
+    if (collegeId) params.append('collegeId', collegeId);
+    return apiRequest(`/tests/assigned?${params.toString()}`);
+  },
+
+  getCollegeTests: async (collegeId: string) => {
+    return apiRequest(`/tests/college/${collegeId}`);
   },
 
   create: async (testData: any) => {

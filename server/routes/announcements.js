@@ -10,12 +10,41 @@ const router = express.Router();
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const { status, targetAudience, page = 1, limit = 10 } = req.query;
+    const { status, targetAudience, batch, branch, section, page = 1, limit = 10 } = req.query;
 
     let filter = {};
     
+    // Role-based filtering
+    if (req.user.role === 'student') {
+      // Students see announcements targeted to them
+      const student = await Student.findOne({ userId: req.user._id });
+      if (student) {
+        filter.$or = [
+          { targetAudience: 'all' },
+          { targetAudience: 'students' },
+          { 
+            targetAudience: 'specific',
+            $or: [
+              { 'targetGroups.batches': student.batch },
+              { 'targetGroups.branches': student.branch },
+              { 'targetGroups.sections': student.section }
+            ]
+          }
+        ];
+      }
+    } else if (req.user.role === 'faculty') {
+      // Faculty see announcements targeted to them or all
+      filter.$or = [
+        { targetAudience: 'all' },
+        { targetAudience: 'faculty' }
+      ];
+    }
+    
     if (status && status !== 'all') filter.status = status;
     if (targetAudience && targetAudience !== 'all') filter.targetAudience = targetAudience;
+    if (batch) filter['targetGroups.batches'] = batch;
+    if (branch) filter['targetGroups.branches'] = branch;
+    if (section) filter['targetGroups.sections'] = section;
 
     const announcements = await Announcement.find(filter)
       .populate('createdBy', 'name email')

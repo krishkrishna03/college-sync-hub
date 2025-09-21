@@ -11,8 +11,114 @@ const router = express.Router();
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const { category, level, search, page = 1, limit = 10 } = req.query;
+    const { category, level, search, studentId, page = 1, limit = 10 } = req.query;
 
+    let filter = { isActive: true };
+    
+    if (category && category !== 'all') filter.category = category;
+    if (level && level !== 'all') filter.level = level;
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    let courses;
+    
+    if (studentId) {
+      // Get courses for specific student
+      const student = await Student.findById(studentId).populate('courses.courseId');
+      courses = student?.courses?.map(c => c.courseId).filter(c => c) || [];
+    } else {
+      courses = await Course.find(filter)
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .sort({ createdAt: -1 });
+    }
+
+    const total = studentId ? courses.length : await Course.countDocuments(filter);
+
+    res.json({
+      courses,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    console.error('Get courses error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/courses/student/:studentId
+// @desc    Get courses for specific student
+// @access  Private
+router.get('/student/:studentId', auth, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    
+    const student = await Student.findById(studentId)
+      .populate('courses.courseId')
+      .populate('userId', 'name email');
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    // Check if user has access to this student's data
+    if (req.user.role === 'student' && req.user._id.toString() !== student.userId._id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    if (req.user.role === 'faculty' || req.user.role === 'college-admin') {
+      if (req.user.collegeId.toString() !== student.userId.collegeId.toString()) {
+        return res.status(403).json({ message: 'Access denied to this student' });
+      }
+    }
+
+      student: {
+        name: student.userId.name,
+        email: student.userId.email,
+        registrationNumber: student.registrationNumber
+      }
+    });
+  } catch (error) {
+    console.error('Get student courses error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/courses/my-courses
+// @desc    Get current student's enrolled courses
+// @access  Private (Student)
+router.get('/my-courses', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ message: 'Student access required' });
+    }
+
+    const student = await Student.findOne({ userId: req.user._id })
+      .populate('courses.courseId');
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student profile not found' });
+    }
+
+    res.json({ courses: student.courses });
+  } catch (error) {
+    console.error('Get my courses error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Original courses route continues...
+router.get('/all', auth, async (req, res) => {
+  try {
+    const { category, level, search, page = 1, limit = 10 } = req.query;
+    res.json({
     let filter = { isActive: true };
     
     if (category && category !== 'all') filter.category = category;

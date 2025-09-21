@@ -13,14 +13,32 @@ const router = express.Router();
 // @access  Private (Admin)
 router.get('/stats', [auth, adminAuth], async (req, res) => {
   try {
+    let filter = {};
+    
+    // Role-based filtering
+    if (req.user.role === 'college-admin' || req.user.role === 'faculty') {
+      filter.collegeId = req.user.collegeId;
+    }
+
     // Get counts
-    const totalStudents = await User.countDocuments({ role: 'student', status: 'active' });
-    const facultyMembers = await User.countDocuments({ role: 'faculty', status: 'active' });
+    const totalStudents = await User.countDocuments({ 
+      role: 'student', 
+      status: 'active',
+      ...filter
+    });
+    const facultyMembers = await User.countDocuments({ 
+      role: 'faculty', 
+      status: 'active',
+      ...filter
+    });
     const activeTests = await Test.countDocuments({ isActive: true });
     const totalAnnouncements = await Announcement.countDocuments();
 
     // Get recent activities (last 10)
-    const recentStudents = await User.find({ role: 'student' })
+    const recentStudents = await User.find({ 
+      role: 'student',
+      ...filter
+    })
       .sort({ createdAt: -1 })
       .limit(5)
       .select('name createdAt');

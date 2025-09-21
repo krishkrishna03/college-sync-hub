@@ -11,6 +11,8 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 import Students from "./pages/Students";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import FacultyDashboard from "./pages/FacultyDashboard";
+import StudentDashboard from "./pages/StudentDashboard";
 import BatchYears from "./pages/BatchYears";
 import Branches from "./pages/Branches";
 import FacultyManagement from "./pages/FacultyManagement";
@@ -49,6 +51,8 @@ const App = () => (
               <Dashboard />
             </Layout>
           } />
+          <Route path="/faculty-dashboard" element={<Layout><FacultyDashboard /></Layout>} />
+          <Route path="/student-dashboard" element={<Layout><StudentDashboard /></Layout>} />
           <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
           <Route path="/college" element={<Layout><CollegeDashboard /></Layout>} />
           <Route path="/students" element={<Layout><Students /></Layout>} />
