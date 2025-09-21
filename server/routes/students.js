@@ -238,7 +238,8 @@ router.post('/bulk-upload', [auth, adminAuth], upload.single('file'), async (req
                 batch,
                 branch,
                 section,
-                year: '1st Year'
+                year: '1st Year',
+                enrollmentDate: new Date()
               });
 
               await student.save();
@@ -376,6 +377,55 @@ router.get('/:id/report', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Get student report error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/students/send-invitations
+// @desc    Send credentials to students and return data for CSV download
+// @access  Private (Admin)
+router.post('/send-invitations', [auth, adminAuth], async (req, res) => {
+  try {
+    const { batch, branch, section } = req.body;
+    
+    // Find students based on criteria
+    let filter = {};
+    if (batch) filter.batch = batch;
+    if (branch) filter.branch = branch;
+    if (section) filter.section = section;
+    
+    const students = await Student.find(filter)
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(100); // Limit to recent uploads
+    
+    const credentialsData = [];
+    
+    for (const student of students) {
+      // Generate new temporary password for security
+      const tempPassword = Math.random().toString(36).slice(-8);
+      
+      // Update user password
+      const user = await User.findById(student.userId._id);
+      if (user) {
+        user.password = tempPassword;
+        await user.save();
+        
+        credentialsData.push({
+          name: user.name,
+          email: user.email,
+          studentId: student.registrationNumber,
+          tempPassword,
+          batch: student.batch,
+          branch: student.branch,
+          section: student.section
+        });
+      }
+    }
+    
+    res.json(credentialsData);
+  } catch (error) {
+    console.error('Send invitations error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

@@ -35,4 +35,13 @@ const batchSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Update totalStudents when sections change
+batchSchema.pre('save', function(next) {
+  this.branches.forEach(branch => {
+    branch.totalStudents = branch.sections.reduce((total, section) => {
+      return total + (section.currentStrength || 0);
+    }, 0);
+  });
+  next();
+});
 module.exports = mongoose.model('Batch', batchSchema);

@@ -148,9 +148,9 @@ export default function BatchYears() {
     }
   };
 
-  const handleDeleteBatch = async (batchId: number) => {
+  const handleDeleteBatch = async (batchId: string) => {
     try {
-      await batchesAPI.delete(batchId.toString());
+      await batchesAPI.delete(batchId);
       fetchBatches();
       toast({
         title: "Batch Deleted",
@@ -165,9 +165,9 @@ export default function BatchYears() {
     }
   };
 
-  const handleDeleteBranch = async (batchId: number, branchId: number) => {
+  const handleDeleteBranch = async (batchId: string, branchId: string) => {
     try {
-      await batchesAPI.deleteBranch(batchId.toString(), branchId.toString());
+      await batchesAPI.deleteBranch(batchId, branchId);
       fetchBatches();
       toast({
         title: "Branch Deleted",
@@ -182,7 +182,7 @@ export default function BatchYears() {
     }
   };
 
-  const handleEditBranch = (batchId: number, branchId: number, branchName: string) => {
+  const handleEditBranch = (batchId: string, branchId: string, branchName: string) => {
     setEditingBranch({ id: branchId, name: branchName, batchId });
     setIsEditBranchModalOpen(true);
   };
@@ -191,8 +191,8 @@ export default function BatchYears() {
     if (editingBranch && editingBranch.name.trim()) {
       try {
         await batchesAPI.updateBranch(
-          editingBranch.batchId.toString(),
-          editingBranch.id.toString(),
+          editingBranch.batchId,
+          editingBranch.id,
           { name: editingBranch.name }
         );
         fetchBatches();
@@ -307,19 +307,30 @@ export default function BatchYears() {
                     id="batchCount"
                     type="number"
                     placeholder="0"
-                    value={newBranch.batchCount}
-                    onChange={(e) => setNewBranch(prev => ({ ...prev, batchCount: parseInt(e.target.value) || 0 }))}
+                    value={newBranch.sections.length}
+                    readOnly
+                    className="bg-muted"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Number of sections (automatically calculated)
+                  </p>
                 </div>
                 <div>
-                  <Label htmlFor="userCount">User Count</Label>
-                  <Input
-                    id="userCount"
-                    type="number"
-                    placeholder="0"
-                    value={newBranch.userCount}
-                    onChange={(e) => setNewBranch(prev => ({ ...prev, userCount: parseInt(e.target.value) || 0 }))}
-                  />
+                  <Label>Default Sections</Label>
+                  <div className="space-y-2 mt-2">
+                    <div className="flex gap-2">
+                      <Input placeholder="Section name (e.g., A)" className="flex-1" />
+                      <Input placeholder="Capacity" type="number" className="w-24" />
+                      <Button size="sm" onClick={() => {
+                        // Add section logic here
+                      }}>
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Default sections A and B will be created if none specified
+                    </p>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -445,14 +456,14 @@ export default function BatchYears() {
                                   <Button 
                                     variant="outline" 
                                     size="sm"
-                                    onClick={() => handleEditBranch(batchYear.id, branch.id, branch.name)}
+                                    onClick={() => handleEditBranch(batchYear.id.toString(), branch.id.toString(), branch.name)}
                                   >
                                     <Edit className="w-4 h-4" />
                                   </Button>
                                   <Button 
                                     variant="outline" 
                                     size="sm"
-                                    onClick={() => handleDeleteBranch(batchYear.id, branch.id)}
+                                    onClick={() => handleDeleteBranch(batchYear.id.toString(), branch.id.toString())}
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>

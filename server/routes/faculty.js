@@ -176,6 +176,8 @@ router.post('/bulk-upload', [auth, adminAuth], upload.single('file'), async (req
             
             if (existingUser || existingFaculty) {
               results.duplicatesFound++;
+              results.duplicatesList = results.duplicatesList || [];
+              results.duplicatesList.push(email);
               continue;
             }
 
@@ -213,7 +215,8 @@ router.post('/bulk-upload', [auth, adminAuth], upload.single('file'), async (req
               email,
               facultyId,
               branch,
-              mobile
+              mobile,
+              tempPassword
             });
 
           } catch (error) {

@@ -326,6 +326,12 @@ export const batchesAPI = {
     });
   },
 
+  addSection: async (batchId: string, branchId: string, sectionData: any) => {
+    return apiRequest(`/batches/${batchId}/branches/${branchId}/sections`, {
+      method: 'POST',
+      body: JSON.stringify(sectionData),
+    });
+  },
   updateBranch: async (batchId: string, branchId: string, branchData: any) => {
     return apiRequest(`/batches/${batchId}/branches/${branchId}`, {
       method: 'PUT',

@@ -260,8 +260,8 @@ export default function FacultyManagement() {
     });
     
     // Generate CSV download
-    const csvContent = "data:text/csv;charset=utf-8,Name,Email,Faculty ID,Password,Branch\n" + 
-      bulkResults.facultyData.map(f => `${f.name},${f.email},${f.facultyId},temp123,${f.branch}`).join('\n');
+    const csvContent = "data:text/csv;charset=utf-8,Name,Email,Faculty ID,Password,Branch,Mobile\n" + 
+      bulkResults.facultyData.map(f => `${f.name},${f.email},${f.facultyId},${f.tempPassword || 'temp123'},${f.branch},${f.mobile}`).join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);

@@ -253,10 +253,10 @@ export default function Students() {
   const handleSendInvitations = async () => {
   try {
     // Call backend to send invitations and get credentials for the created students
-    const credentials = await studentsAPI.sendInvitations({
+    const response = await studentsAPI.sendInvitations({
       batch: bulkResults.batch,
       branch: bulkResults.stream,
-      section: bulkResults.duplicatesList.length === 0 ? bulkResults.section : undefined // or pass section if needed
+      section: bulkResults.section
     });
 
     toast({
@@ -267,7 +267,7 @@ export default function Students() {
     // Generate CSV from backend response
     const csvRows = [
       "Name,Email,Student ID,Password",
-      ...credentials.map(
+      ...response.map(
         (s: any) => `${s.name},${s.email},${s.studentId},${s.tempPassword}`
       )
     ];
@@ -290,7 +290,7 @@ export default function Students() {
   } catch (error: any) {
     toast({
       title: "Error",
-      description: error?.response?.data?.message || "Failed to send invitations or download credentials.",
+      description: error.message || "Failed to send invitations or download credentials.",
       variant: "destructive"
     });
   }

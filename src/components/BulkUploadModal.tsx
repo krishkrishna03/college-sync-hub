@@ -22,12 +22,14 @@ interface BulkResultsModalProps {
     accountsCreated: number;
     duplicatesFound: number;
     errors: number;
+    duplicatesList?: string[];
     facultyData: Array<{
       name: string;
       email: string;
       facultyId: string;
       branch: string;
       mobile: string;
+      tempPassword?: string;
     }>;
   };
   onReview: () => void;
@@ -170,6 +172,16 @@ export function BulkResultsModal({ isOpen, onClose, results, onReview, onSendInv
                   {results.duplicatesFound} duplicate faculty records were found. 
                   Please review your file and remove duplicates before proceeding.
                 </p>
+                {results.duplicatesList && results.duplicatesList.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-yellow-800 mb-2">Duplicate emails:</p>
+                    <div className="max-h-32 overflow-y-auto">
+                      {results.duplicatesList.map((email, index) => (
+                        <p key={index} className="text-xs text-yellow-700">• {email}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
