@@ -42,7 +42,22 @@ export default function Login() {
         title: "Login Successful",
         description: `Welcome back, ${response.user.name}!`,
       });
-      navigate("/");
+      
+      // Role-based navigation
+      switch (response.user.role) {
+        case 'admin':
+          navigate("/admin");
+          break;
+        case 'college-admin':
+          navigate("/college");
+          break;
+        case 'faculty':
+        case 'student':
+          navigate("/");
+          break;
+        default:
+          navigate("/");
+      }
     } catch (error: any) {
       setIsLoading(false);
       toast({

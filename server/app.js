@@ -8,6 +8,8 @@ require('dotenv').config();
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const collegeRoutes = require('./routes/colleges');
+const invitationRoutes = require('./routes/invitations');
 const studentRoutes = require('./routes/students');
 const facultyRoutes = require('./routes/faculty');
 const batchRoutes = require('./routes/batches');
@@ -56,6 +58,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 /* -------------------- Routes -------------------- */
 app.use('/api/auth', authRoutes);
+app.use('/api/colleges', collegeRoutes);
+app.use('/api/invitations', invitationRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/batches', batchRoutes);

@@ -58,6 +58,30 @@ export const authAPI = {
     return response;
   },
 
+  registerAdmin: async (userData: any) => {
+    return apiRequest('/auth/register-admin', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  verifyInvitation: async (token: string) => {
+    return apiRequest(`/invitations/verify/${token}`);
+  },
+
+  acceptInvitation: async (token: string, password: string) => {
+    return apiRequest(`/invitations/accept/${token}`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
+  },
+
+  rejectInvitation: async (token: string) => {
+    return apiRequest(`/invitations/reject/${token}`, {
+      method: 'POST',
+    });
+  },
+
   register: async (userData: any) => {
     return apiRequest('/auth/register', {
       method: 'POST',
@@ -85,6 +109,61 @@ export const authAPI = {
 
   logout: () => {
     removeAuthToken();
+  }
+};
+
+// Colleges API
+export const collegesAPI = {
+  getAll: async (filters: any = {}) => {
+    const queryParams = new URLSearchParams(filters).toString();
+    return apiRequest(`/colleges?${queryParams}`);
+  },
+
+  create: async (collegeData: any) => {
+    return apiRequest('/colleges', {
+      method: 'POST',
+      body: JSON.stringify(collegeData),
+    });
+  },
+
+  update: async (id: string, collegeData: any) => {
+    return apiRequest(`/colleges/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(collegeData),
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest(`/colleges/${id}`, {
+      method: 'DELETE',
+    });
+  }
+};
+
+// Invitations API
+export const invitationsAPI = {
+  send: async (invitationData: any) => {
+    return apiRequest('/invitations/send', {
+      method: 'POST',
+      body: JSON.stringify(invitationData),
+    });
+  },
+
+  verify: async (token: string) => {
+    return apiRequest(`/invitations/verify/${token}`);
+  },
+
+  accept: async (token: string, password: string) => {
+    return apiRequest(`/invitations/accept/${token}`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
+  },
+
+  reject: async (token: string) => {
+    return apiRequest(`/invitations/reject/${token}`, {
+      method: 'POST',
+    });
   }
 };
 

@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
+import CollegeDashboard from "./pages/CollegeDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import AcceptInvitation from "./pages/AcceptInvitation";
 import Students from "./pages/Students";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -38,6 +41,7 @@ const App = () => (
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
           
           {/* Protected Routes */}
           <Route path="/" element={
@@ -45,6 +49,8 @@ const App = () => (
               <Dashboard />
             </Layout>
           } />
+          <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
+          <Route path="/college" element={<Layout><CollegeDashboard /></Layout>} />
           <Route path="/students" element={<Layout><Students /></Layout>} />
           <Route path="/batch-years" element={<Layout><BatchYears /></Layout>} />
           <Route path="/branches" element={<Layout><Branches /></Layout>} />

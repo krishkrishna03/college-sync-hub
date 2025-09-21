@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useProfile } from "@/contexts/ProfileContext";
 import { Users, GraduationCap, ClipboardList, Megaphone, TrendingUp, Calendar, BookOpen, BarChart3 } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { dashboardAPI } from "@/lib/api";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const { profileData } = useProfile();
   const [stats, setStats] = useState({
     totalStudents: 0,
     facultyMembers: 0,
@@ -16,6 +20,18 @@ export default function Dashboard() {
   const [recentActivities, setRecentActivities] = useState([]);
   const [upcomingTests, setUpcomingTests] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Redirect based on user role
+  useEffect(() => {
+    if (profileData.role === 'admin') {
+      navigate('/admin');
+      return;
+    }
+    if (profileData.role === 'college-admin') {
+      navigate('/college');
+      return;
+    }
+  }, [profileData.role, navigate]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useProfile } from "@/contexts/ProfileContext";
 import { 
   LayoutDashboard, 
   Users, 
@@ -71,6 +72,8 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [dropdownStates, setDropdownStates] = useState<Record<string, boolean>>({});
   const location = useLocation();
+  const { profileData } = useProfile();
+  const navigate = useNavigate();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
@@ -92,6 +95,30 @@ export function Sidebar() {
   const isParentActive = (children: any[]) => {
     return children.some(child => isActive(child.href));
   };
+
+  // Filter navigation items based on user role
+  const getFilteredNavigationItems = () => {
+    const role = profileData.role;
+    
+    if (role === 'admin') {
+      return [
+        { name: "Admin Dashboard", href: "/admin", icon: LayoutDashboard },
+        { name: "Profile", href: "/profile", icon: User },
+      ];
+    }
+    
+    if (role === 'college-admin') {
+      return [
+        { name: "College Dashboard", href: "/college", icon: LayoutDashboard },
+        { name: "Profile", href: "/profile", icon: User },
+      ];
+    }
+    
+    // Default navigation for faculty and students
+    return navigationItems;
+  };
+
+  const filteredNavigationItems = getFilteredNavigationItems();
 
   return (
     <>
@@ -148,7 +175,7 @@ export function Sidebar() {
           "flex-1 p-4 space-y-2 overflow-y-auto",
           isCollapsed && "px-2"
         )}>
-          {navigationItems.map((item) => (
+          {filteredNavigationItems.map((item) => (
             <div key={item.name}>
               {item.hasDropdown ? (
                 <div>

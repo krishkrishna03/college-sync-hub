@@ -8,6 +8,8 @@ interface ProfileData {
   phone: string;
   department: string;
   role?: string;
+  collegeId?: string;
+  collegeName?: string;
 }
 
 interface ProfileContextType {
@@ -25,6 +27,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     phone: "",
     department: "",
     role: "",
+    collegeId: "",
+    collegeName: "",
   });
 
   useEffect(() => {
@@ -39,6 +43,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           phone: user.phone || "",
           department: user.department || "",
           role: user.role || "",
+          collegeId: user.collegeId || "",
+          collegeName: user.collegeName || "",
         });
       } catch (error) {
         console.error("Failed to fetch profile:", error);
