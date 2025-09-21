@@ -25,15 +25,28 @@ const app = express();
 app.use(helmet());
 app.use(compression());
 
-/* -------------------- CORS Config -------------------- */
+const allowedOrigins = [
+  'http://localhost:8080',                   // local dev
+  'https://plantechx.netlify.app',          // production
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+  origin: (origin, callback) => {
+    // allow requests with no origin (like Postman)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token']
 }));
 
-// Handle preflight requests
+// handle preflight
 app.options('*', cors());
 
 /* -------------------- Logging -------------------- */
