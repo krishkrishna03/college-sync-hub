@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://college-sync-hub.onrender.com/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // Get auth token from localStorage
 const getAuthToken = () => {
@@ -112,6 +112,88 @@ export const authAPI = {
   }
 };
 
+// Master Admin API
+export const masterAdminAPI = {
+  getDashboardStats: async () => {
+    return apiRequest('/master-admin/dashboard');
+  },
+
+  getAuditLogs: async (filters: any = {}) => {
+    const queryParams = new URLSearchParams(filters).toString();
+    return apiRequest(`/master-admin/audit-logs?${queryParams}`);
+  },
+
+  getPlatformStats: async () => {
+    return apiRequest('/master-admin/platform-stats');
+  }
+};
+
+// Exams API (for Master Admin)
+export const examsAPI = {
+  getAll: async (filters: any = {}) => {
+    const queryParams = new URLSearchParams(filters).toString();
+    return apiRequest(`/exams?${queryParams}`);
+  },
+
+  create: async (examData: any) => {
+    return apiRequest('/exams', {
+      method: 'POST',
+      body: JSON.stringify(examData),
+    });
+  },
+
+  update: async (id: string, examData: any) => {
+    return apiRequest(`/exams/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(examData),
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest(`/exams/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  assignToColleges: async (examId: string, collegeIds: string[]) => {
+    return apiRequest(`/exams/${examId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ collegeIds }),
+    });
+  },
+
+  getReports: async (examId: string, filters: any = {}) => {
+    const queryParams = new URLSearchParams(filters).toString();
+    return apiRequest(`/exams/${examId}/reports?${queryParams}`);
+  }
+};
+
+// Notifications API
+export const notificationsAPI = {
+  getAll: async (filters: any = {}) => {
+    const queryParams = new URLSearchParams(filters).toString();
+    return apiRequest(`/notifications?${queryParams}`);
+  },
+
+  create: async (notificationData: any) => {
+    return apiRequest('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(notificationData),
+    });
+  },
+
+  markAsRead: async (id: string) => {
+    return apiRequest(`/notifications/${id}/read`, {
+      method: 'PUT',
+    });
+  },
+
+  delete: async (id: string) => {
+    return apiRequest(`/notifications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+};
 // Colleges API
 export const collegesAPI = {
   getAll: async (filters: any = {}) => {

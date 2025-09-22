@@ -5,11 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BookOpen, ClipboardList, Award, TrendingUp, Play, Eye, Clock, Target, Calendar, User } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookOpen, ClipboardList, Award, TrendingUp, Play, Eye, Clock, Target, Calendar, User, CheckCircle, AlertCircle } from "lucide-react";
 import { useProfile } from "@/contexts/ProfileContext";
 import { studentsAPI, testsAPI, coursesAPI, announcementsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { StatCard } from "@/components/ui/stat-card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from "recharts";
 
 interface StudentProfile {
   id: string;
@@ -59,6 +62,23 @@ interface Announcement {
   scheduledFor: string;
   isRead: boolean;
 }
+
+const performanceData = [
+  { subject: "Technical", score: 85, attempts: 5 },
+  { subject: "Logical", score: 92, attempts: 7 },
+  { subject: "Verbal", score: 78, attempts: 4 },
+  { subject: "Reasoning", score: 88, attempts: 6 },
+  { subject: "Coding", score: 95, attempts: 3 }
+];
+
+const progressData = [
+  { month: "Jan", score: 75, tests: 3 },
+  { month: "Feb", score: 82, tests: 5 },
+  { month: "Mar", score: 78, tests: 4 },
+  { month: "Apr", score: 88, tests: 6 },
+  { month: "May", score: 92, tests: 7 },
+  { month: "Jun", score: 89, tests: 5 }
+];
 
 export default function StudentDashboard() {
   const { profileData } = useProfile();
@@ -314,24 +334,546 @@ export default function StudentDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Completed Tests"
+          title="Assigned Exams"
           value={stats.completedTests.toString()}
-          change="Successfully completed"
+          change="Total assigned"
           icon={ClipboardList}
-          trend="up"
-        />
-        <StatCard
-          title="Pending Tests"
-          value={stats.pendingTests.toString()}
-          change="Awaiting completion"
-          icon={Clock}
           trend="neutral"
         />
         <StatCard
-          title="Enrolled Courses"
-          value={stats.enrolledCourses.toString()}
-          change="Active enrollments"
-          icon={BookOpen}
+          title="Available to Take"
+          value={stats.pendingTests.toString()}
+          change="Ready to attempt"
+          icon={Play}
+          trend="neutral"
+        />
+        <StatCard
+          title="Practice Completed"
+          value={stats.completedTests.toString()}
+          change="Successfully finished"
+          icon={CheckCircle}
+          trend="up"
+        />
+        <StatCard
+          title="Average Score"
+          value={`${stats.averageScore}%`}
+          change="Overall performance"
+          icon={TrendingUp}
+          trend="up"
+        />
+      </div>
+
+      <Tabs defaultValue="exams" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="exams">My Exams</TabsTrigger>
+          <TabsTrigger value="practice">Practice Tests</TabsTrigger>
+          <TabsTrigger value="courses">My Courses</TabsTrigger>
+          <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="announcements">Announcements</TabsTrigger>
+        </TabsList>
+
+        {/* Exams Tab */}
+        <TabsContent value="exams" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5" />
+                Assigned Exams
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Exam Name</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Difficulty</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Questions</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {assignedTests.map((test) => (
+                    <TableRow key={test.id} className="hover:bg-accent/50">
+                      <TableCell className="font-medium">{test.title}</TableCell>
+                      <TableCell>{test.subject}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{test.category}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={test.difficulty === "Easy" ? "secondary" : test.difficulty === "Medium" ? "default" : "destructive"}>
+                          {test.difficulty}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{test.duration} min</TableCell>
+                      <TableCell>{test.totalQuestions}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          test.status === "completed" ? "default" : 
+                          test.status === "in-progress" ? "secondary" : "outline"
+                        }>
+                          {test.status.replace("-", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {test.score ? `${test.score}%` : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {test.status === "not-started" && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleStartTest(test.id)}
+                            >
+                              <Play className="w-4 h-4 mr-1" />
+                              Start
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewTestDetails(test)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Practice Tests Tab */}
+        <TabsContent value="practice" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {["Technical", "Logical", "Reasoning", "Verbal", "Coding"].map((subject) => (
+              <Card key={subject} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="text-lg">{subject} Practice</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Available Tests:</span>
+                      <span className="font-medium">12</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Completed:</span>
+                      <span className="font-medium">8</span>
+                    </div>
+                    <Progress value={67} className="h-2" />
+                    <Button className="w-full" size="sm">
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Practice
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Courses Tab */}
+        <TabsContent value="courses" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                My Courses
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {enrolledCourses.map((course) => (
+                  <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline">{course.category}</Badge>
+                        <Badge variant={course.status === "completed" ? "default" : course.status === "enrolled" ? "secondary" : "destructive"}>
+                          {course.status}
+                        </Badge>
+                      </div>
+                      <CardTitle className="text-lg">{course.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Level:</span>
+                        <span className="font-medium">{course.level}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Instructor:</span>
+                        <span className="font-medium">{course.instructor}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Progress:</span>
+                          <span className="font-medium">{course.progress}%</span>
+                        </div>
+                        <Progress value={course.progress} className="h-2" />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleViewCourseDetails(course)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Details
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Progress Tab */}
+        <TabsContent value="progress" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="hover:shadow-elevated transition-all duration-300">
+              <CardHeader>
+                <CardTitle>Performance by Subject</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={{
+                  score: { label: "Average Score", color: "#3b82f6" }
+                }}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={performanceData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="subject" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="score" fill="#3b82f6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-elevated transition-all duration-300">
+              <CardHeader>
+                <CardTitle>Score Progress Over Time</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={{
+                  score: { label: "Average Score", color: "#10b981" }
+                }}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={progressData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Upcoming Deadlines */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Upcoming Deadlines
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {assignedTests.filter(test => test.status === "not-started").slice(0, 3).map((test) => (
+                  <div key={test.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-warning rounded-full"></div>
+                      <div>
+                        <p className="font-medium">{test.title}</p>
+                        <p className="text-sm text-muted-foreground">{test.subject} • {test.duration} minutes</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">Due Soon</Badge>
+                      <Button size="sm" onClick={() => handleStartTest(test.id)}>
+                        <Play className="w-4 h-4 mr-1" />
+                        Start
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Announcements Tab */}
+        <TabsContent value="announcements" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Recent Announcements
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {announcements.map((announcement) => (
+                  <div 
+                    key={announcement.id} 
+                    className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-card ${!announcement.isRead ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' : 'bg-muted/30'}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-semibold">{announcement.title}</h4>
+                          {!announcement.isRead && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          )}
+                          <Badge variant={
+                            announcement.priority === "urgent" ? "destructive" :
+                            announcement.priority === "high" ? "default" :
+                            announcement.priority === "medium" ? "secondary" : "outline"
+                          } className="text-xs">
+                            {announcement.priority}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{announcement.content}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(announcement.scheduledFor).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {!announcement.isRead && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMarkAnnouncementRead(announcement.id)}
+                          className="hover:bg-primary hover:text-primary-foreground"
+                        >
+                          Mark as Read
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Quick Actions */}
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button className="h-16 flex-col gap-2" variant="outline">
+              <ClipboardList className="w-6 h-6" />
+              <span>Take Practice Test</span>
+            </Button>
+            <Button className="h-16 flex-col gap-2" variant="outline">
+              <BookOpen className="w-6 h-6" />
+              <span>Browse Courses</span>
+            </Button>
+            <Button className="h-16 flex-col gap-2" variant="outline">
+              <BarChart3 className="w-6 h-6" />
+              <span>View Progress</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Old sections moved to tabs */}
+      {/* Assigned Tests */}
+      <div className="hidden">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5" />
+              Assigned Tests
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Test Name</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Difficulty</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Questions</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Score</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assignedTests.map((test) => (
+                  <TableRow key={test.id}>
+                    <TableCell className="font-medium">{test.title}</TableCell>
+                    <TableCell>{test.subject}</TableCell>
+                    <TableCell>
+                      <Badge variant={test.difficulty === "Easy" ? "secondary" : test.difficulty === "Medium" ? "default" : "destructive"}>
+                        {test.difficulty}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{test.duration} min</TableCell>
+                    <TableCell>{test.totalQuestions}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        test.status === "completed" ? "default" : 
+                        test.status === "in-progress" ? "secondary" : "outline"
+                      }>
+                        {test.status.replace("-", " ")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {test.score ? `${test.score}%` : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {test.status === "not-started" && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleStartTest(test.id)}
+                          >
+                            <Play className="w-4 h-4 mr-1" />
+                            Start
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewTestDetails(test)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Enrolled Courses */}
+      <div className="hidden">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              My Courses
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {enrolledCourses.map((course) => (
+                <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">{course.category}</Badge>
+                      <Badge variant={course.status === "completed" ? "default" : course.status === "enrolled" ? "secondary" : "destructive"}>
+                        {course.status}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-lg">{course.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Level:</span>
+                      <span className="font-medium">{course.level}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Instructor:</span>
+                      <span className="font-medium">{course.instructor}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Progress:</span>
+                        <span className="font-medium">{course.progress}%</span>
+                      </div>
+                      <Progress value={course.progress} className="h-2" />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleViewCourseDetails(course)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Announcements */}
+      <div className="hidden">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Recent Announcements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {announcements.slice(0, 5).map((announcement) => (
+                <div 
+                  key={announcement.id} 
+                  className={`p-4 rounded-lg border ${!announcement.isRead ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' : 'bg-muted/30'}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold">{announcement.title}</h4>
+                        {!announcement.isRead && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        )}
+                        <Badge variant={
+                          announcement.priority === "urgent" ? "destructive" :
+                          announcement.priority === "high" ? "default" :
+                          announcement.priority === "medium" ? "secondary" : "outline"
+                        } className="text-xs">
+                          {announcement.priority}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">{announcement.content}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(announcement.scheduledFor).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {!announcement.isRead && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMarkAnnouncementRead(announcement.id)}
+                      >
+                        Mark as Read
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
           trend="neutral"
         />
         <StatCard
@@ -415,109 +957,6 @@ export default function StudentDashboard() {
         </CardContent>
       </Card>
 
-      {/* Enrolled Courses */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5" />
-            My Courses
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {enrolledCourses.map((course) => (
-              <Card key={course.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline">{course.category}</Badge>
-                    <Badge variant={course.status === "completed" ? "default" : course.status === "enrolled" ? "secondary" : "destructive"}>
-                      {course.status}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-lg">{course.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Level:</span>
-                    <span className="font-medium">{course.level}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Instructor:</span>
-                    <span className="font-medium">{course.instructor}</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Progress:</span>
-                      <span className="font-medium">{course.progress}%</span>
-                    </div>
-                    <Progress value={course.progress} className="h-2" />
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => handleViewCourseDetails(course)}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Details
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Announcements */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5" />
-            Recent Announcements
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {announcements.slice(0, 5).map((announcement) => (
-              <div 
-                key={announcement.id} 
-                className={`p-4 rounded-lg border ${!announcement.isRead ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' : 'bg-muted/30'}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-semibold">{announcement.title}</h4>
-                      {!announcement.isRead && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      )}
-                      <Badge variant={
-                        announcement.priority === "urgent" ? "destructive" :
-                        announcement.priority === "high" ? "default" :
-                        announcement.priority === "medium" ? "secondary" : "outline"
-                      } className="text-xs">
-                        {announcement.priority}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{announcement.content}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(announcement.scheduledFor).toLocaleDateString()}
-                    </p>
-                  </div>
-                  {!announcement.isRead && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleMarkAnnouncementRead(announcement.id)}
-                    >
-                      Mark as Read
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Test Details Modal */}
       <Dialog open={!!selectedTest} onOpenChange={() => setSelectedTest(null)}>

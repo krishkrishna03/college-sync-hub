@@ -31,6 +31,19 @@ export default function Login() {
     setIsLoading(true);
 
     try {
+      // Fixed credentials for Master Admin
+      if (formData.email === "admin@plantechx.com" && formData.password === "admin123") {
+        // Mock master admin login
+        localStorage.setItem('authToken', 'master-admin-token');
+        setIsLoading(false);
+        toast({
+          title: "Login Successful",
+          description: "Welcome back, Master Admin!",
+        });
+        navigate("/admin");
+        return;
+      }
+
       const response = await authAPI.login(
         formData.email, 
         formData.password, 

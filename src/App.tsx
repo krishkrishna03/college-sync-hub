@@ -6,7 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import CollegeDashboard from "./pages/CollegeDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
+import MasterAdminDashboard from "./pages/MasterAdminDashboard";
+import ExamCreation from "./pages/ExamCreation";
+import ExamResults from "./pages/ExamResults";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import Students from "./pages/Students";
 import Login from "./pages/Login";
@@ -53,7 +55,9 @@ const App = () => (
           } />
           <Route path="/faculty-dashboard" element={<Layout><FacultyDashboard /></Layout>} />
           <Route path="/student-dashboard" element={<Layout><StudentDashboard /></Layout>} />
-          <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
+          <Route path="/admin" element={<Layout><MasterAdminDashboard /></Layout>} />
+          <Route path="/exam-creation" element={<Layout><ExamCreation /></Layout>} />
+          <Route path="/exam-results/:examId" element={<Layout><ExamResults /></Layout>} />
           <Route path="/college" element={<Layout><CollegeDashboard /></Layout>} />
           <Route path="/students" element={<Layout><Students /></Layout>} />
           <Route path="/batch-years" element={<Layout><BatchYears /></Layout>} />

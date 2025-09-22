@@ -18,6 +18,9 @@ const testRoutes = require('./routes/tests');
 const courseRoutes = require('./routes/courses');
 const announcementRoutes = require('./routes/announcements');
 const dashboardRoutes = require('./routes/dashboard');
+const masterAdminRoutes = require('./routes/master-admin');
+const examRoutes = require('./routes/exams');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -81,6 +84,9 @@ app.use('/api/tests', testRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/master-admin', masterAdminRoutes);
+app.use('/api/exams', examRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Debug CORS check route
 app.get('/api/test-cors', (req, res) => {

@@ -102,7 +102,8 @@ export function Sidebar() {
     
     if (role === 'admin') {
       return [
-        { name: "Admin Dashboard", href: "/admin", icon: LayoutDashboard },
+        { name: "Master Admin Dashboard", href: "/admin", icon: LayoutDashboard },
+        { name: "Exam Creation", href: "/exam-creation", icon: ClipboardList },
         { name: "Profile", href: "/profile", icon: User },
       ];
     }
