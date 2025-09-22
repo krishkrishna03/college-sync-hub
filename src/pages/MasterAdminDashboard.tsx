@@ -101,7 +101,20 @@ export default function MasterAdminDashboard() {
       
       // Fetch colleges
       const collegesResponse = await collegesAPI.getAll();
-      setColleges(collegesResponse.colleges || []);
+      const formattedColleges = collegesResponse.colleges?.map((college: any) => ({
+        id: college._id,
+        name: college.name,
+        code: college.code,
+        email: college.email,
+        phone: college.phone || '',
+        adminName: college.adminUserId?.name || 'Unknown',
+        adminEmail: college.adminUserId?.email || 'Unknown',
+        status: college.isActive ? 'active' : 'inactive',
+        studentsCount: 0, // This would be calculated from actual data
+        facultyCount: 0, // This would be calculated from actual data
+        createdAt: college.createdAt
+      })) || [];
+      setColleges(formattedColleges);
       
       // Fetch audit logs
       const auditResponse = await masterAdminAPI.getAuditLogs({ limit: 10 });

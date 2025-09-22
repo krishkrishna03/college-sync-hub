@@ -1,8 +1,11 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Faculty = require('../models/Faculty');
+const College = require('../models/College');
 const { auth, adminAuth } = require('../middleware/auth');
+const { sendInvitationEmail } = require('../utils/emailService');
 const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');

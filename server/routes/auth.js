@@ -1,13 +1,13 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
+const crypto = require('crypto');
 const User = require('../models/User');
 const College = require('../models/College');
 const Student = require('../models/Student');
 const Faculty = require('../models/Faculty');
 const { auth } = require('../middleware/auth');
 const { sendInvitationEmail } = require('../utils/emailService');
-const crypto = require('crypto');
 
 const router = express.Router();
 
