@@ -12,7 +12,9 @@ import { studentsAPI, testsAPI, coursesAPI, announcementsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { StatCard } from "@/components/ui/stat-card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar, BarChart3 } from "recharts";
+import { authAPI } from "@/lib/api";
+import { FileText } from "lucide-react";
 
 interface StudentProfile {
   id: string;
@@ -363,6 +365,8 @@ export default function StudentDashboard() {
         />
       </div>
 
+      </div>
+
       <Tabs defaultValue="exams" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="exams">My Exams</TabsTrigger>
@@ -695,268 +699,38 @@ export default function StudentDashboard() {
       {/* Old sections moved to tabs */}
       {/* Assigned Tests */}
       <div className="hidden">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="w-5 h-5" />
-              Assigned Tests
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Test Name</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Difficulty</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Questions</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Score</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignedTests.map((test) => (
-                  <TableRow key={test.id}>
-                    <TableCell className="font-medium">{test.title}</TableCell>
-                    <TableCell>{test.subject}</TableCell>
-                    <TableCell>
-                      <Badge variant={test.difficulty === "Easy" ? "secondary" : test.difficulty === "Medium" ? "default" : "destructive"}>
-                        {test.difficulty}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{test.duration} min</TableCell>
-                    <TableCell>{test.totalQuestions}</TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        test.status === "completed" ? "default" : 
-                        test.status === "in-progress" ? "secondary" : "outline"
-                      }>
-                        {test.status.replace("-", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {test.score ? `${test.score}%` : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {test.status === "not-started" && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleStartTest(test.id)}
-                          >
-                            <Play className="w-4 h-4 mr-1" />
-                            Start
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewTestDetails(test)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Enrolled Courses */}
       <div className="hidden">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
-              My Courses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {enrolledCourses.map((course) => (
-                <Card key={course.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline">{course.category}</Badge>
-                      <Badge variant={course.status === "completed" ? "default" : course.status === "enrolled" ? "secondary" : "destructive"}>
-                        {course.status}
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-lg">{course.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Level:</span>
-                      <span className="font-medium">{course.level}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Instructor:</span>
-                      <span className="font-medium">{course.instructor}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Progress:</span>
-                        <span className="font-medium">{course.progress}%</span>
-                      </div>
-                      <Progress value={course.progress} className="h-2" />
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleViewCourseDetails(course)}
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Details
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Recent Announcements */}
       <div className="hidden">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5" />
-              Recent Announcements
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {announcements.slice(0, 5).map((announcement) => (
-                <div 
-                  key={announcement.id} 
-                  className={`p-4 rounded-lg border ${!announcement.isRead ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' : 'bg-muted/30'}`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-semibold">{announcement.title}</h4>
-                        {!announcement.isRead && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        )}
-                        <Badge variant={
-                          announcement.priority === "urgent" ? "destructive" :
-                          announcement.priority === "high" ? "default" :
-                          announcement.priority === "medium" ? "secondary" : "outline"
-                        } className="text-xs">
-                          {announcement.priority}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">{announcement.content}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(announcement.scheduledFor).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {!announcement.isRead && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkAnnouncementRead(announcement.id)}
-                      >
-                        Mark as Read
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
-          trend="neutral"
-        />
-        <StatCard
-          title="Average Score"
-          value={`${stats.averageScore}%`}
-          change="Overall performance"
-          icon={TrendingUp}
-          trend="up"
-        />
-      </div>
-
-      {/* Assigned Tests */}
-      <Card>
+      
+      {/* Quick Actions */}
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5" />
-            Assigned Tests
-          </CardTitle>
+          <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Test Name</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Difficulty</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Questions</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {assignedTests.map((test) => (
-                <TableRow key={test.id}>
-                  <TableCell className="font-medium">{test.title}</TableCell>
-                  <TableCell>{test.subject}</TableCell>
-                  <TableCell>
-                    <Badge variant={test.difficulty === "Easy" ? "secondary" : test.difficulty === "Medium" ? "default" : "destructive"}>
-                      {test.difficulty}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{test.duration} min</TableCell>
-                  <TableCell>{test.totalQuestions}</TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      test.status === "completed" ? "default" : 
-                      test.status === "in-progress" ? "secondary" : "outline"
-                    }>
-                      {test.status.replace("-", " ")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {test.score ? `${test.score}%` : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {test.status === "not-started" && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleStartTest(test.id)}
-                        >
-                          <Play className="w-4 h-4 mr-1" />
-                          Start
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewTestDetails(test)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button className="h-16 flex-col gap-2" variant="outline">
+              <ClipboardList className="w-6 h-6" />
+              <span>Take Practice Test</span>
+            </Button>
+            <Button className="h-16 flex-col gap-2" variant="outline">
+              <BookOpen className="w-6 h-6" />
+              <span>Browse Courses</span>
+            </Button>
+            <Button className="h-16 flex-col gap-2" variant="outline">
+              <BarChart3 className="w-6 h-6" />
+              <span>View Progress</span>
+            </Button>
+          </div>
         </CardContent>
       </Card>
-
 
       {/* Test Details Modal */}
       <Dialog open={!!selectedTest} onOpenChange={() => setSelectedTest(null)}>

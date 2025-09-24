@@ -477,6 +477,8 @@ export default function CollegeDashboard() {
 
       </div>
 
+      </div>
+
       <Tabs defaultValue="users" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users">User Management</TabsTrigger>
