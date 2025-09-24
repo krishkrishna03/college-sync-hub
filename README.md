@@ -1,73 +1,125 @@
-# Welcome to your Lovable project
+Build a full-stack educational platform with the following specifications:
 
-## Project info
+Technologies:
 
-**URL**: https://lovable.dev/projects/c86448c6-ff7b-489d-8557-c13afe1ee324
+Frontend: React.js with React Router v6, state management (Context API or Redux), responsive design, modals, tabs, tables, charts for analytics, and interactive dashboards. Include animations/hover effects to make the UI sharp.
 
-## How can I edit this code?
+Backend: Node.js + Express.js, MongoDB (Atlas), full CRUD APIs, JWT authentication, role-based access control, email notifications, and logging.
 
-There are several ways of editing your application.
+Extras: Include input validation, error handling, and responsive UI for desktop and mobile.
 
-**Use Lovable**
+Master Admin Portal:
+Fixed login credentials.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/c86448c6-ff7b-489d-8557-c13afe1ee324) and start prompting.
+Dashboard: Show Total Colleges, Total Students, Platform Activity (audit logs of all actions), charts/graphs for platform stats.
 
-Changes made via Lovable will be committed automatically to this repo.
+College Management:
 
-**Use your preferred IDE**
+Create new college accounts with: College Name, Email, Address, College Code.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Send invitation email to college with login credentials.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+College account only created after acceptance.
 
-Follow these steps:
+Master Admin can create and delete college accounts (no edit).
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Exam Management:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Multi-step form:
 
-# Step 3: Install the necessary dependencies.
-npm i
+Exam Details: Test Type (Practice, Assessment, Mock Test, Company Specific), Description, Subject, Skills (Tech, Logical, Reasoning, Verbal, Coding, Other), Number of Questions, Difficulty Level, Duration.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+Questions & Answers: Enter each question, multiple options, and correct answer.
 
-**Edit a file directly in GitHub**
+Overview: Review all details before saving.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Exams stored in DB and displayed under subject + test type tabs.
 
-**Use GitHub Codespaces**
+Assign exams to colleges, send notifications, track reports.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Notifications: Title, Message, Target Role (All, Faculty, Students), College Selection.
 
-## What technologies are used for this project?
+Audit Logs: Track all actions on the platform.
 
-This project is built with:
+Profile Management: View/edit profile with updated UI.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+UI Enhancements: Use charts, cards, tables, and hover effects for a modern look.
 
-## How can I deploy this project?
+College Dashboard:
+Can create Faculty and Student accounts:
 
-Simply open [Lovable](https://lovable.dev/projects/c86448c6-ff7b-489d-8557-c13afe1ee324) and click on Share -> Publish.
+Fields: Name, ID, Email, Branch, Batch, Section.
 
-## Can I connect a custom domain to my Lovable project?
+Two methods: Manual entry or Bulk upload (CSV/Excel).
 
-Yes, you can!
+Backend sends login credentials to the email provided; account activated only after acceptance.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Assign tests to students: Specify Start & End Date/Time, Subject, Test Type, Batch, Branch, Section.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+View/download reports of individual students in tabular format with filters.
+
+Create announcements and notifications for students/faculty (CRUD).
+
+Profile Management: View/edit profile.
+
+UI Enhancements: Use modals, tables with sorting/filtering, and cards for announcements.
+
+Faculty Dashboard:
+Metrics: Total Tests Created, Tests Assigned, Tests Approved, Students Assigned (display with charts).
+
+Request new tests directly to Master Admin or College.
+
+View individual student progress, test reports, and download PDFs.
+
+Check announcements and notifications.
+
+Profile Management: View/edit profile.
+
+UI Enhancements: Use interactive charts and cards for stats.
+
+Student Dashboard:
+Metrics: Assigned Exams, Available to Take, Practice Completed, Upcoming Deadlines, Average Score.
+
+Can attempt exams online; after completion, view detailed report with corrections.
+
+Notifications and announcements visible.
+
+Profile Management: View/edit profile.
+
+UI Enhancements: Use progress bars, charts, and tabs for exam categories.
+
+General Requirements:
+Role-based access control: Master Admin, College Admin, Faculty, Student.
+
+Frontend: Clean, responsive UI with modern design, hover effects, modals, tables, forms, tabs, and interactive dashboards.
+
+Backend: Node.js + Express.js, MongoDB, full CRUD for all entities.
+
+Authentication & Authorization: JWT for all protected routes.
+
+Email Integration: Send login credentials and notifications to Faculty and Student emails upon creation.
+
+Audit Logs: Track all actions for Master Admin.
+
+Validation & Error Handling: Backend validation, frontend alerts, and notifications.
+
+Extra Enhancements:
+
+Charts for analytics (total students, exams, completion rates).
+
+Responsive tables with search, sort, and pagination.
+
+Interactive dashboards with hover effects and badges.
+
+Modular and reusable React components for forms, tables, and cards.
+
+Deliverables:
+Complete project structure: frontend React components/pages, backend routes/controllers/models, MongoDB schema design.
+
+Utility functions for emails, notifications, and audit logs.
+
+All CRUD operations working end-to-end.
+
+Ensure smooth navigation, authentication, and role-based permissions.
+
+update the above project with this all feactures and functions
