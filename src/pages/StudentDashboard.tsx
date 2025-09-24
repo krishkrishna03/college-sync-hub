@@ -365,8 +365,6 @@ export default function StudentDashboard() {
         />
       </div>
 
-      </div>
-
       <Tabs defaultValue="exams" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="exams">My Exams</TabsTrigger>
