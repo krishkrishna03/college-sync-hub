@@ -32,9 +32,11 @@ export default function Login() {
 
     try {
       // Fixed credentials for Master Admin
-      if (formData.email === "admin@plantechx.com" && formData.password === "admin123") {
+      if (formData.email === "admin@plantechx.com" && formData.password === "masteradmin123") {
         // Mock master admin login
         localStorage.setItem('authToken', 'master-admin-token');
+        localStorage.setItem('userRole', 'admin');
+        localStorage.setItem('userName', 'Master Admin');
         setIsLoading(false);
         toast({
           title: "Login Successful",
@@ -49,6 +51,11 @@ export default function Login() {
         formData.password, 
         formData.collegeCode
       );
+      
+      // Store user data in localStorage
+      localStorage.setItem('userRole', response.user.role);
+      localStorage.setItem('userName', response.user.name);
+      localStorage.setItem('userEmail', response.user.email);
       
       setIsLoading(false);
       toast({
@@ -65,8 +72,10 @@ export default function Login() {
           navigate("/college");
           break;
         case 'faculty':
+          navigate("/faculty-dashboard");
+          break;
         case 'student':
-          navigate("/");
+          navigate("/student-dashboard");
           break;
         default:
           navigate("/");

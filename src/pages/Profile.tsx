@@ -161,6 +161,40 @@ export default function Profile() {
     }
   };
 
+  // Sample activity log data
+  const activityLogs = [
+    {
+      action: "Created new test",
+      details: "Aptitude Test - Basic",
+      type: "Create",
+      timestamp: "2024-01-15 10:30 AM"
+    },
+    {
+      action: "Updated student batch",
+      details: "Moved 25 students to 2025 batch",
+      type: "Update",
+      timestamp: "2024-01-15 09:15 AM"
+    },
+    {
+      action: "Assigned test",
+      details: "Mock Test - Advanced to CSE-A",
+      type: "Assign",
+      timestamp: "2024-01-14 04:20 PM"
+    },
+    {
+      action: "Sent announcement",
+      details: "Exam schedule notification",
+      type: "Notification",
+      timestamp: "2024-01-14 02:45 PM"
+    },
+    {
+      action: "Created faculty account",
+      details: "Dr. Smith - Mathematics",
+      type: "Create",
+      timestamp: "2024-01-13 11:30 AM"
+    }
+  ];
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-6xl">

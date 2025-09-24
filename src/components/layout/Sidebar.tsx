@@ -104,6 +104,8 @@ export function Sidebar() {
       return [
         { name: "Master Admin Dashboard", href: "/admin", icon: LayoutDashboard },
         { name: "Exam Creation", href: "/exam-creation", icon: ClipboardList },
+        { name: "Exam Management", href: "/exam-management", icon: FileText },
+        { name: "Notifications", href: "/notifications", icon: Bell },
         { name: "Profile", href: "/profile", icon: User },
       ];
     }
@@ -111,6 +113,18 @@ export function Sidebar() {
     if (role === 'college-admin') {
       return [
         { name: "College Dashboard", href: "/college", icon: LayoutDashboard },
+        { 
+          name: "User Management", 
+          icon: Users, 
+          hasDropdown: true,
+          children: [
+            { name: "Students", href: "/students", icon: Users },
+            { name: "Faculty", href: "/faculty", icon: GraduationCap }
+          ]
+        },
+        { name: "Test Assignment", href: "/test-assignment", icon: ClipboardList },
+        { name: "Reports", href: "/reports", icon: BarChart3 },
+        { name: "Announcements", href: "/announcements", icon: Bell },
         { name: "Profile", href: "/profile", icon: User },
       ];
     }
@@ -120,6 +134,7 @@ export function Sidebar() {
         { name: "Faculty Dashboard", href: "/faculty-dashboard", icon: LayoutDashboard },
         { name: "My Students", href: "/students", icon: Users },
         { name: "Test Management", href: "/exam-management", icon: ClipboardList },
+        { name: "Test Requests", href: "/test-request", icon: TrendingUp },
         { name: "Announcements", href: "/announcements", icon: Bell },
         { name: "Profile", href: "/profile", icon: User },
       ];
@@ -128,8 +143,17 @@ export function Sidebar() {
     if (role === 'student') {
       return [
         { name: "Student Dashboard", href: "/student-dashboard", icon: LayoutDashboard },
-        { name: "My Tests", href: "/my-tests", icon: ClipboardList },
-        { name: "My Courses", href: "/my-courses", icon: BookOpen },
+        { 
+          name: "My Tests", 
+          icon: ClipboardList, 
+          hasDropdown: true,
+          children: [
+            { name: "Assigned Tests", href: "/assigned-tests", icon: ClipboardList },
+            { name: "Practice Tests", href: "/practice-tests", icon: BookOpenCheck },
+            { name: "Test Results", href: "/test-results", icon: BarChart3 }
+          ]
+        },
+        { name: "My Courses", href: "/courses", icon: BookOpen },
         { name: "Announcements", href: "/announcements", icon: Bell },
         { name: "Profile", href: "/profile", icon: User },
       ];

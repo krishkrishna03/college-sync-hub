@@ -13,6 +13,9 @@ const setAuthToken = (token: string) => {
 // Remove auth token from localStorage
 const removeAuthToken = () => {
   localStorage.removeItem('authToken');
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userEmail');
 };
 
 // API request helper

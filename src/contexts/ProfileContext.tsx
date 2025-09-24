@@ -34,18 +34,36 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const user = await authAPI.getCurrentUser();
-        // Map backend fields to ProfileData
-        setProfileData({
-          avatarUrl: user.avatarUrl || user.avatar || "",
-          fullName: user.fullName || user.name || user.username || "",
-          email: user.email || "",
-          phone: user.phone || "",
-          department: user.department || "",
-          role: user.role || "",
-          collegeId: user.collegeId || "",
-          collegeName: user.collegeName || "",
-        });
+        // Check if user is logged in
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          // For master admin, use stored data
+          if (token === 'master-admin-token') {
+            setProfileData({
+              avatarUrl: "",
+              fullName: "Master Admin",
+              email: "admin@plantechx.com",
+              phone: "+91 98765 43210",
+              department: "Administration",
+              role: "admin",
+              collegeId: "",
+              collegeName: "PlantechX Platform",
+            });
+          } else {
+            // For other users, fetch from API
+            const user = await authAPI.getCurrentUser();
+            setProfileData({
+              avatarUrl: user.avatarUrl || user.avatar || "",
+              fullName: user.fullName || user.name || user.username || "",
+              email: user.email || "",
+              phone: user.phone || "",
+              department: user.department || "",
+              role: user.role || "",
+              collegeId: user.collegeId || "",
+              collegeName: user.collegeName || "",
+            });
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch profile:", error);
       }

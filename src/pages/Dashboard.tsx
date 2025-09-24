@@ -23,31 +23,74 @@ export default function Dashboard() {
 
   // Redirect based on user role
   useEffect(() => {
-    if (profileData.role === 'admin') {
-      navigate('/admin');
-      return;
-    }
-    if (profileData.role === 'college-admin') {
-      navigate('/college');
-      return;
-    }
-    if (profileData.role === 'faculty') {
-      navigate('/faculty-dashboard');
-      return;
-    }
-    if (profileData.role === 'student') {
-      navigate('/student-dashboard');
-      return;
+    const userRole = localStorage.getItem('userRole') || profileData.role;
+    
+    if (userRole) {
+      switch (userRole) {
+        case 'admin':
+          navigate('/admin');
+          return;
+        case 'college-admin':
+          navigate('/college');
+          return;
+        case 'faculty':
+          navigate('/faculty-dashboard');
+          return;
+        case 'student':
+          navigate('/student-dashboard');
+          return;
+      }
     }
   }, [profileData.role, navigate]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await dashboardAPI.getStats();
-        setStats(response.stats);
-        setRecentActivities(response.recentActivities);
-        setUpcomingTests(response.upcomingTests);
+        // Mock dashboard data
+        setStats({
+          totalStudents: 1245,
+          facultyMembers: 45,
+          activeTests: 28,
+          announcements: 12
+        });
+        
+        setRecentActivities([
+          {
+            action: "New student enrolled",
+            details: "John Doe - Computer Science",
+            time: "2 hours ago",
+            type: "success"
+          },
+          {
+            action: "Test assigned",
+            details: "Data Structures Assessment to CSE-A",
+            time: "4 hours ago",
+            type: "info"
+          },
+          {
+            action: "Faculty account created",
+            details: "Dr. Smith - Mathematics Department",
+            time: "1 day ago",
+            type: "success"
+          }
+        ]);
+        
+        setUpcomingTests([
+          {
+            id: "1",
+            title: "Programming Fundamentals",
+            batch: "2025",
+            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+            students: 45
+          },
+          {
+            id: "2",
+            title: "Database Management",
+            batch: "2026",
+            date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+            students: 38
+          }
+        ]);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       } finally {

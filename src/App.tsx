@@ -33,6 +33,12 @@ import CompanySpecific from "./pages/CompanySpecific";
 import MockTests from "./pages/MockTests";
 import Announcements from "./pages/Announcements";
 import Profile from "./pages/Profile";
+import NotificationCenter from "./pages/NotificationCenter";
+import TestAssignment from "./pages/TestAssignment";
+import MyTests from "./pages/MyTests";
+import PracticeTests from "./pages/PracticeTests";
+import TestResults from "./pages/TestResults";
+import TakeTest from "./pages/TakeTest";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +63,7 @@ const App = () => (
           <Route path="/student-dashboard" element={<Layout><StudentDashboard /></Layout>} />
           <Route path="/admin" element={<Layout><MasterAdminDashboard /></Layout>} />
           <Route path="/exam-creation" element={<Layout><ExamCreation /></Layout>} />
+          <Route path="/notifications" element={<Layout><NotificationCenter /></Layout>} />
           <Route path="/exam-results/:examId" element={<Layout><ExamResults /></Layout>} />
           <Route path="/college" element={<Layout><CollegeDashboard /></Layout>} />
           <Route path="/students" element={<Layout><Students /></Layout>} />
@@ -64,6 +71,12 @@ const App = () => (
           <Route path="/branches" element={<Layout><Branches /></Layout>} />
           <Route path="/faculty" element={<Layout><FacultyManagement /></Layout>} />
           <Route path="/exam-management" element={<Layout><ExamManagement /></Layout>} />
+          <Route path="/test-assignment" element={<Layout><TestAssignment /></Layout>} />
+          <Route path="/reports" element={<Layout><ParticipationReport /></Layout>} />
+          <Route path="/assigned-tests" element={<Layout><MyTests /></Layout>} />
+          <Route path="/practice-tests" element={<Layout><PracticeTests /></Layout>} />
+          <Route path="/test-results" element={<Layout><TestResults /></Layout>} />
+          <Route path="/take-test/:testId" element={<Layout><TakeTest /></Layout>} />
           <Route path="/practice" element={<Layout><ExamManagement /></Layout>} />
           <Route path="/assessments" element={<Layout><ExamManagement /></Layout>} />
           <Route path="/company-tests" element={<Layout><ExamManagement /></Layout>} />
