@@ -1,7 +1,14 @@
 const nodemailer = require('nodemailer');
+const logger = require('../middleware/logger');
 
 class EmailService {
   constructor() {
+    logger.info('Initializing Email Service', {
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      user: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
+    });
+    
     this.transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT,
@@ -14,6 +21,12 @@ class EmailService {
   }
 
   async sendLoginCredentials(userEmail, userName, password, role, collegeName = null) {
+    logger.info('Sending login credentials email', {
+      to: userEmail,
+      role,
+      collegeName
+    });
+    
     const roleText = this.getRoleDisplayName(role);
     
     const mailOptions = {
@@ -56,14 +69,20 @@ class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions);
+      logger.info('Login credentials email sent successfully', { to: userEmail });
       return true;
     } catch (error) {
-      console.error('Email sending failed:', error);
+      logger.errorLog(error, { 
+        context: 'Send Login Credentials Email', 
+        to: userEmail 
+      });
       return false;
     }
   }
 
   async sendPasswordReset(userEmail, userName, resetToken) {
+    logger.info('Sending password reset email', { to: userEmail });
+    
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
     
     const mailOptions = {
@@ -96,9 +115,13 @@ class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions);
+      logger.info('Password reset email sent successfully', { to: userEmail });
       return true;
     } catch (error) {
-      console.error('Password reset email failed:', error);
+      logger.errorLog(error, { 
+        context: 'Send Password Reset Email', 
+        to: userEmail 
+      });
       return false;
     }
   }
@@ -114,6 +137,12 @@ class EmailService {
   }
 
   async sendTestAssignmentNotification(collegeEmail, collegeAdminName, testName, collegeName, startDateTime, endDateTime) {
+    logger.info('Sending test assignment notification', {
+      to: collegeEmail,
+      testName,
+      collegeName
+    });
+    
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: collegeEmail,
@@ -152,14 +181,23 @@ class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions);
+      logger.info('Test assignment notification sent successfully', { to: collegeEmail });
       return true;
     } catch (error) {
-      console.error('Test assignment email failed:', error);
+      logger.errorLog(error, { 
+        context: 'Send Test Assignment Email', 
+        to: collegeEmail 
+      });
       return false;
     }
   }
 
   async sendTestAssignmentToStudent(studentEmail, studentName, testName, startDateTime, endDateTime, duration) {
+    logger.info('Sending test assignment to student', {
+      to: studentEmail,
+      testName
+    });
+    
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: studentEmail,
@@ -201,9 +239,13 @@ class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions);
+      logger.info('Student test assignment email sent successfully', { to: studentEmail });
       return true;
     } catch (error) {
-      console.error('Student test assignment email failed:', error);
+      logger.errorLog(error, { 
+        context: 'Send Student Test Assignment Email', 
+        to: studentEmail 
+      });
       return false;
     }
   }

@@ -29,7 +29,7 @@ type AuthAction =
 const initialState: AuthState = {
   user: null,
   token: localStorage.getItem('token'),
-  loading: false,
+  loading: true,
   error: null,
 };
 
@@ -86,20 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
-      } catch (error) {
-        dispatch({ type: 'LOGOUT' });
-      }
-    }
-  }, []);
 
   return (
     <AuthContext.Provider value={{ state, dispatch }}>

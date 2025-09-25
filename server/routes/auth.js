@@ -5,6 +5,7 @@ const User = require('../models/User');
 const emailService = require('../utils/emailService');
 const { auth } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
+const logger = require('../middleware/logger');
 
 const router = express.Router();
 
@@ -16,18 +17,23 @@ router.post('/login', [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      logger.warn('Login validation failed', { errors: errors.array() });
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { email, password } = req.body;
     
+    logger.info('Login attempt', { email });
+    
     const user = await User.findOne({ email, isActive: true }).populate('collegeId');
     if (!user) {
+      logger.warn('Login failed - user not found', { email });
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      logger.warn('Login failed - invalid password', { email, userId: user._id });
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
@@ -35,6 +41,8 @@ router.post('/login', [
     user.lastLogin = new Date();
     user.hasLoggedIn = true;
     await user.save();
+
+    logger.authLog('LOGIN_SUCCESS', user, { ip: req.ip });
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -53,9 +61,15 @@ router.post('/login', [
       lastLogin: user.lastLogin
     };
 
+    logger.info('Login successful', { 
+      userId: user._id, 
+      email: user.email, 
+      role: user.role 
+    });
+
     res.json({ token, user: userResponse });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.errorLog(error, { context: 'User Login', email: req.body.email });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -63,12 +77,15 @@ router.post('/login', [
 // Get current user
 router.get('/me', auth, async (req, res) => {
   try {
+    logger.info('Get current user request', { userId: req.user._id });
+    
     const user = await User.findById(req.user._id)
       .select('-password')
       .populate('collegeId');
     
     res.json(user);
   } catch (error) {
+    logger.errorLog(error, { context: 'Get Current User', userId: req.user?._id });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -84,8 +101,14 @@ router.put('/profile', auth, [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      logger.warn('Profile update validation failed', { 
+        userId: req.user._id, 
+        errors: errors.array() 
+      });
       return res.status(400).json({ errors: errors.array() });
     }
+
+    logger.info('Profile update request', { userId: req.user._id });
 
     const updates = {};
     const allowedFields = ['name', 'phoneNumber', 'branch', 'batch', 'section'];
@@ -102,8 +125,14 @@ router.put('/profile', auth, [
       { new: true, runValidators: true }
     ).select('-password');
 
+    logger.info('Profile updated successfully', { 
+      userId: req.user._id, 
+      updatedFields: Object.keys(updates) 
+    });
+
     res.json(user);
   } catch (error) {
+    logger.errorLog(error, { context: 'Profile Update', userId: req.user?._id });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -116,8 +145,14 @@ router.put('/change-password', auth, [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      logger.warn('Change password validation failed', { 
+        userId: req.user._id, 
+        errors: errors.array() 
+      });
       return res.status(400).json({ errors: errors.array() });
     }
+
+    logger.info('Change password request', { userId: req.user._id });
 
     const { currentPassword, newPassword } = req.body;
     
@@ -125,14 +160,20 @@ router.put('/change-password', auth, [
     const isMatch = await user.comparePassword(currentPassword);
     
     if (!isMatch) {
+      logger.warn('Change password failed - incorrect current password', { 
+        userId: req.user._id 
+      });
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
 
     user.password = newPassword;
     await user.save();
 
+    logger.authLog('PASSWORD_CHANGED', user);
+
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
+    logger.errorLog(error, { context: 'Change Password', userId: req.user?._id });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -144,13 +185,21 @@ router.post('/forgot-password', [
   try {
     const { email } = req.body;
     
+    logger.info('Forgot password request', { email });
+    
     const user = await User.findOne({ email, isActive: true });
     if (!user) {
+      logger.warn('Forgot password - user not found', { email });
       return res.status(404).json({ error: 'User not found' });
     }
 
     const resetToken = user.generateResetToken();
     await user.save();
+
+    logger.info('Password reset token generated', { 
+      userId: user._id, 
+      email: user.email 
+    });
 
     const emailSent = await emailService.sendPasswordReset(
       user.email,
@@ -159,11 +208,20 @@ router.post('/forgot-password', [
     );
 
     if (emailSent) {
+      logger.info('Password reset email sent successfully', { 
+        userId: user._id, 
+        email: user.email 
+      });
       res.json({ message: 'Password reset email sent' });
     } else {
+      logger.error('Failed to send password reset email', { 
+        userId: user._id, 
+        email: user.email 
+      });
       res.status(500).json({ error: 'Failed to send email' });
     }
   } catch (error) {
+    logger.errorLog(error, { context: 'Forgot Password', email: req.body.email });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -176,6 +234,8 @@ router.post('/reset-password/:token', [
     const { token } = req.params;
     const { password } = req.body;
 
+    logger.info('Password reset attempt', { token: token.substring(0, 10) + '...' });
+
     const hashedToken = crypto
       .createHash('sha256')
       .update(token)
@@ -187,6 +247,7 @@ router.post('/reset-password/:token', [
     });
 
     if (!user) {
+      logger.warn('Password reset failed - invalid or expired token', { token });
       return res.status(400).json({ error: 'Invalid or expired reset token' });
     }
 
@@ -195,8 +256,11 @@ router.post('/reset-password/:token', [
     user.resetPasswordExpires = undefined;
     await user.save();
 
+    logger.authLog('PASSWORD_RESET', user);
+
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
+    logger.errorLog(error, { context: 'Password Reset', token: req.params.token });
     res.status(500).json({ error: 'Server error' });
   }
 });
