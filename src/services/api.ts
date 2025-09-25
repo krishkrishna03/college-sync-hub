@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://college-sync-hub.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://college-sync-hub.onrender.com/api';
 
 class ApiService {
   private getHeaders(includeAuth = true): HeadersInit {
