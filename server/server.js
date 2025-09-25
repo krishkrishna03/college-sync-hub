@@ -23,6 +23,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS - hardcoded allowed origins
+// CORS - allow specific origins dynamically
 const allowedOrigins = [
   'http://localhost:5173',
   'https://eduplant.netlify.app'
@@ -30,10 +31,20 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins,
-    credentials: true,
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman or server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true, // allow cookies/authorization headers
   })
 );
+
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
