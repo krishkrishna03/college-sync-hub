@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, BookOpen, Building, User, GraduationCap } from 'lucide-react';
+import { Users, BookOpen, Building, User, GraduationCap, FileText, Clock, Play, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
+import StudentTestInterface from '../../components/Test/StudentTestInterface';
+import TestResults from '../../components/Test/TestResults';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 
 interface College {
@@ -24,6 +26,23 @@ interface DashboardData {
   colleagues: Colleague[];
 }
 
+interface AssignedTest {
+  _id: string;
+  testId: {
+    _id: string;
+    testName: string;
+    testDescription: string;
+    subject: string;
+    numberOfQuestions: number;
+    totalMarks: number;
+    duration: number;
+    startDateTime: string;
+    endDateTime: string;
+  };
+  hasAttempted: boolean;
+  attempt?: any;
+}
+
 interface StudentDashboardProps {
   activeTab: string;
 }
@@ -31,11 +50,20 @@ interface StudentDashboardProps {
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const { state } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [assignedTests, setAssignedTests] = useState<AssignedTest[]>([]);
+  const [activeTest, setActiveTest] = useState<any>(null);
+  const [testStartTime, setTestStartTime] = useState<Date | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [testResults, setTestResults] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboardData();
+    if (activeTab === 'dashboard' || activeTab === 'profile') {
+      loadDashboardData();
+    } else if (activeTab === 'my-tests') {
+      loadAssignedTests();
+    }
   }, []);
 
   const loadDashboardData = async () => {
@@ -49,6 +77,115 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
       setLoading(false);
     }
   };
+
+  const loadAssignedTests = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.getStudentAssignedTests();
+      setAssignedTests(data);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartTest = async (testId: string) => {
+    try {
+      const response = await apiService.startTest(testId);
+      setActiveTest(response.test);
+      setTestStartTime(new Date(response.startTime));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to start test');
+    }
+  };
+
+  const handleSubmitTest = async (answers: any[], timeSpent: number) => {
+    if (!activeTest || !testStartTime) return;
+
+    try {
+      const response = await apiService.submitTest(activeTest._id, answers, testStartTime, timeSpent);
+      setActiveTest(null);
+      setTestStartTime(null);
+      
+      // Show results
+      const results = await apiService.getTestResults(activeTest._id);
+      setTestResults(results);
+      setShowResults(true);
+      
+      // Reload assigned tests
+      loadAssignedTests();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to submit test');
+    }
+  };
+
+  const handleViewResults = async (testId: string) => {
+    try {
+      const results = await apiService.getTestResults(testId);
+      setTestResults(results);
+      setShowResults(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to load results');
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const isTestActive = (test: AssignedTest) => {
+    const now = new Date();
+    const start = new Date(test.testId.startDateTime);
+    const end = new Date(test.testId.endDateTime);
+    return now >= start && now <= end;
+  };
+
+  const getTestStatus = (test: AssignedTest) => {
+    if (test.hasAttempted) return { text: 'Completed', color: 'bg-green-100 text-green-800' };
+    
+    const now = new Date();
+    const start = new Date(test.testId.startDateTime);
+    const end = new Date(test.testId.endDateTime);
+    
+    if (now < start) return { text: 'Upcoming', color: 'bg-yellow-100 text-yellow-800' };
+    if (now > end) return { text: 'Expired', color: 'bg-red-100 text-red-800' };
+    return { text: 'Available', color: 'bg-blue-100 text-blue-800' };
+  };
+
+  // Show test interface if test is active
+  if (activeTest && testStartTime) {
+    return (
+      <StudentTestInterface
+        test={activeTest}
+        startTime={testStartTime}
+        onSubmit={handleSubmitTest}
+        onExit={() => {
+          setActiveTest(null);
+          setTestStartTime(null);
+        }}
+      />
+    );
+  }
+
+  // Show test results
+  if (showResults && testResults) {
+    return (
+      <TestResults
+        results={testResults}
+        onClose={() => {
+          setShowResults(false);
+          setTestResults(null);
+        }}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -74,6 +211,100 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
 
   if (!dashboardData) {
     return <div>No data available</div>;
+  }
+
+  if (activeTab === 'my-tests') {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">My Tests</h2>
+        </div>
+
+        <div className="grid gap-6">
+          {assignedTests.map((test) => {
+            const status = getTestStatus(test);
+            return (
+              <div key={test._id} className="bg-white rounded-lg shadow p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {test.testId.testName}
+                      </h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                        {status.text}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-2">{test.testId.testDescription}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="text-center p-2 bg-gray-50 rounded">
+                    <p className="text-xs text-gray-600">Subject</p>
+                    <p className="font-semibold">{test.testId.subject}</p>
+                  </div>
+                  <div className="text-center p-2 bg-gray-50 rounded">
+                    <p className="text-xs text-gray-600">Questions</p>
+                    <p className="font-semibold">{test.testId.numberOfQuestions}</p>
+                  </div>
+                  <div className="text-center p-2 bg-gray-50 rounded">
+                    <p className="text-xs text-gray-600">Duration</p>
+                    <p className="font-semibold">{test.testId.duration} min</p>
+                  </div>
+                  <div className="text-center p-2 bg-gray-50 rounded">
+                    <p className="text-xs text-gray-600">Total Marks</p>
+                    <p className="font-semibold">{test.testId.totalMarks}</p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <div className="text-sm text-gray-600 mb-3">
+                    <p><strong>Available:</strong> {formatDate(test.testId.startDateTime)} - {formatDate(test.testId.endDateTime)}</p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {test.hasAttempted ? (
+                      <button
+                        onClick={() => handleViewResults(test.testId._id)}
+                        className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                      >
+                        <CheckCircle size={16} />
+                        View Results
+                      </button>
+                    ) : isTestActive(test) ? (
+                      <button
+                        onClick={() => handleStartTest(test.testId._id)}
+                        className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+                      >
+                        <Play size={16} />
+                        Start Test
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="bg-gray-400 text-white py-2 px-4 rounded-lg cursor-not-allowed flex items-center gap-2 text-sm"
+                      >
+                        <Clock size={16} />
+                        {status.text}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {assignedTests.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No tests assigned yet</h3>
+            <p className="text-gray-600">Tests assigned by your college will appear here</p>
+          </div>
+        )}
+      </div>
+    );
   }
 
   if (activeTab === 'profile') {
@@ -141,10 +372,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
           
           <div className="bg-purple-50 p-4 rounded-lg">
             <div className="flex items-center">
-              <GraduationCap className="h-8 w-8 text-purple-600" />
+              <FileText className="h-8 w-8 text-purple-600" />
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Classmates</p>
-                <p className="text-lg font-bold text-gray-900">{dashboardData.colleagues.length}</p>
+                <p className="text-sm font-medium text-gray-600">Assigned Tests</p>
+                <p className="text-lg font-bold text-gray-900">{assignedTests.length}</p>
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, GraduationCap, CheckCircle, Clock, CreditCard as Edit } from 'lucide-react';
+import { Plus, Users, GraduationCap, CheckCircle, Clock, FileText, Send, Eye } from 'lucide-react';
 import apiService from '../../services/api';
 import Modal from '../../components/UI/Modal';
 import UserForm from '../../components/Forms/UserForm';
@@ -31,6 +31,27 @@ interface DashboardData {
   };
 }
 
+interface TestAssignment {
+  _id: string;
+  testId: {
+    _id: string;
+    testName: string;
+    testDescription: string;
+    subject: string;
+    numberOfQuestions: number;
+    totalMarks: number;
+    duration: number;
+    startDateTime: string;
+    endDateTime: string;
+  };
+  assignedBy: {
+    name: string;
+    email: string;
+  };
+  status: 'pending' | 'accepted' | 'rejected';
+  assignedAt: string;
+}
+
 interface CollegeAdminDashboardProps {
   activeTab: string;
 }
@@ -39,7 +60,10 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [faculty, setFaculty] = useState<User[]>([]);
   const [students, setStudents] = useState<User[]>([]);
+  const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
   const [showUserForm, setShowUserForm] = useState(false);
+  const [showStudentAssignment, setShowStudentAssignment] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<TestAssignment | null>(null);
   const [defaultRole, setDefaultRole] = useState<'faculty' | 'student'>('student');
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
@@ -51,6 +75,8 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       loadFaculty();
     } else if (activeTab === 'students') {
       loadStudents();
+    } else if (activeTab === 'assigned-tests') {
+      loadAssignedTests();
     }
   }, [activeTab]);
 
@@ -87,6 +113,18 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     }
   };
 
+  const loadAssignedTests = async () => {
+    try {
+      setLoading(true);
+      const data = await apiService.getAssignedTests();
+      setAssignedTests(data);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateUser = async (userData: any) => {
     try {
       setFormLoading(true);
@@ -104,6 +142,26 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       throw error;
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleTestAssignmentStatus = async (assignmentId: string, status: 'accepted' | 'rejected') => {
+    try {
+      await apiService.updateTestAssignmentStatus(assignmentId, status);
+      loadAssignedTests();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to update test status');
+    }
+  };
+
+  const handleAssignToStudents = async (assignmentId: string, filters: any) => {
+    try {
+      await apiService.assignTestToStudents(assignmentId, filters);
+      setShowStudentAssignment(false);
+      setSelectedAssignment(null);
+      loadAssignedTests();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to assign test to students');
     }
   };
 
@@ -157,6 +215,131 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
         >
           Retry
         </button>
+      </div>
+    );
+  }
+
+  if (activeTab === 'assigned-tests') {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">Assigned Tests</h2>
+        </div>
+
+        <div className="grid gap-6">
+          {assignedTests.map((assignment) => (
+            <div key={assignment._id} className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {assignment.testId.testName}
+                    </h3>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      assignment.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                      assignment.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {assignment.status}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-sm mb-2">{assignment.testId.testDescription}</p>
+                  <p className="text-sm text-gray-500">
+                    Assigned by: {assignment.assignedBy.name} on {formatDate(assignment.assignedAt)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="text-center p-2 bg-gray-50 rounded">
+                  <p className="text-xs text-gray-600">Subject</p>
+                  <p className="font-semibold">{assignment.testId.subject}</p>
+                </div>
+                <div className="text-center p-2 bg-gray-50 rounded">
+                  <p className="text-xs text-gray-600">Questions</p>
+                  <p className="font-semibold">{assignment.testId.numberOfQuestions}</p>
+                </div>
+                <div className="text-center p-2 bg-gray-50 rounded">
+                  <p className="text-xs text-gray-600">Duration</p>
+                  <p className="font-semibold">{assignment.testId.duration} min</p>
+                </div>
+                <div className="text-center p-2 bg-gray-50 rounded">
+                  <p className="text-xs text-gray-600">Total Marks</p>
+                  <p className="font-semibold">{assignment.testId.totalMarks}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="text-sm text-gray-600 mb-3">
+                  <p><strong>Start:</strong> {new Date(assignment.testId.startDateTime).toLocaleString()}</p>
+                  <p><strong>End:</strong> {new Date(assignment.testId.endDateTime).toLocaleString()}</p>
+                </div>
+
+                <div className="flex gap-2">
+                  {assignment.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => handleTestAssignmentStatus(assignment._id, 'accepted')}
+                        className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 text-sm"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleTestAssignmentStatus(assignment._id, 'rejected')}
+                        className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 text-sm"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                  {assignment.status === 'accepted' && (
+                    <button
+                      onClick={() => {
+                        setSelectedAssignment(assignment);
+                        setShowStudentAssignment(true);
+                      }}
+                      className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                    >
+                      <Send size={16} />
+                      Assign to Students
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {assignedTests.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No tests assigned yet</h3>
+            <p className="text-gray-600">Tests assigned by Master Admin will appear here</p>
+          </div>
+        )}
+
+        {/* Student Assignment Modal */}
+        {selectedAssignment && (
+          <Modal
+            isOpen={showStudentAssignment}
+            onClose={() => {
+              setShowStudentAssignment(false);
+              setSelectedAssignment(null);
+            }}
+            title="Assign Test to Students"
+            size="lg"
+          >
+            <StudentAssignmentForm
+              assignment={selectedAssignment}
+              students={students}
+              onAssign={handleAssignToStudents}
+              onClose={() => {
+                setShowStudentAssignment(false);
+                setSelectedAssignment(null);
+              }}
+            />
+          </Modal>
+        )}
       </div>
     );
   }
@@ -429,6 +612,147 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
         />
       </Modal>
     </div>
+  );
+};
+
+// Student Assignment Form Component
+interface StudentAssignmentFormProps {
+  assignment: TestAssignment;
+  students: User[];
+  onAssign: (assignmentId: string, filters: any) => Promise<void>;
+  onClose: () => void;
+}
+
+const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
+  assignment,
+  students,
+  onAssign,
+  onClose
+}) => {
+  const [filters, setFilters] = useState({
+    branches: [] as string[],
+    batches: [] as string[],
+    sections: [] as string[],
+    specificStudents: [] as string[]
+  });
+  const [assigning, setAssigning] = useState(false);
+
+  // Get unique values for filters
+  const uniqueBranches = [...new Set(students.map(s => s.branch))];
+  const uniqueBatches = [...new Set(students.map(s => s.batch))];
+  const uniqueSections = [...new Set(students.map(s => s.section))];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setAssigning(true);
+      await onAssign(assignment._id, filters);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleFilterChange = (type: string, value: string, checked: boolean) => {
+    setFilters(prev => ({
+      ...prev,
+      [type]: checked
+        ? [...prev[type as keyof typeof prev], value]
+        : prev[type as keyof typeof prev].filter(item => item !== value)
+    }));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Assign Test: {assignment.testId.testName}
+        </h3>
+        <p className="text-sm text-gray-600">
+          Select students by branch, batch, section, or choose specific students
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <h4 className="font-medium text-gray-700 mb-2">Branches</h4>
+          <div className="space-y-2">
+            {uniqueBranches.map(branch => (
+              <label key={branch} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={filters.branches.includes(branch)}
+                  onChange={(e) => handleFilterChange('branches', branch, e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">{branch}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="font-medium text-gray-700 mb-2">Batches</h4>
+          <div className="space-y-2">
+            {uniqueBatches.map(batch => (
+              <label key={batch} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={filters.batches.includes(batch)}
+                  onChange={(e) => handleFilterChange('batches', batch, e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">{batch}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="font-medium text-gray-700 mb-2">Sections</h4>
+          <div className="space-y-2">
+            {uniqueSections.map(section => (
+              <label key={section} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={filters.sections.includes(section)}
+                  onChange={(e) => handleFilterChange('sections', section, e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm text-gray-700">{section}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+          disabled={assigning}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={assigning}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+        >
+          {assigning ? (
+            <>
+              <LoadingSpinner size="sm" />
+              Assigning...
+            </>
+          ) : (
+            <>
+              <Send size={16} />
+              Assign Test
+            </>
+          )}
+        </button>
+      </div>
+    </form>
   );
 };
 

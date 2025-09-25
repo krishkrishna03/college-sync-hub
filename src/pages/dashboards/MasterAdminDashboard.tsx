@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Building, Users, GraduationCap, TrendingUp, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, Building, Users, GraduationCap, TrendingUp, CheckCircle, XCircle, Clock, FileText, BarChart3 } from 'lucide-react';
 import apiService from '../../services/api';
 import Modal from '../../components/UI/Modal';
 import CollegeForm from '../../components/Forms/CollegeForm';
+import TestForm from '../../components/Test/TestForm';
+import TestCard from '../../components/Test/TestCard';
+import TestAssignmentModal from '../../components/Test/TestAssignmentModal';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 
 interface College {
@@ -23,6 +26,19 @@ interface College {
   isActive: boolean;
 }
 
+interface Test {
+  _id: string;
+  testName: string;
+  testDescription: string;
+  subject: string;
+  numberOfQuestions: number;
+  totalMarks: number;
+  duration: number;
+  startDateTime: string;
+  endDateTime: string;
+  createdAt: string;
+}
+
 interface AdminStats {
   totalColleges: number;
   totalFaculty: number;
@@ -36,15 +52,21 @@ interface MasterAdminDashboardProps {
 
 const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }) => {
   const [colleges, setColleges] = useState<College[]>([]);
+  const [tests, setTests] = useState<Test[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [showCollegeForm, setShowCollegeForm] = useState(false);
+  const [showTestForm, setShowTestForm] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [selectedTest, setSelectedTest] = useState<Test | null>(null);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeTab === 'colleges' || activeTab === 'dashboard') {
+    if (activeTab === 'colleges' || activeTab === 'dashboard' || activeTab === 'stats') {
       loadData();
+    } else if (activeTab === 'tests') {
+      loadTests();
     }
   }, [activeTab]);
 
@@ -64,6 +86,18 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     }
   };
 
+  const loadTests = async () => {
+    try {
+      setLoading(true);
+      const testsData = await apiService.getTests();
+      setTests(testsData);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load tests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateCollege = async (collegeData: any) => {
     try {
       setFormLoading(true);
@@ -74,6 +108,42 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
       throw error;
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleCreateTest = async (testData: any) => {
+    try {
+      setFormLoading(true);
+      await apiService.createTest(testData);
+      setShowTestForm(false);
+      loadTests();
+    } catch (error) {
+      throw error;
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleAssignTest = async (testId: string, collegeIds: string[]) => {
+    try {
+      await apiService.assignTestToColleges(testId, collegeIds);
+      setShowAssignmentModal(false);
+      setSelectedTest(null);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleViewTest = (testId: string) => {
+    // Navigate to test details or open modal
+    console.log('View test:', testId);
+  };
+
+  const handleAssignTestClick = (testId: string) => {
+    const test = tests.find(t => t._id === testId);
+    if (test) {
+      setSelectedTest(test);
+      setShowAssignmentModal(true);
     }
   };
 
@@ -199,6 +269,79 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
             </table>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (activeTab === 'tests') {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">Test Management</h2>
+          <button
+            onClick={() => setShowTestForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Create Test
+          </button>
+        </div>
+
+        <div className="grid gap-6">
+          {tests.map((test) => (
+            <TestCard
+              key={test._id}
+              test={test}
+              onView={handleViewTest}
+              onAssign={handleAssignTestClick}
+            />
+          ))}
+        </div>
+
+        {tests.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No tests created yet</h3>
+            <p className="text-gray-600 mb-4">Create your first test to get started</p>
+            <button
+              onClick={() => setShowTestForm(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Create Test
+            </button>
+          </div>
+        )}
+
+        <Modal
+          isOpen={showTestForm}
+          onClose={() => setShowTestForm(false)}
+          title="Create New Test"
+          size="xl"
+        >
+          <TestForm onSubmit={handleCreateTest} loading={formLoading} />
+        </Modal>
+
+        {selectedTest && (
+          <Modal
+            isOpen={showAssignmentModal}
+            onClose={() => {
+              setShowAssignmentModal(false);
+              setSelectedTest(null);
+            }}
+            title="Assign Test to Colleges"
+            size="lg"
+          >
+            <TestAssignmentModal
+              testId={selectedTest._id}
+              testName={selectedTest.testName}
+              onClose={() => {
+                setShowAssignmentModal(false);
+                setSelectedTest(null);
+              }}
+              onAssign={handleAssignTest}
+            />
+          </Modal>
+        )}
       </div>
     );
   }
@@ -340,11 +483,11 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
 
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-orange-600" />
+                <FileText className="h-8 w-8 text-orange-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
+                  <p className="text-sm font-medium text-gray-600">Tests</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {stats.totalColleges + stats.totalFaculty + stats.totalStudents}
+                    {tests.length}
                   </p>
                 </div>
               </div>
@@ -353,31 +496,73 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <h3 className="text-lg font-medium">Recent Colleges</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b">
+            <h3 className="text-lg font-medium">Recent Colleges</h3>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {colleges.slice(0, 5).map((college) => (
+                <div key={college.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{college.name}</h4>
+                    <p className="text-sm text-gray-500">{college.email}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {college.totalFaculty + college.totalStudents} users
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Created {formatDate(college.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {colleges.slice(0, 5).map((college) => (
-              <div key={college.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium text-gray-900">{college.name}</h4>
-                  <p className="text-sm text-gray-500">{college.email}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {college.totalFaculty + college.totalStudents} users
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Created {formatDate(college.createdAt)}
-                  </p>
-                </div>
-              </div>
-            ))}
+
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b">
+            <h3 className="text-lg font-medium">Quick Actions</h3>
+          </div>
+          <div className="p-6 space-y-3">
+            <button
+              onClick={() => setShowCollegeForm(true)}
+              className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Add New College
+            </button>
+            <button
+              onClick={() => setShowTestForm(true)}
+              className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 flex items-center gap-2"
+            >
+              <FileText size={20} />
+              Create New Test
+            </button>
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={showCollegeForm}
+        onClose={() => setShowCollegeForm(false)}
+        title="Create New College"
+        size="md"
+      >
+        <CollegeForm onSubmit={handleCreateCollege} loading={formLoading} />
+      </Modal>
+
+      <Modal
+        isOpen={showTestForm}
+        onClose={() => setShowTestForm(false)}
+        title="Create New Test"
+        size="xl"
+      >
+        <TestForm onSubmit={handleCreateTest} loading={formLoading} />
+      </Modal>
     </div>
   );
 };

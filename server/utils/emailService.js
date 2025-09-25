@@ -112,6 +112,101 @@ class EmailService {
     };
     return roleNames[role] || role;
   }
+
+  async sendTestAssignmentNotification(collegeEmail, collegeAdminName, testName, collegeName, startDateTime, endDateTime) {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: collegeEmail,
+      subject: `New Test Assignment - ${testName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #3B82F6; color: white; padding: 20px; text-align: center;">
+            <h1>Test Assignment Notification</h1>
+          </div>
+          <div style="padding: 20px; background-color: #f9f9f9;">
+            <h2>Hello, ${collegeAdminName}!</h2>
+            <p>A new test has been assigned to your college: <strong>${collegeName}</strong></p>
+            
+            <div style="background-color: white; padding: 15px; border-left: 4px solid #3B82F6; margin: 20px 0;">
+              <h3>Test Details:</h3>
+              <p><strong>Test Name:</strong> ${testName}</p>
+              <p><strong>Start Date:</strong> ${new Date(startDateTime).toLocaleString()}</p>
+              <p><strong>End Date:</strong> ${new Date(endDateTime).toLocaleString()}</p>
+            </div>
+            
+            <p>Please log in to your dashboard to accept or reject this test assignment.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/login" 
+                 style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                View Dashboard
+              </a>
+            </div>
+          </div>
+          <div style="background-color: #374151; color: white; text-align: center; padding: 10px;">
+            <p>Academic Management System © 2025</p>
+          </div>
+        </div>
+      `
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Test assignment email failed:', error);
+      return false;
+    }
+  }
+
+  async sendTestAssignmentToStudent(studentEmail, studentName, testName, startDateTime, endDateTime, duration) {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: studentEmail,
+      subject: `Test Assignment - ${testName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #10B981; color: white; padding: 20px; text-align: center;">
+            <h1>Test Assignment</h1>
+          </div>
+          <div style="padding: 20px; background-color: #f9f9f9;">
+            <h2>Hello, ${studentName}!</h2>
+            <p>You have been assigned a new test to complete.</p>
+            
+            <div style="background-color: white; padding: 15px; border-left: 4px solid #10B981; margin: 20px 0;">
+              <h3>Test Details:</h3>
+              <p><strong>Test Name:</strong> ${testName}</p>
+              <p><strong>Duration:</strong> ${duration} minutes</p>
+              <p><strong>Available From:</strong> ${new Date(startDateTime).toLocaleString()}</p>
+              <p><strong>Available Until:</strong> ${new Date(endDateTime).toLocaleString()}</p>
+            </div>
+            
+            <p style="color: #dc2626; font-weight: bold;">
+              ⚠️ Make sure you have a stable internet connection and sufficient time before starting the test.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/login" 
+                 style="background-color: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Take Test
+              </a>
+            </div>
+          </div>
+          <div style="background-color: #374151; color: white; text-align: center; padding: 10px;">
+            <p>Academic Management System © 2025</p>
+          </div>
+        </div>
+      `
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      return true;
+    } catch (error) {
+      console.error('Student test assignment email failed:', error);
+      return false;
+    }
+  }
 }
 
 module.exports = new EmailService();

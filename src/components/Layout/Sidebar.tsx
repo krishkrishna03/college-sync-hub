@@ -6,7 +6,9 @@ import {
   Building, 
   BookOpen,
   UserPlus,
-  BarChart3
+  BarChart3,
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -43,6 +45,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       roles: ['master_admin'],
     },
     {
+      id: 'tests',
+      label: 'Tests',
+      icon: <FileText size={20} />,
+      roles: ['master_admin'],
+    },
+    {
       id: 'faculty',
       label: 'Faculty',
       icon: <Users size={20} />,
@@ -53,6 +61,18 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       label: 'Students',
       icon: <GraduationCap size={20} />,
       roles: ['college_admin'],
+    },
+    {
+      id: 'assigned-tests',
+      label: 'Assigned Tests',
+      icon: <ClipboardList size={20} />,
+      roles: ['college_admin'],
+    },
+    {
+      id: 'my-tests',
+      label: 'My Tests',
+      icon: <FileText size={20} />,
+      roles: ['student'],
     },
     {
       id: 'profile',
