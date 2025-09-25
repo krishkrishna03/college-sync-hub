@@ -40,7 +40,7 @@ const createMasterAdmin = async () => {
       
       const newMasterAdmin = new User({
         name: 'Master Administrator',
-        email: 'admin@academic.com',
+        email: 'caikiet10@gmail.com',
         password: 'admin123',
         role: 'master_admin'
       });
@@ -48,7 +48,7 @@ const createMasterAdmin = async () => {
       await newMasterAdmin.save();
       
       logger.info('Master Admin Created Successfully', {
-        email: 'admin@academic.com',
+        email: 'caikiet10@gmail.com',
         defaultPassword: 'admin123'
       });
     } else {
