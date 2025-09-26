@@ -590,7 +590,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
             defaultRole="faculty"
           />
         </Modal>
-      </div>
+    
         <Modal
           isOpen={showBulkUpload}
           onClose={() => setShowBulkUpload(false)}
@@ -604,8 +604,10 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
             onClose={() => setShowBulkUpload(false)}
           />
         </Modal>
+         </div>
     );
   }
+         
 
   if (activeTab === 'students') {
     return (
