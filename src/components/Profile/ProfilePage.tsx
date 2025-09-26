@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, Building, Hash, BookOpen, Calendar, Users, Save, Edit, Lock } from 'lucide-react';
+import { User, Mail, Phone, Building, Hash, BookOpen, Calendar, Users, Save, CreditCard as Edit, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import LoadingSpinner from '../UI/LoadingSpinner';
