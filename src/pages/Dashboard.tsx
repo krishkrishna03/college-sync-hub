@@ -13,6 +13,8 @@ import StudentDashboard from './dashboards/StudentDashboard';
 
 // Profile component
 import ProfileModal from '../components/Profile/ProfileModal';
+import NotificationsList from '../components/Notifications/NotificationsList';
+import ProfilePage from '../components/Profile/ProfilePage';
 
 const Dashboard: React.FC = () => {
   const { state } = useAuth();
@@ -38,6 +40,16 @@ const Dashboard: React.FC = () => {
   };
 
   const renderDashboardContent = () => {
+    // Handle notifications tab for all roles
+    if (activeTab === 'notifications') {
+      return <NotificationsList />;
+    }
+    
+    // Handle profile tab for all roles
+    if (activeTab === 'profile') {
+      return <ProfilePage />;
+    }
+    
     switch (state.user.role) {
       case 'master_admin':
         return <MasterAdminDashboard activeTab={activeTab} />;

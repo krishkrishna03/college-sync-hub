@@ -8,7 +8,8 @@ import {
   UserPlus,
   BarChart3,
   FileText,
-  ClipboardList
+  ClipboardList,
+  Bell
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -49,6 +50,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       label: 'Tests',
       icon: <FileText size={20} />,
       roles: ['master_admin'],
+    },
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      icon: <Bell size={20} />,
+      roles: ['master_admin', 'college_admin', 'faculty', 'student'],
     },
     {
       id: 'faculty',

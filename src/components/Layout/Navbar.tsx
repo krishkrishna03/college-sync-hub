@@ -1,6 +1,7 @@
 import React from 'react';
-import { LogOut, User, Settings } from 'lucide-react';
+import { LogOut, User, Settings, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationBell from '../Notifications/NotificationBell';
 
 interface NavbarProps {
   title: string;
@@ -43,6 +44,8 @@ const Navbar: React.FC<NavbarProps> = ({ title, onProfileClick }) => {
           </div>
 
           <div className="flex items-center space-x-2">
+            <NotificationBell />
+            
             {onProfileClick && (
               <button
                 onClick={onProfileClick}

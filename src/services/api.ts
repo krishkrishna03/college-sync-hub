@@ -226,6 +226,51 @@ class ApiService {
   async getStudentPerformance() {
     return this.request('/reports/student/performance');
   }
+
+  // Notification endpoints
+  async createNotification(notificationData: any) {
+    return this.request('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(notificationData),
+    });
+  }
+
+  async createNotificationWithFile(formData: FormData) {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/notifications`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Request failed');
+    }
+    return data;
+  }
+
+  async getMyNotifications(page = 1, limit = 20) {
+    return this.request(`/notifications/my-notifications?page=${page}&limit=${limit}`);
+  }
+
+  async markNotificationRead(notificationId: string) {
+    return this.request(`/notifications/${notificationId}/read`, {
+      method: 'PUT',
+    });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request('/notifications/mark-all-read', {
+      method: 'PUT',
+    });
+  }
+
+  async getNotificationStats() {
+    return this.request('/notifications/stats');
+  }
 }
 
 export default new ApiService();

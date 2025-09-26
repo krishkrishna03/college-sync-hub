@@ -7,6 +7,7 @@ import TestForm from '../../components/Test/TestForm';
 import TestCard from '../../components/Test/TestCard';
 import TestAssignmentModal from '../../components/Test/TestAssignmentModal';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import NotificationForm from '../../components/Notifications/NotificationForm';
 
 interface College {
   id: string;
@@ -56,6 +57,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [showCollegeForm, setShowCollegeForm] = useState(false);
   const [showTestForm, setShowTestForm] = useState(false);
+  const [showNotificationForm, setShowNotificationForm] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +119,18 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
       await apiService.createTest(testData);
       setShowTestForm(false);
       loadTests();
+    } catch (error) {
+      throw error;
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleCreateNotification = async (formData: FormData) => {
+    try {
+      setFormLoading(true);
+      await apiService.createNotificationWithFile(formData);
+      setShowNotificationForm(false);
     } catch (error) {
       throw error;
     } finally {
@@ -269,6 +283,36 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
             </table>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (activeTab === 'notifications') {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">Create Notification</h2>
+          <button
+            onClick={() => setShowNotificationForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Create Notification
+          </button>
+        </div>
+
+        <Modal
+          isOpen={showNotificationForm}
+          onClose={() => setShowNotificationForm(false)}
+          title="Create New Notification"
+          size="lg"
+        >
+          <NotificationForm 
+            onSubmit={handleCreateNotification} 
+            loading={formLoading}
+            onClose={() => setShowNotificationForm(false)}
+          />
+        </Modal>
       </div>
     );
   }
