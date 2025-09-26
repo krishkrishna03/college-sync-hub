@@ -156,12 +156,10 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
     formDataUpload.append('pdf', file);
 
     try {
-      const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://college-sync-hub.onrender.com/api';
-      const response = await fetch(`${apiUrl}/tests/extract-pdf`, {
+      const response = await fetch('/api/tests/extract-pdf', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: formDataUpload
       });
@@ -193,11 +191,9 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
 
   const generateSampleQuestions = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://college-sync-hub.onrender.com/api';
-      const response = await fetch(`${apiUrl}/tests/sample-questions/${formData.subject}?count=${Math.min(5, formData.numberOfQuestions - formData.questions.length)}`, {
+      const response = await fetch(`/api/tests/sample-questions/${formData.subject}?count=${Math.min(5, formData.numberOfQuestions - formData.questions.length)}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
@@ -218,6 +214,27 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
       console.error('Error generating sample questions:', error);
     }
   };
+const isFormValid = (() => {
+  const newErrors: any = {};
+
+  if (!formData.testName.trim()) newErrors.testName = 'Test name is required';
+  if (!formData.testDescription.trim()) newErrors.testDescription = 'Description is required';
+  if (formData.numberOfQuestions < 1) newErrors.numberOfQuestions = 'Must have at least 1 question';
+  if (formData.marksPerQuestion < 1) newErrors.marksPerQuestion = 'Marks must be at least 1';
+  if (formData.duration < 5) newErrors.duration = 'Duration must be at least 5 minutes';
+  if (!formData.startDateTime) newErrors.startDateTime = 'Start date is required';
+  if (!formData.endDateTime) newErrors.endDateTime = 'End date is required';
+
+  if (formData.startDateTime && formData.endDateTime && new Date(formData.startDateTime) >= new Date(formData.endDateTime)) {
+    newErrors.endDateTime = 'End date must be after start date';
+  }
+
+  if (formData.questions.length !== formData.numberOfQuestions) {
+    newErrors.questions = `You need exactly ${formData.numberOfQuestions} questions`;
+  }
+
+  return Object.keys(newErrors).length === 0;
+})();
 
   if (showPreview) {
     return (
@@ -285,7 +302,8 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
           <div className="mt-6 flex justify-end">
             <button
               onClick={handleSubmit}
-              disabled={loading || !validateForm()}
+              disabled={loading || !isFormValid}
+
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
             >
               {loading ? <LoadingSpinner size="sm" /> : null}
@@ -597,7 +615,7 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
         </button>
         <button
           type="submit"
-          disabled={loading || !validateForm()}
+          disabled={loading || !isFormValid}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
         >
           {loading ? <LoadingSpinner size="sm" /> : null}
