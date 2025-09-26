@@ -4,6 +4,7 @@ import apiService from '../../services/api';
 import Modal from '../../components/UI/Modal';
 import UserForm from '../../components/Forms/UserForm';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import NotificationForm from '../../components/Notifications/NotificationForm';
 
 interface User {
   _id: string;
@@ -63,6 +64,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
   const [showUserForm, setShowUserForm] = useState(false);
   const [showStudentAssignment, setShowStudentAssignment] = useState(false);
+  const [showNotificationForm, setShowNotificationForm] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<TestAssignment | null>(null);
   const [defaultRole, setDefaultRole] = useState<'faculty' | 'student'>('student');
   const [loading, setLoading] = useState(true);
@@ -162,6 +164,18 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       loadAssignedTests();
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to assign test to students');
+    }
+  };
+
+  const handleCreateNotification = async (formData: FormData) => {
+    try {
+      setFormLoading(true);
+      await apiService.createNotificationWithFile(formData);
+      setShowNotificationForm(false);
+    } catch (error) {
+      throw error;
+    } finally {
+      setFormLoading(false);
     }
   };
 
@@ -340,6 +354,36 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
             />
           </Modal>
         )}
+      </div>
+    );
+  }
+
+  if (activeTab === 'notifications') {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">Create Notification</h2>
+          <button
+            onClick={() => setShowNotificationForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Create Notification
+          </button>
+        </div>
+
+        <Modal
+          isOpen={showNotificationForm}
+          onClose={() => setShowNotificationForm(false)}
+          title="Create New Notification"
+          size="lg"
+        >
+          <NotificationForm 
+            onSubmit={handleCreateNotification} 
+            loading={formLoading}
+            onClose={() => setShowNotificationForm(false)}
+          />
+        </Modal>
       </div>
     );
   }
