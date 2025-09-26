@@ -9,7 +9,7 @@ class EmailService {
       user: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
     });
     
-    this.transporter = nodemailer.createTransport({
+    this.transporter = nodemailer.createTransporter({
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT,
       secure: false,
@@ -249,79 +249,79 @@ class EmailService {
       return false;
     }
   }
+
+  async sendNotificationEmail(userEmail, userName, title, message, type = 'general', priority = 'medium') {
+    logger.info('Sending notification email', {
+      to: userEmail,
+      title,
+      type,
+      priority
+    });
+    
+    const priorityColors = {
+      low: '#10B981',
+      medium: '#3B82F6', 
+      high: '#EF4444'
+    };
+    
+    const typeIcons = {
+      general: '📢',
+      urgent: '🚨',
+      announcement: '📣',
+      reminder: '⏰'
+    };
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: `${typeIcons[type] || '📢'} ${title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: ${priorityColors[priority]}; color: white; padding: 20px; text-align: center;">
+            <h1>${typeIcons[type] || '📢'} Notification</h1>
+          </div>
+          <div style="padding: 20px; background-color: #f9f9f9;">
+            <h2>Hello, ${userName}!</h2>
+            <div style="background-color: white; padding: 15px; border-left: 4px solid ${priorityColors[priority]}; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: ${priorityColors[priority]};">${title}</h3>
+              <div style="line-height: 1.6; color: #374151;">
+                ${message.replace(/\n/g, '<br>')}
+              </div>
+            </div>
+            
+            <div style="background-color: #f3f4f6; padding: 10px; border-radius: 5px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">
+                <strong>Type:</strong> ${type.charAt(0).toUpperCase() + type.slice(1)} | 
+                <strong>Priority:</strong> ${priority.charAt(0).toUpperCase() + priority.slice(1)}
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/login" 
+                 style="background-color: ${priorityColors[priority]}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                View in Dashboard
+              </a>
+            </div>
+          </div>
+          <div style="background-color: #374151; color: white; text-align: center; padding: 10px;">
+            <p>Academic Management System © 2025</p>
+          </div>
+        </div>
+      `
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      logger.info('Notification email sent successfully', { to: userEmail });
+      return true;
+    } catch (error) {
+      logger.errorLog(error, { 
+        context: 'Send Notification Email', 
+        to: userEmail 
+      });
+      return false;
+    }
+  }
 }
-
- async sendNotificationEmail(userEmail, userName, title, message, type = 'general', priority = 'medium') {
-   logger.info('Sending notification email', {
-     to: userEmail,
-     title,
-     type,
-     priority
-   });
-   
-   const priorityColors = {
-     low: '#10B981',
-     medium: '#3B82F6', 
-     high: '#EF4444'
-   };
-   
-   const typeIcons = {
-     general: '📢',
-     urgent: '🚨',
-     announcement: '📣',
-     reminder: '⏰'
-   };
-   
-   const mailOptions = {
-     from: process.env.EMAIL_USER,
-     to: userEmail,
-     subject: `${typeIcons[type] || '📢'} ${title}`,
-     html: `
-       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-         <div style="background-color: ${priorityColors[priority]}; color: white; padding: 20px; text-align: center;">
-           <h1>${typeIcons[type] || '📢'} Notification</h1>
-         </div>
-         <div style="padding: 20px; background-color: #f9f9f9;">
-           <h2>Hello, ${userName}!</h2>
-           <div style="background-color: white; padding: 15px; border-left: 4px solid ${priorityColors[priority]}; margin: 20px 0;">
-             <h3 style="margin-top: 0; color: ${priorityColors[priority]};">${title}</h3>
-             <div style="line-height: 1.6; color: #374151;">
-               ${message.replace(/\n/g, '<br>')}
-             </div>
-           </div>
-           
-           <div style="background-color: #f3f4f6; padding: 10px; border-radius: 5px; margin: 20px 0;">
-             <p style="margin: 0; font-size: 12px; color: #6b7280;">
-               <strong>Type:</strong> ${type.charAt(0).toUpperCase() + type.slice(1)} | 
-               <strong>Priority:</strong> ${priority.charAt(0).toUpperCase() + priority.slice(1)}
-             </p>
-           </div>
-           
-           <div style="text-align: center; margin: 30px 0;">
-             <a href="${process.env.FRONTEND_URL}/login" 
-                style="background-color: ${priorityColors[priority]}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-               View in Dashboard
-             </a>
-           </div>
-         </div>
-         <div style="background-color: #374151; color: white; text-align: center; padding: 10px;">
-           <p>Academic Management System © 2025</p>
-         </div>
-       </div>
-     `
-   };
-
-   try {
-     await this.transporter.sendMail(mailOptions);
-     logger.info('Notification email sent successfully', { to: userEmail });
-     return true;
-   } catch (error) {
-     logger.errorLog(error, { 
-       context: 'Send Notification Email', 
-       to: userEmail 
-     });
-     return false;
-   }
- }
 
 module.exports = new EmailService();

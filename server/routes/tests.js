@@ -50,8 +50,11 @@ router.post('/', auth, authorize('master_admin'), [
   body('questions').isArray({ min: 1 })
 ], async (req, res) => {
   try {
+    console.log('Received test creation request:', req.body);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
@@ -69,6 +72,7 @@ router.post('/', auth, authorize('master_admin'), [
 
     // Validate questions
     if (questions.length !== numberOfQuestions) {
+      console.log('Question count mismatch:', questions.length, 'vs', numberOfQuestions);
       return res.status(400).json({ 
         error: `Number of questions (${questions.length}) must match the specified count (${numberOfQuestions})` 
       });
@@ -78,18 +82,21 @@ router.post('/', auth, authorize('master_admin'), [
     for (let i = 0; i < questions.length; i++) {
       const question = questions[i];
       if (!question.questionText || !question.options || !question.correctAnswer) {
+        console.log('Question validation failed at index:', i, question);
         return res.status(400).json({ 
           error: `Question ${i + 1} is incomplete` 
         });
       }
       
       if (!question.options.A || !question.options.B || !question.options.C || !question.options.D) {
+        console.log('Question options validation failed at index:', i, question.options);
         return res.status(400).json({ 
           error: `Question ${i + 1} must have all four options (A, B, C, D)` 
         });
       }
       
       if (!['A', 'B', 'C', 'D'].includes(question.correctAnswer)) {
+        console.log('Correct answer validation failed at index:', i, question.correctAnswer);
         return res.status(400).json({ 
           error: `Question ${i + 1} must have a valid correct answer (A, B, C, or D)` 
         });
@@ -99,6 +106,7 @@ router.post('/', auth, authorize('master_admin'), [
       question.marks = marksPerQuestion;
     }
 
+    console.log('Creating test with validated data');
     const test = new Test({
       testName,
       testDescription,
@@ -113,6 +121,7 @@ router.post('/', auth, authorize('master_admin'), [
     });
 
     await test.save();
+    console.log('Test created successfully:', test._id);
 
     res.status(201).json({
       message: 'Test created successfully',
@@ -130,7 +139,7 @@ router.post('/', auth, authorize('master_admin'), [
     });
 
   } catch (error) {
-    console.error('Create test error:', error);
+    console.error('Create test error:', error.message, error.stack);
     res.status(500).json({ error: 'Server error' });
   }
 });

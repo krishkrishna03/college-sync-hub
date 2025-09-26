@@ -15,6 +15,8 @@ function App() {
       
       if (token && userStr) {
         try {
+          // Set loading to false initially to prevent hydration issues
+          dispatch({ type: 'LOGIN_START' });
           // Verify token is still valid by fetching current user
           const currentUser = await apiService.getCurrentUser();
           dispatch({ 

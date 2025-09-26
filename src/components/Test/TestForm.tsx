@@ -156,10 +156,12 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
     formDataUpload.append('pdf', file);
 
     try {
-      const response = await fetch('/api/tests/extract-pdf', {
+      const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://college-sync-hub.onrender.com/api';
+      const response = await fetch(`${apiUrl}/tests/extract-pdf`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: formDataUpload
       });
@@ -191,9 +193,11 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
 
   const generateSampleQuestions = async () => {
     try {
-      const response = await fetch(`/api/tests/sample-questions/${formData.subject}?count=${Math.min(5, formData.numberOfQuestions - formData.questions.length)}`, {
+      const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://college-sync-hub.onrender.com/api';
+      const response = await fetch(`${apiUrl}/tests/sample-questions/${formData.subject}?count=${Math.min(5, formData.numberOfQuestions - formData.questions.length)}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
