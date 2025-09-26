@@ -5,6 +5,7 @@ import Modal from '../../components/UI/Modal';
 import UserForm from '../../components/Forms/UserForm';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import NotificationForm from '../../components/Notifications/NotificationForm';
+import BulkUploadForm from '../../components/Forms/BulkUploadForm';
 
 interface User {
   _id: string;
@@ -39,6 +40,8 @@ interface TestAssignment {
     testName: string;
     testDescription: string;
     subject: string;
+    testType?: string;
+    difficulty?: string;
     numberOfQuestions: number;
     totalMarks: number;
     duration: number;
@@ -63,6 +66,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [students, setStudents] = useState<User[]>([]);
   const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
   const [showUserForm, setShowUserForm] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showStudentAssignment, setShowStudentAssignment] = useState(false);
   const [showNotificationForm, setShowNotificationForm] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<TestAssignment | null>(null);
@@ -147,6 +151,41 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     }
   };
 
+  const handleBulkUpload = async (file: File, role: string) => {
+    try {
+      setFormLoading(true);
+      const formData = new FormData();
+      formData.append('excel', file);
+      formData.append('role', role);
+      
+      const response = await fetch('/api/college/users/bulk-upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+      
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
+      }
+      
+      // Reload data
+      loadDashboardData();
+      if (role === 'faculty') {
+        loadFaculty();
+      } else {
+        loadStudents();
+      }
+      
+      return result;
+    } catch (error) {
+      throw error;
+    } finally {
+      setFormLoading(false);
+    }
+  };
   const handleTestAssignmentStatus = async (assignmentId: string, status: 'accepted' | 'rejected') => {
     try {
       await apiService.updateTestAssignmentStatus(assignmentId, status);
@@ -208,6 +247,10 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     setShowUserForm(true);
   };
 
+  const openBulkUpload = (role: 'faculty' | 'student') => {
+    setDefaultRole(role);
+    setShowBulkUpload(true);
+  };
   if (loading && !dashboardData) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -256,6 +299,20 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                     }`}>
                       {assignment.status}
                     </span>
+                    {assignment.testId.testType && (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {assignment.testId.testType}
+                      </span>
+                    )}
+                    {assignment.testId.difficulty && (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        assignment.testId.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
+                        assignment.testId.difficulty === 'Hard' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {assignment.testId.difficulty}
+                      </span>
+                    )}
                   </div>
                   <p className="text-gray-600 text-sm mb-2">{assignment.testId.testDescription}</p>
                   <p className="text-sm text-gray-500">
@@ -392,13 +449,22 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     <div className="bg-white rounded-lg shadow">
       <div className="px-6 py-4 border-b flex justify-between items-center">
         <h3 className="text-lg font-medium">{userType}</h3>
-        <button
-          onClick={() => openUserForm(userType.toLowerCase() as 'faculty' | 'student')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus size={16} />
-          Add {userType.slice(0, -1)}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => openBulkUpload(userType.toLowerCase().slice(0, -1) as 'faculty' | 'student')}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+          >
+            <Upload size={16} />
+            Bulk Upload
+          </button>
+          <button
+            onClick={() => openUserForm(userType.toLowerCase().slice(0, -1) as 'faculty' | 'student')}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Add {userType.slice(0, -1)}
+          </button>
+        </div>
       </div>
       
       <div className="overflow-x-auto">
@@ -487,12 +553,21 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       {users.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <p>No {userType.toLowerCase()} found</p>
-          <button
-            onClick={() => openUserForm(userType.toLowerCase().slice(0, -1) as 'faculty' | 'student')}
-            className="mt-2 text-blue-600 hover:text-blue-800"
-          >
-            Add the first {userType.toLowerCase().slice(0, -1)}
-          </button>
+          <div className="mt-2 space-x-2">
+            <button
+              onClick={() => openBulkUpload(userType.toLowerCase().slice(0, -1) as 'faculty' | 'student')}
+              className="text-green-600 hover:text-green-800"
+            >
+              Bulk upload {userType.toLowerCase()}
+            </button>
+            <span className="text-gray-400">or</span>
+            <button
+              onClick={() => openUserForm(userType.toLowerCase().slice(0, -1) as 'faculty' | 'student')}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              Add manually
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -516,6 +591,19 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
           />
         </Modal>
       </div>
+        <Modal
+          isOpen={showBulkUpload}
+          onClose={() => setShowBulkUpload(false)}
+          title="Bulk Upload Faculty"
+          size="lg"
+        >
+          <BulkUploadForm 
+            role="faculty"
+            onSubmit={handleBulkUpload} 
+            loading={formLoading}
+            onClose={() => setShowBulkUpload(false)}
+          />
+        </Modal>
     );
   }
 
@@ -558,6 +646,19 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
             
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center">
+        <Modal
+          isOpen={showBulkUpload}
+          onClose={() => setShowBulkUpload(false)}
+          title="Bulk Upload Students"
+          size="lg"
+        >
+          <BulkUploadForm 
+            role="student"
+            onSubmit={handleBulkUpload} 
+            loading={formLoading}
+            onClose={() => setShowBulkUpload(false)}
+          />
+        </Modal>
                 <GraduationCap className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Students</p>
@@ -593,20 +694,38 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                 <h3 className="text-lg font-medium">Quick Actions</h3>
               </div>
               <div className="p-6 space-y-3">
-                <button
-                  onClick={() => openUserForm('faculty')}
-                  className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <Plus size={20} />
-                  Add Faculty Member
-                </button>
-                <button
-                  onClick={() => openUserForm('student')}
-                  className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 flex items-center gap-2"
-                >
-                  <Plus size={20} />
-                  Add Student
-                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => openUserForm('faculty')}
+                    className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                  >
+                    <Plus size={16} />
+                    Add Faculty
+                  </button>
+                  <button
+                    onClick={() => openBulkUpload('faculty')}
+                    className="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+                  >
+                    <Upload size={16} />
+                    Bulk Faculty
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => openUserForm('student')}
+                    className="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
+                  >
+                    <Plus size={16} />
+                    Add Student
+                  </button>
+                  <button
+                    onClick={() => openBulkUpload('student')}
+                    className="bg-orange-600 text-white p-3 rounded-lg hover:bg-orange-700 flex items-center gap-2 text-sm"
+                  >
+                    <Upload size={16} />
+                    Bulk Students
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -656,6 +775,19 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
         />
       </Modal>
     </div>
+      <Modal
+        isOpen={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        title={`Bulk Upload ${defaultRole === 'faculty' ? 'Faculty' : 'Students'}`}
+        size="lg"
+      >
+        <BulkUploadForm 
+          role={defaultRole}
+          onSubmit={handleBulkUpload} 
+          loading={formLoading}
+          onClose={() => setShowBulkUpload(false)}
+        />
+      </Modal>
   );
 };
 

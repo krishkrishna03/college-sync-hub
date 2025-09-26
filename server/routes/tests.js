@@ -42,6 +42,9 @@ router.post('/', auth, authorize('master_admin'), [
   body('testName').trim().isLength({ min: 3 }),
   body('testDescription').trim().isLength({ min: 10 }),
   body('subject').isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']),
+  body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment']),
+  body('topics').optional().isArray(),
+  body('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']),
   body('numberOfQuestions').isInt({ min: 1, max: 100 }),
   body('marksPerQuestion').isInt({ min: 1, max: 10 }),
   body('duration').isInt({ min: 5, max: 300 }),
@@ -62,6 +65,9 @@ router.post('/', auth, authorize('master_admin'), [
       testName,
       testDescription,
       subject,
+      testType = 'Assessment',
+      topics = [],
+      difficulty = 'Medium',
       numberOfQuestions,
       marksPerQuestion,
       duration,
@@ -111,6 +117,9 @@ router.post('/', auth, authorize('master_admin'), [
       testName,
       testDescription,
       subject,
+      testType,
+      topics,
+      difficulty,
       numberOfQuestions,
       marksPerQuestion,
       duration,
@@ -129,6 +138,9 @@ router.post('/', auth, authorize('master_admin'), [
         id: test._id,
         testName: test.testName,
         subject: test.subject,
+        testType: test.testType,
+        topics: test.topics,
+        difficulty: test.difficulty,
         numberOfQuestions: test.numberOfQuestions,
         totalMarks: test.totalMarks,
         duration: test.duration,
@@ -610,9 +622,10 @@ router.post('/:id/submit', auth, authorize('student'), [
 
     await testAttempt.save();
 
-    // Return results
-    res.json({
+    // Return results based on test type
+    const responseData = {
       message: 'Test submitted successfully',
+      testType: test.testType,
       results: {
         totalMarks: testAttempt.totalMarks,
         marksObtained: testAttempt.marksObtained,
@@ -622,7 +635,21 @@ router.post('/:id/submit', auth, authorize('student'), [
         timeSpent: testAttempt.timeSpent,
         submittedAt: testAttempt.createdAt
       }
-    });
+    };
+
+    // For Practice tests, include immediate feedback
+    if (test.testType === 'Practice') {
+      responseData.instantFeedback = processedAnswers.map((answer, index) => ({
+        questionId: answer.questionId,
+        question: test.questions[index],
+        selectedAnswer: answer.selectedAnswer,
+        correctAnswer: test.questions[index].correctAnswer,
+        isCorrect: answer.isCorrect,
+        explanation: `The correct answer is ${test.questions[index].correctAnswer}: ${test.questions[index].options[test.questions[index].correctAnswer]}`
+      }));
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('Submit test error:', error);

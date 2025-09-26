@@ -40,6 +40,20 @@ const testSchema = new mongoose.Schema({
     required: true,
     enum: ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']
   },
+  testType: {
+    type: String,
+    enum: ['Assessment', 'Practice', 'Assignment'],
+    default: 'Assessment'
+  },
+  topics: [{
+    type: String,
+    trim: true
+  }],
+  difficulty: {
+    type: String,
+    enum: ['Easy', 'Medium', 'Hard'],
+    default: 'Medium'
+  },
   numberOfQuestions: {
     type: Number,
     required: true,

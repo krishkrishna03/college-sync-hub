@@ -33,6 +33,8 @@ interface AssignedTest {
     testName: string;
     testDescription: string;
     subject: string;
+    testType?: string;
+    difficulty?: string;
     numberOfQuestions: number;
     totalMarks: number;
     duration: number;
@@ -55,6 +57,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const [testStartTime, setTestStartTime] = useState<Date | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [testResults, setTestResults] = useState<any>(null);
+  const [showInstantResults, setShowInstantResults] = useState(false);
+  const [instantResults, setInstantResults] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,10 +112,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
       setActiveTest(null);
       setTestStartTime(null);
       
-      // Show results
-      const results = await apiService.getTestResults(activeTest._id);
-      setTestResults(results);
-      setShowResults(true);
+      // Handle different test types
+      if (response.testType === 'Practice' && response.instantFeedback) {
+        // Show instant feedback for practice tests
+        setInstantResults(response);
+        setShowInstantResults(true);
+      } else {
+        // Show regular results for Assessment/Assignment tests
+        const results = await apiService.getTestResults(activeTest._id);
+        setTestResults(results);
+        setShowResults(true);
+      }
       
       // Reload assigned tests
       loadAssignedTests();
@@ -159,6 +170,23 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     return { text: 'Available', color: 'bg-blue-100 text-blue-800' };
   };
 
+  const getTestTypeColor = (testType: string) => {
+    const colors = {
+      'Assessment': 'bg-blue-100 text-blue-800',
+      'Practice': 'bg-green-100 text-green-800',
+      'Assignment': 'bg-purple-100 text-purple-800'
+    };
+    return colors[testType as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    const colors = {
+      'Easy': 'bg-green-100 text-green-800',
+      'Medium': 'bg-yellow-100 text-yellow-800',
+      'Hard': 'bg-red-100 text-red-800'
+    };
+    return colors[difficulty as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
   // Show test interface if test is active
   if (activeTest && testStartTime) {
     return (
@@ -174,6 +202,108 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     );
   }
 
+  // Show instant results for practice tests
+  if (showInstantResults && instantResults) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Practice Test Complete!</h1>
+            <p className="text-gray-600">Here's your instant feedback</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-blue-600">{instantResults.results.marksObtained}</div>
+              <div className="text-sm text-gray-600">Marks Obtained</div>
+              <div className="text-xs text-gray-500">out of {instantResults.results.totalMarks}</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-green-600">{instantResults.results.percentage.toFixed(1)}%</div>
+              <div className="text-sm text-gray-600">Percentage</div>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-purple-600">{instantResults.results.correctAnswers}</div>
+              <div className="text-sm text-gray-600">Correct</div>
+            </div>
+            <div className="bg-orange-50 p-4 rounded-lg text-center">
+              <div className="text-2xl font-bold text-orange-600">{instantResults.results.incorrectAnswers}</div>
+              <div className="text-sm text-gray-600">Incorrect</div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900">Question-wise Feedback</h3>
+            {instantResults.instantFeedback.map((feedback: any, index: number) => (
+              <div
+                key={index}
+                className={`border rounded-lg p-4 ${
+                  feedback.isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">
+                    {index + 1}. {feedback.question.questionText}
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    {feedback.isCorrect ? (
+                      <CheckCircle size={20} className="text-green-600" />
+                    ) : (
+                      <XCircle size={20} className="text-red-600" />
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                  {Object.entries(feedback.question.options).map(([key, value]: [string, any]) => (
+                    <div
+                      key={key}
+                      className={`p-2 rounded text-sm ${
+                        key === feedback.correctAnswer
+                          ? 'bg-green-100 border border-green-300'
+                          : key === feedback.selectedAnswer && !feedback.isCorrect
+                          ? 'bg-red-100 border border-red-300'
+                          : 'bg-white border border-gray-200'
+                      }`}
+                    >
+                      <span className="font-medium">{key})</span> {value}
+                      {key === feedback.correctAnswer && (
+                        <span className="ml-2 text-green-600 text-xs">✓ Correct</span>
+                      )}
+                      {key === feedback.selectedAnswer && key !== feedback.correctAnswer && (
+                        <span className="ml-2 text-red-600 text-xs">✗ Your answer</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="text-sm">
+                  <p className={`${feedback.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                    {feedback.explanation}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-6">
+            <button
+              onClick={() => {
+                setShowInstantResults(false);
+                setInstantResults(null);
+              }}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium"
+            >
+              Back to Tests
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   // Show test results
   if (showResults && testResults) {
     return (
@@ -234,8 +364,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
                         {status.text}
                       </span>
+                      {test.testId.testType && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTestTypeColor(test.testId.testType)}`}>
+                          {test.testId.testType}
+                        </span>
+                      )}
+                      {test.testId.difficulty && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(test.testId.difficulty)}`}>
+                          {test.testId.difficulty}
+                        </span>
+                      )}
                     </div>
                     <p className="text-gray-600 text-sm mb-2">{test.testId.testDescription}</p>
+                    {test.testId.testType === 'Practice' && (
+                      <div className="mb-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          💡 Get instant feedback after each question!
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -275,10 +422,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                     ) : isTestActive(test) ? (
                       <button
                         onClick={() => handleStartTest(test.testId._id)}
-                        className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+                        className={`text-white py-2 px-4 rounded-lg flex items-center gap-2 text-sm ${
+                          test.testId.testType === 'Practice' 
+                            ? 'bg-green-600 hover:bg-green-700' 
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
                       >
                         <Play size={16} />
-                        Start Test
+                        {test.testId.testType === 'Practice' ? 'Start Practice' : 'Start Test'}
                       </button>
                     ) : (
                       <button

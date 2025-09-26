@@ -19,6 +19,7 @@ interface Test {
   testName: string;
   testDescription: string;
   subject: string;
+  testType?: string;
   numberOfQuestions: number;
   totalMarks: number;
   duration: number;
@@ -43,6 +44,8 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
   const [timeLeft, setTimeLeft] = useState(test.duration * 60); // in seconds
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
+  const [showInstantFeedback, setShowInstantFeedback] = useState(false);
+  const [currentFeedback, setCurrentFeedback] = useState<any>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -71,6 +74,27 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
+    
+    // For Practice tests, show instant feedback
+    if (test.testType === 'Practice') {
+      const question = test.questions.find(q => q._id === questionId);
+      if (question) {
+        const isCorrect = question.correctAnswer === answer;
+        setCurrentFeedback({
+          questionId,
+          selectedAnswer: answer,
+          correctAnswer: question.correctAnswer,
+          isCorrect,
+          explanation: `The correct answer is ${question.correctAnswer}: ${question.options[question.correctAnswer]}`
+        });
+        setShowInstantFeedback(true);
+        
+        // Auto-hide feedback after 3 seconds
+        setTimeout(() => {
+          setShowInstantFeedback(false);
+        }, 3000);
+      }
+    }
   };
 
   const getAnsweredCount = () => {
@@ -119,6 +143,12 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
     return 'text-green-600';
   };
 
+  const handleNextQuestion = () => {
+    if (currentQuestion < test.numberOfQuestions - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+      setShowInstantFeedback(false);
+    }
+  };
   const currentQ = test.questions[currentQuestion];
 
   return (
@@ -129,7 +159,9 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-xl font-bold text-gray-900">{test.testName}</h1>
-              <p className="text-sm text-gray-600">{test.subject} • {test.totalMarks} marks</p>
+              <p className="text-sm text-gray-600">
+                {test.subject} • {test.testType || 'Assessment'} • {test.totalMarks} marks
+              </p>
             </div>
             
             <div className="flex items-center gap-4">
@@ -193,6 +225,13 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                   <span>Current</span>
                 </div>
               </div>
+              
+              {test.testType === 'Practice' && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-800 font-medium">Practice Mode</p>
+                  <p className="text-xs text-blue-600">Get instant feedback after each answer!</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -248,6 +287,32 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 </div>
               </div>
 
+              {/* Instant Feedback for Practice Tests */}
+              {test.testType === 'Practice' && showInstantFeedback && currentFeedback && (
+                <div className={`mb-6 p-4 rounded-lg border-l-4 ${
+                  currentFeedback.isCorrect 
+                    ? 'bg-green-50 border-green-400' 
+                    : 'bg-red-50 border-red-400'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {currentFeedback.isCorrect ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-600" />
+                    )}
+                    <span className={`font-medium ${
+                      currentFeedback.isCorrect ? 'text-green-800' : 'text-red-800'
+                    }`}>
+                      {currentFeedback.isCorrect ? 'Correct!' : 'Incorrect'}
+                    </span>
+                  </div>
+                  <p className={`text-sm ${
+                    currentFeedback.isCorrect ? 'text-green-700' : 'text-red-700'
+                  }`}>
+                    {currentFeedback.explanation}
+                  </p>
+                </div>
+              )}
               {/* Navigation Buttons */}
               <div className="flex justify-between">
                 <button
@@ -261,7 +326,7 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 <div className="flex gap-2">
                   {currentQuestion < test.numberOfQuestions - 1 ? (
                     <button
-                      onClick={() => setCurrentQuestion(currentQuestion + 1)}
+                      onClick={handleNextQuestion}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       Next
@@ -302,6 +367,11 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 <p className="text-sm">
                   <strong>Time Remaining:</strong> {formatTime(timeLeft)}
                 </p>
+                {test.testType && (
+                  <p className="text-sm">
+                    <strong>Test Type:</strong> {test.testType}
+                  </p>
+                )}
               </div>
               <p className="text-sm text-red-600 mt-2">
                 ⚠️ You cannot change your answers after submission.

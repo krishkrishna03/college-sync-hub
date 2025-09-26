@@ -6,6 +6,9 @@ interface Test {
   testName: string;
   testDescription: string;
   subject: string;
+  testType?: string;
+  topics?: string[];
+  difficulty?: string;
   numberOfQuestions: number;
   totalMarks: number;
   duration: number;
@@ -43,6 +46,23 @@ const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, showActions
     return colors[subject as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
+  const getTestTypeColor = (testType: string) => {
+    const colors = {
+      'Assessment': 'bg-blue-100 text-blue-800',
+      'Practice': 'bg-green-100 text-green-800',
+      'Assignment': 'bg-purple-100 text-purple-800'
+    };
+    return colors[testType as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    const colors = {
+      'Easy': 'bg-green-100 text-green-800',
+      'Medium': 'bg-yellow-100 text-yellow-800',
+      'Hard': 'bg-red-100 text-red-800'
+    };
+    return colors[difficulty as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
   const isActive = () => {
     const now = new Date();
     const start = new Date(test.startDateTime);
@@ -71,11 +91,33 @@ const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, showActions
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSubjectColor(test.subject)}`}>
               {test.subject}
             </span>
+            {test.testType && (
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTestTypeColor(test.testType)}`}>
+                {test.testType}
+              </span>
+            )}
+            {test.difficulty && (
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(test.difficulty)}`}>
+                {test.difficulty}
+              </span>
+            )}
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
               {status.text}
             </span>
           </div>
           <p className="text-gray-600 text-sm mb-3">{test.testDescription}</p>
+          {test.topics && test.topics.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs text-gray-500 mb-1">Topics:</p>
+              <div className="flex flex-wrap gap-1">
+                {test.topics.map((topic, index) => (
+                  <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -18,6 +18,9 @@ interface TestFormData {
   testName: string;
   testDescription: string;
   subject: 'Verbal' | 'Reasoning' | 'Technical' | 'Arithmetic' | 'Communication';
+  testType: 'Assessment' | 'Practice' | 'Assignment';
+  topics: string[];
+  difficulty: 'Easy' | 'Medium' | 'Hard';
   numberOfQuestions: number;
   marksPerQuestion: number;
   duration: number;
@@ -36,6 +39,9 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
     testName: '',
     testDescription: '',
     subject: 'Technical',
+    testType: 'Assessment',
+    topics: [],
+    difficulty: 'Medium',
     numberOfQuestions: 10,
     marksPerQuestion: 1,
     duration: 60,
@@ -57,6 +63,17 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
   const [errors, setErrors] = useState<any>({});
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
+  const testTypes = ['Assessment', 'Practice', 'Assignment'];
+  const difficulties = ['Easy', 'Medium', 'Hard'];
+  
+  // Topic options based on subject
+  const topicOptions = {
+    'Verbal': ['Vocabulary', 'Grammar', 'Reading Comprehension', 'Synonyms & Antonyms', 'Sentence Completion'],
+    'Reasoning': ['Logical Reasoning', 'Analytical Reasoning', 'Verbal Reasoning', 'Non-Verbal Reasoning', 'Critical Thinking'],
+    'Technical': ['Programming', 'Data Structures', 'Algorithms', 'Database', 'Networking', 'Operating Systems'],
+    'Arithmetic': ['Basic Math', 'Algebra', 'Geometry', 'Statistics', 'Probability', 'Number Systems'],
+    'Communication': ['Written Communication', 'Verbal Communication', 'Presentation Skills', 'Business Communication', 'Email Etiquette']
+  };
 
   const validateForm = (): boolean => {
     const newErrors: any = {};
@@ -75,6 +92,9 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
       }
     }
 
+    if (formData.testType === 'Practice' && formData.topics.length === 0) {
+      newErrors.topics = 'Please select at least one topic for practice tests';
+    }
     if (formData.questions.length !== formData.numberOfQuestions) {
       newErrors.questions = `You need exactly ${formData.numberOfQuestions} questions`;
     }
@@ -103,6 +123,9 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
         testName: '',
         testDescription: '',
         subject: 'Technical',
+        testType: 'Assessment',
+        topics: [],
+        difficulty: 'Medium',
         numberOfQuestions: 10,
         marksPerQuestion: 1,
         duration: 60,
@@ -215,6 +238,14 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
     }
   };
 const isFormValid = (() => {
+  const handleTopicChange = (topic: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      topics: checked
+        ? [...prev.topics, topic]
+        : prev.topics.filter(t => t !== topic)
+    }));
+  };
   const newErrors: any = {};
 
   if (!formData.testName.trim()) newErrors.testName = 'Test name is required';
@@ -229,6 +260,9 @@ const isFormValid = (() => {
     newErrors.endDateTime = 'End date must be after start date';
   }
 
+  if (formData.testType === 'Practice' && formData.topics.length === 0) {
+    newErrors.topics = 'Please select at least one topic for practice tests';
+  }
   if (formData.questions.length !== formData.numberOfQuestions) {
     newErrors.questions = `You need exactly ${formData.numberOfQuestions} questions`;
   }
@@ -253,10 +287,14 @@ const isFormValid = (() => {
           <h2 className="text-xl font-bold mb-2">{formData.testName}</h2>
           <p className="text-gray-600 mb-4">{formData.testDescription}</p>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="text-center p-3 bg-blue-50 rounded">
               <p className="text-sm text-gray-600">Subject</p>
               <p className="font-medium">{formData.subject}</p>
+            </div>
+            <div className="text-center p-3 bg-purple-50 rounded">
+              <p className="text-sm text-gray-600">Type</p>
+              <p className="font-medium">{formData.testType}</p>
             </div>
             <div className="text-center p-3 bg-green-50 rounded">
               <p className="text-sm text-gray-600">Questions</p>
@@ -272,6 +310,18 @@ const isFormValid = (() => {
             </div>
           </div>
 
+          {formData.topics.length > 0 && (
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-700 mb-2">Topics Covered:</h4>
+              <div className="flex flex-wrap gap-2">
+                {formData.topics.map(topic => (
+                  <span key={topic} className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="space-y-6">
             {formData.questions.map((question, index) => (
               <div key={index} className="border rounded-lg p-4">
@@ -321,7 +371,7 @@ const isFormValid = (() => {
       <div className="bg-white p-6 rounded-lg border">
         <h3 className="text-lg font-medium mb-4">Test Information</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FileText className="inline w-4 h-4 mr-1" />
@@ -352,7 +402,19 @@ const isFormValid = (() => {
             </select>
           </div>
 
-          <div className="md:col-span-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Test Type</label>
+            <select
+              value={formData.testType}
+              onChange={(e) => setFormData(prev => ({ ...prev, testType: e.target.value as any, topics: [] }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {testTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <textarea
               value={formData.testDescription}
@@ -366,6 +428,63 @@ const isFormValid = (() => {
             {errors.testDescription && <p className="mt-1 text-sm text-red-600">{errors.testDescription}</p>}
           </div>
 
+          {/* Topics Selection for Practice Tests */}
+          {formData.testType === 'Practice' && (
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Topics (Select specific topics for practice)
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border rounded-lg">
+                {topicOptions[formData.subject].map(topic => (
+                  <label key={topic} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.topics.includes(topic)}
+                      onChange={(e) => handleTopicChange(topic, e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{topic}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.topics && <p className="mt-1 text-sm text-red-600">{errors.topics}</p>}
+            </div>
+          )}
+
+          {/* Topics Selection for Assignment Tests */}
+          {formData.testType === 'Assignment' && (
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Topics (Select multiple topics for comprehensive coverage)
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border rounded-lg">
+                {topicOptions[formData.subject].map(topic => (
+                  <label key={topic} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.topics.includes(topic)}
+                      onChange={(e) => handleTopicChange(topic, e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{topic}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
+            <select
+              value={formData.difficulty}
+              onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value as any }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {difficulties.map(difficulty => (
+                <option key={difficulty} value={difficulty}>{difficulty}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Hash className="inline w-4 h-4 mr-1" />
