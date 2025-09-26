@@ -9,7 +9,8 @@ class EmailService {
       user: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
     });
     
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
+
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT,
       secure: false,
