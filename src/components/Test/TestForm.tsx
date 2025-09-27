@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash } from 'lucide-react';
+import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
 
 interface Question {
@@ -73,6 +73,15 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
     'Technical': ['Programming', 'Data Structures', 'Algorithms', 'Database', 'Networking', 'Operating Systems'],
     'Arithmetic': ['Basic Math', 'Algebra', 'Geometry', 'Statistics', 'Probability', 'Number Systems'],
     'Communication': ['Written Communication', 'Verbal Communication', 'Presentation Skills', 'Business Communication', 'Email Etiquette']
+  };
+
+  const handleTopicChange = (topic: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      topics: checked
+        ? [...prev.topics, topic]
+        : prev.topics.filter(t => t !== topic)
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -179,7 +188,7 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
     formDataUpload.append('pdf', file);
 
     try {
-      const response = await fetch('/api/tests/extract-pdf', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tests/extract-pdf`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -214,7 +223,7 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
 
   const generateSampleQuestions = async () => {
     try {
-      const response = await fetch(`/api/tests/sample-questions/${formData.subject}?count=${Math.min(5, formData.numberOfQuestions - formData.questions.length)}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tests/sample-questions/${formData.subject}?count=${Math.min(5, formData.numberOfQuestions - formData.questions.length)}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -237,38 +246,31 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
       console.error('Error generating sample questions:', error);
     }
   };
-const isFormValid = (() => {
-  const handleTopicChange = (topic: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      topics: checked
-        ? [...prev.topics, topic]
-        : prev.topics.filter(t => t !== topic)
-    }));
+
+  const isFormValid = () => {
+    const newErrors: any = {};
+
+    if (!formData.testName.trim()) newErrors.testName = 'Test name is required';
+    if (!formData.testDescription.trim()) newErrors.testDescription = 'Description is required';
+    if (formData.numberOfQuestions < 1) newErrors.numberOfQuestions = 'Must have at least 1 question';
+    if (formData.marksPerQuestion < 1) newErrors.marksPerQuestion = 'Marks must be at least 1';
+    if (formData.duration < 5) newErrors.duration = 'Duration must be at least 5 minutes';
+    if (!formData.startDateTime) newErrors.startDateTime = 'Start date is required';
+    if (!formData.endDateTime) newErrors.endDateTime = 'End date is required';
+
+    if (formData.startDateTime && formData.endDateTime && new Date(formData.startDateTime) >= new Date(formData.endDateTime)) {
+      newErrors.endDateTime = 'End date must be after start date';
+    }
+
+    if (formData.testType === 'Practice' && formData.topics.length === 0) {
+      newErrors.topics = 'Please select at least one topic for practice tests';
+    }
+    if (formData.questions.length !== formData.numberOfQuestions) {
+      newErrors.questions = `You need exactly ${formData.numberOfQuestions} questions`;
+    }
+
+    return Object.keys(newErrors).length === 0;
   };
-  const newErrors: any = {};
-
-  if (!formData.testName.trim()) newErrors.testName = 'Test name is required';
-  if (!formData.testDescription.trim()) newErrors.testDescription = 'Description is required';
-  if (formData.numberOfQuestions < 1) newErrors.numberOfQuestions = 'Must have at least 1 question';
-  if (formData.marksPerQuestion < 1) newErrors.marksPerQuestion = 'Marks must be at least 1';
-  if (formData.duration < 5) newErrors.duration = 'Duration must be at least 5 minutes';
-  if (!formData.startDateTime) newErrors.startDateTime = 'Start date is required';
-  if (!formData.endDateTime) newErrors.endDateTime = 'End date is required';
-
-  if (formData.startDateTime && formData.endDateTime && new Date(formData.startDateTime) >= new Date(formData.endDateTime)) {
-    newErrors.endDateTime = 'End date must be after start date';
-  }
-
-  if (formData.testType === 'Practice' && formData.topics.length === 0) {
-    newErrors.topics = 'Please select at least one topic for practice tests';
-  }
-  if (formData.questions.length !== formData.numberOfQuestions) {
-    newErrors.questions = `You need exactly ${formData.numberOfQuestions} questions`;
-  }
-
-  return Object.keys(newErrors).length === 0;
-})();
 
   if (showPreview) {
     return (
@@ -322,6 +324,7 @@ const isFormValid = (() => {
               </div>
             </div>
           )}
+          
           <div className="space-y-6">
             {formData.questions.map((question, index) => (
               <div key={index} className="border rounded-lg p-4">
@@ -352,8 +355,7 @@ const isFormValid = (() => {
           <div className="mt-6 flex justify-end">
             <button
               onClick={handleSubmit}
-              disabled={loading || !isFormValid}
-
+              disabled={loading || !isFormValid()}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
             >
               {loading ? <LoadingSpinner size="sm" /> : null}
@@ -414,6 +416,7 @@ const isFormValid = (() => {
               ))}
             </select>
           </div>
+          
           <div className="md:col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <textarea
@@ -485,6 +488,7 @@ const isFormValid = (() => {
               ))}
             </select>
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Hash className="inline w-4 h-4 mr-1" />
@@ -734,7 +738,7 @@ const isFormValid = (() => {
         </button>
         <button
           type="submit"
-          disabled={loading || !isFormValid}
+          disabled={loading || !isFormValid()}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
         >
           {loading ? <LoadingSpinner size="sm" /> : null}
