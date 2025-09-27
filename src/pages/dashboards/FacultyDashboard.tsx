@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Users, BookOpen, Building, User } from 'lucide-react';
+import { Users, BookOpen, Building, User, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import NotificationForm from '../../components/Notifications/NotificationForm';
+import Modal from '../../components/UI/Modal';
 
 interface College {
   name: string;
@@ -31,6 +33,8 @@ interface FacultyDashboardProps {
 const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ activeTab }) => {
   const { state } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [showNotificationForm, setShowNotificationForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +51,18 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ activeTab }) => {
       setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateNotification = async (formData: FormData) => {
+    try {
+      setFormLoading(true);
+      await apiService.createNotificationWithFile(formData);
+      setShowNotificationForm(false);
+    } catch (error) {
+      throw error;
+    } finally {
+      setFormLoading(false);
     }
   };
 
@@ -74,6 +90,23 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ activeTab }) => {
 
   if (!dashboardData) {
     return <div>No data available</div>;
+  }
+
+  if (activeTab === 'notifications') {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">Create Notification</h2>
+          <button
+            onClick={() => setShowNotificationForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Create Notification
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (activeTab === 'profile') {
@@ -201,6 +234,19 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ activeTab }) => {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={showNotificationForm}
+        onClose={() => setShowNotificationForm(false)}
+        title="Create New Notification"
+        size="lg"
+      >
+        <NotificationForm 
+          onSubmit={handleCreateNotification} 
+          loading={formLoading}
+          onClose={() => setShowNotificationForm(false)}
+        />
+      </Modal>
     </div>
   );
 };

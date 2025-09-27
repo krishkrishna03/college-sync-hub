@@ -29,7 +29,7 @@ const notificationSchema = new mongoose.Schema({
   },
   createdByRole: {
     type: String,
-    enum: ['master_admin', 'college_admin'],
+    enum: ['master_admin', 'college_admin', 'faculty'],
     required: true
   },
   // Target audience

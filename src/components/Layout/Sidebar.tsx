@@ -9,7 +9,10 @@ import {
   BarChart3,
   FileText,
   ClipboardList,
-  Bell
+  Bell,
+  Brain,
+  Target,
+  Award
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -17,15 +20,27 @@ interface SidebarItem {
   label: string;
   icon: React.ReactNode;
   roles?: string[];
+  badge?: number;
 }
 
 interface SidebarProps {
   userRole: string;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  testCounts?: {
+    practiceTests: number;
+    assessments: number;
+  };
+  unreadNotifications?: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  userRole, 
+  activeTab, 
+  onTabChange, 
+  testCounts = { practiceTests: 0, assessments: 0 },
+  unreadNotifications = 0
+}) => {
   const menuItems: SidebarItem[] = [
     {
       id: 'dashboard',
@@ -52,10 +67,25 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       roles: ['master_admin'],
     },
     {
+      id: 'practice-tests',
+      label: 'Practice Tests',
+      icon: <Brain size={20} />,
+      roles: ['master_admin', 'college_admin', 'faculty', 'student'],
+      badge: testCounts.practiceTests
+    },
+    {
+      id: 'assessments',
+      label: 'Assessments',
+      icon: <Target size={20} />,
+      roles: ['master_admin', 'college_admin', 'faculty', 'student'],
+      badge: testCounts.assessments
+    },
+    {
       id: 'notifications',
       label: 'Notifications',
       icon: <Bell size={20} />,
       roles: ['master_admin', 'college_admin', 'faculty', 'student'],
+      badge: unreadNotifications
     },
     {
       id: 'faculty',
@@ -117,6 +147,11 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
             {item.label}
           </button>
         ))}
+            {item.badge && item.badge > 0 && (
+              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                {item.badge > 99 ? '99+' : item.badge}
+              </span>
+            )}
       </nav>
     </div>
   );

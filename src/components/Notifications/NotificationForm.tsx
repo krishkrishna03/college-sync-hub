@@ -42,7 +42,7 @@ const NotificationForm: React.FC<NotificationFormProps> = ({ onSubmit, loading, 
   useEffect(() => {
     if (state.user?.role === 'master_admin') {
       loadColleges();
-    } else if (state.user?.role === 'college_admin') {
+    } else if (state.user?.role === 'college_admin' || state.user?.role === 'faculty') {
       loadCollegeUsers();
     }
   }, [state.user?.role, formData.targetType]);
@@ -275,6 +275,11 @@ const NotificationForm: React.FC<NotificationFormProps> = ({ onSubmit, loading, 
                 <option value="students">🎓 Students</option>
               </>
             )}
+            {state.user?.role === 'faculty' && (
+              <>
+                <option value="students">🎓 Students</option>
+              </>
+            )}
           </select>
         </div>
       </div>
@@ -340,7 +345,7 @@ const NotificationForm: React.FC<NotificationFormProps> = ({ onSubmit, loading, 
       )}
 
       {/* Filters for College Admin */}
-      {state.user?.role === 'college_admin' && (formData.targetType === 'faculty' || formData.targetType === 'students') && (
+      {(state.user?.role === 'college_admin' || state.user?.role === 'faculty') && (formData.targetType === 'faculty' || formData.targetType === 'students') && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

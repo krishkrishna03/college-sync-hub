@@ -41,7 +41,7 @@ const upload = multer({
 });
 
 // Create notification (Master Admin and College Admin)
-router.post('/', auth, authorize('master_admin', 'college_admin'), upload.single('attachment'), [
+router.post('/', auth, authorize('master_admin', 'college_admin', 'faculty'), upload.single('attachment'), [
   body('title').trim().isLength({ min: 3, max: 200 }),
   body('message').trim().isLength({ min: 10, max: 2000 }),
   body('type').isIn(['general', 'urgent', 'announcement', 'reminder']),
