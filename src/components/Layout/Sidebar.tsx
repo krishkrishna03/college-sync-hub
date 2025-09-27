@@ -145,13 +145,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             {item.icon}
             {item.label}
-          </button>
-        ))}
             {item.badge && item.badge > 0 && (
               <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
                 {item.badge > 99 ? '99+' : item.badge}
               </span>
             )}
+          </button>
+        ))}
       </nav>
     </div>
   );
