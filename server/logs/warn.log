@@ -1,0 +1,4 @@
+{"timestamp":"2025-09-28T05:57:01.010Z","level":"WARN","message":"Authentication failed - invalid token","error":"getaddrinfo ENOTFOUND ac-tcrbnhx-shard-00-00.igezekd.mongodb.net","ip":"::1"}
+{"timestamp":"2025-09-28T08:14:23.373Z","level":"WARN","message":"Authentication failed - invalid token","error":"getaddrinfo ENOTFOUND ac-tcrbnhx-shard-00-00.igezekd.mongodb.net","ip":"::1"}
+{"timestamp":"2025-09-28T08:14:56.449Z","level":"WARN","message":"Authentication failed - invalid token","error":"getaddrinfo ENOTFOUND ac-tcrbnhx-shard-00-00.igezekd.mongodb.net","ip":"::1"}
+{"timestamp":"2025-09-28T08:15:16.479Z","level":"WARN","message":"Authentication failed - invalid token","error":"getaddrinfo ENOTFOUND ac-tcrbnhx-shard-00-00.igezekd.mongodb.net","ip":"::1"}
