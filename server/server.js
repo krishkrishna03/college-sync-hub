@@ -25,7 +25,8 @@ app.use(limiter);
 // CORS - hardcoded allowed origins
 // CORS - allow specific origins dynamically
 const allowedOrigins = [
-  'http://localhost:5173'
+  'http://localhost:5173',
+  'https://eduplant.netlify.app/'
 ];
 
 app.use(
