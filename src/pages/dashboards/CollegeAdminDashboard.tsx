@@ -602,6 +602,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
 
   if (activeTab === 'students') {
     return (
+      <>
       <div className="space-y-6">
         {renderUserTable(students, 'Students')}
         
