@@ -42,7 +42,7 @@ const testSchema = new mongoose.Schema({
   },
   testType: {
     type: String,
-    enum: ['Assessment', 'Practice', 'Assignment'],
+    enum: ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'],
     default: 'Assessment'
   },
   topics: [{

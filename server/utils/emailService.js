@@ -205,14 +205,14 @@ class EmailService {
       subject: `Test Assignment - ${testName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background-color: #10B981; color: white; padding: 20px; text-align: center;">
+          <div style="background-color: #3B82F6; color: white; padding: 20px; text-align: center;">
             <h1>Test Assignment</h1>
           </div>
           <div style="padding: 20px; background-color: #f9f9f9;">
             <h2>Hello, ${studentName}!</h2>
             <p>You have been assigned a new test to complete.</p>
             
-            <div style="background-color: white; padding: 15px; border-left: 4px solid #10B981; margin: 20px 0;">
+            <div style="background-color: white; padding: 15px; border-left: 4px solid #3B82F6; margin: 20px 0;">
               <h3>Test Details:</h3>
               <p><strong>Test Name:</strong> ${testName}</p>
               <p><strong>Duration:</strong> ${duration} minutes</p>
@@ -226,7 +226,7 @@ class EmailService {
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${process.env.FRONTEND_URL}/login" 
-                 style="background-color: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                 style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 Take Test
               </a>
             </div>

@@ -422,14 +422,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                     ) : isTestActive(test) ? (
                       <button
                         onClick={() => handleStartTest(test.testId._id)}
-                        className={`text-white py-2 px-4 rounded-lg flex items-center gap-2 text-sm ${
+                        className={`text-white py-2 px-4 rounded-lg flex items-center gap-2 text-sm font-medium ${
                           test.testId.testType === 'Practice' 
                             ? 'bg-green-600 hover:bg-green-700' 
+                            : test.testId.testType === 'Mock Test'
+                            ? 'bg-orange-600 hover:bg-orange-700'
+                            : test.testId.testType === 'Specific Company Test'
+                            ? 'bg-red-600 hover:bg-red-700'
                             : 'bg-blue-600 hover:bg-blue-700'
                         }`}
                       >
                         <Play size={16} />
-                        {test.testId.testType === 'Practice' ? 'Start Practice' : 'Start Test'}
+                        {test.testId.testType === 'Practice' ? 'Start Practice' : 
+                         test.testId.testType === 'Mock Test' ? 'Start Mock Test' :
+                         test.testId.testType === 'Specific Company Test' ? 'Start Company Test' :
+                         'Start Test'}
                       </button>
                     ) : (
                       <button

@@ -436,6 +436,16 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
                 <option key={type} value={type}>{type}</option>
               ))}
             </select>
+            {formData.testType === 'Mock Test' && (
+              <p className="mt-1 text-xs text-orange-600">
+                Mock tests simulate real exam conditions with time pressure
+              </p>
+            )}
+            {formData.testType === 'Specific Company Test' && (
+              <p className="mt-1 text-xs text-red-600">
+                Company-specific tests for recruitment and assessment
+              </p>
+            )}
           </div>
           
           <div className="md:col-span-3">

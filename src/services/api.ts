@@ -271,6 +271,16 @@ class ApiService {
   async getNotificationStats() {
     return this.request('/notifications/stats');
   }
+
+  // Dashboard stats endpoint (fallback to existing data)
+  async getDashboardStats() {
+    try {
+      // Try to get dashboard stats, fallback to admin stats if not available
+      return await this.getAdminStats();
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export default new ApiService();

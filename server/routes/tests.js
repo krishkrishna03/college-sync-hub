@@ -42,7 +42,7 @@ router.post('/', auth, authorize('master_admin'), [
   body('testName').trim().isLength({ min: 3 }),
   body('testDescription').trim().isLength({ min: 10 }),
   body('subject').isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']),
-  body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment']),
+  body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test']),
   body('topics').optional().isArray(),
   body('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']),
   body('numberOfQuestions').isInt({ min: 1, max: 100 }),

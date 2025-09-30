@@ -232,6 +232,18 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                   <p className="text-xs text-blue-600">Get instant feedback after each answer!</p>
                 </div>
               )}
+              {test.testType === 'Mock Test' && (
+                <div className="mt-4 p-3 bg-orange-50 rounded-lg">
+                  <p className="text-xs text-orange-800 font-medium">Mock Test Mode</p>
+                  <p className="text-xs text-orange-600">Simulates real exam conditions!</p>
+                </div>
+              )}
+              {test.testType === 'Specific Company Test' && (
+                <div className="mt-4 p-3 bg-red-50 rounded-lg">
+                  <p className="text-xs text-red-800 font-medium">Company Assessment</p>
+                  <p className="text-xs text-red-600">Company-specific evaluation test!</p>
+                </div>
+              )}
             </div>
           </div>
 
