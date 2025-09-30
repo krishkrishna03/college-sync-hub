@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Clock, CheckCircle, AlertCircle, MessageSquare, Calendar } from 'lucide-react';
 import apiService from '../../services/api';
 import LoadingSpinner from '../UI/LoadingSpinner';
+import NotificationSearch from './NotificationSearch';
 
 interface Notification {
   id: string;
@@ -37,6 +38,13 @@ const NotificationsList: React.FC<NotificationsListProps> = ({ refreshTrigger })
   const [totalPages, setTotalPages] = useState(1);
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchFilters, setSearchFilters] = useState({
+    type: 'all',
+    priority: 'all',
+    dateRange: 'all',
+    sender: 'all'
+  });
 
   useEffect(() => {
     loadNotifications();
@@ -122,6 +130,51 @@ const NotificationsList: React.FC<NotificationsListProps> = ({ refreshTrigger })
   };
 
   const filteredNotifications = notifications.filter(notification => {
+    // Text search
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const titleMatch = notification.notification.title.toLowerCase().includes(searchLower);
+      const messageMatch = notification.notification.message.toLowerCase().includes(searchLower);
+      if (!titleMatch && !messageMatch) return false;
+    }
+    
+    // Filter by type
+    if (searchFilters.type !== 'all' && notification.notification.type !== searchFilters.type) {
+      return false;
+    }
+    
+    // Filter by priority
+    if (searchFilters.priority !== 'all' && notification.notification.priority !== searchFilters.priority) {
+      return false;
+    }
+    
+    // Filter by date range
+    if (searchFilters.dateRange !== 'all') {
+      const notificationDate = new Date(notification.createdAt);
+      const now = new Date();
+      
+      switch (searchFilters.dateRange) {
+        case 'today':
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          if (notificationDate < today) return false;
+          break;
+        case 'week':
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          if (notificationDate < weekAgo) return false;
+          break;
+        case 'month':
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          if (notificationDate < monthAgo) return false;
+          break;
+      }
+    }
+    
+    // Filter by sender role
+    if (searchFilters.sender !== 'all' && notification.notification.createdBy.role !== searchFilters.sender) {
+      return false;
+    }
+    
+    // Read/unread filter
     if (filter === 'unread') return !notification.isRead;
     if (filter === 'read') return notification.isRead;
     return true;
@@ -179,6 +232,14 @@ const NotificationsList: React.FC<NotificationsListProps> = ({ refreshTrigger })
           )}
         </div>
       </div>
+
+      {/* Search and Filters */}
+      <NotificationSearch
+        onSearch={setSearchTerm}
+        onFilter={setSearchFilters}
+        searchTerm={searchTerm}
+        filters={searchFilters}
+      />
 
       {/* Notifications List */}
       <div className="space-y-4">

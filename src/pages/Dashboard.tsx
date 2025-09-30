@@ -15,6 +15,9 @@ import StudentDashboard from './dashboards/StudentDashboard';
 import ProfileModal from '../components/Profile/ProfileModal';
 import NotificationsList from '../components/Notifications/NotificationsList';
 import ProfilePage from '../components/Profile/ProfilePage';
+import NotificationForm from '../components/Notifications/NotificationForm';
+import { Bell } from 'lucide-react';
+import apiService from '../services/api';
 
 const Dashboard: React.FC = () => {
   const { state } = useAuth();
@@ -43,6 +46,32 @@ const Dashboard: React.FC = () => {
     // Handle notifications tab for all roles
     if (activeTab === 'notifications') {
       return <NotificationsList />;
+    }
+    
+    // Handle create notification tab for admins
+    if (activeTab === 'create-notification') {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Bell className="h-8 w-8 text-blue-600" />
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Create Notification</h2>
+                  <p className="text-gray-600">Send notifications to users in your scope</p>
+                </div>
+              </div>
+            </div>
+            <NotificationForm 
+              onSubmit={async (formData) => {
+                await apiService.createNotificationWithFile(formData);
+              }} 
+              loading={false}
+              onClose={() => setActiveTab('notifications')}
+            />
+          </div>
+        </div>
+      );
     }
     
     // Handle profile tab for all roles

@@ -58,6 +58,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       roles: ['master_admin', 'college_admin', 'faculty', 'student'],
     },
     {
+      id: 'create-notification',
+      label: 'Create Notification',
+      icon: <Bell size={20} />,
+      roles: ['master_admin', 'college_admin'],
+    },
+    {
       id: 'faculty',
       label: 'Faculty',
       icon: <Users size={20} />,

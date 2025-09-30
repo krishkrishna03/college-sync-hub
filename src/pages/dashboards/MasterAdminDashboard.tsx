@@ -13,6 +13,8 @@ import RecentActivity from '../../components/Dashboard/RecentActivity';
 import PendingActions from '../../components/Dashboard/PendingActions';
 import PlatformGrowth from '../../components/Dashboard/PlatformGrowth';
 import TestTabs from '../../components/Test/TestTabs';
+import ExportButton from '../../components/Dashboard/ExportButton';
+import GrowthChart from '../../components/Charts/GrowthChart';
 
 interface College {
   id: string;
@@ -454,55 +456,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   if (activeTab === 'notifications') {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Bell className="h-8 w-8 text-blue-600" />
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Notification Center</h2>
-                <p className="text-gray-600">Send notifications to colleges, faculty, and students</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowNotificationForm(true)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
-            >
-              <Plus size={20} />
-              Create Notification
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-blue-50 p-4 rounded-lg text-center">
-              <Building className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <h3 className="font-medium text-gray-900">Notify Colleges</h3>
-              <p className="text-sm text-gray-600 mt-1">Send to college administrators</p>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg text-center">
-              <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <h3 className="font-medium text-gray-900">Notify Faculty</h3>
-              <p className="text-sm text-gray-600 mt-1">Send to faculty members</p>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg text-center">
-              <GraduationCap className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-              <h3 className="font-medium text-gray-900">Notify Students</h3>
-              <p className="text-sm text-gray-600 mt-1">Send to student accounts</p>
-            </div>
-          </div>
-        </div>
-
-        <Modal
-          isOpen={showNotificationForm}
-          onClose={() => setShowNotificationForm(false)}
-          title="Create New Notification"
-          size="lg"
-        >
-          <NotificationForm 
-            onSubmit={handleCreateNotification} 
-            loading={formLoading}
-            onClose={() => setShowNotificationForm(false)}
-          />
-        </Modal>
+        <NotificationsList />
       </div>
     );
   }
@@ -975,15 +929,33 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
             {analyticsData ? ' Live data' : ' Loading...'}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-600">Welcome, Master</p>
-          <button
-            onClick={() => setShowNotificationForm(true)}
-            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
-          >
-            <Bell size={16} />
-            Send Notification
-          </button>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-sm text-gray-600">Welcome, Master</p>
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => setShowNotificationForm(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+              >
+                <Bell size={16} />
+                Send Notification
+              </button>
+              <button
+                onClick={() => setShowTestForm(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+              >
+                <Plus size={16} />
+                Create Test
+              </button>
+            </div>
+          </div>
+          {analyticsData && (
+            <ExportButton 
+              data={analyticsData} 
+              filename="dashboard-analytics"
+              title="Dashboard Analytics Report"
+            />
+          )}
         </div>
       </div>
 
@@ -1048,6 +1020,62 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
 
       {analyticsData?.recentActivity && (
         <RecentActivity activities={analyticsData.recentActivity} />
+      )}
+
+      {/* Growth Charts */}
+      {analyticsData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <GrowthChart
+            title="User Growth Trend"
+            data={{
+              labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+              datasets: [
+                {
+                  label: 'Students',
+                  data: [
+                    Math.max(0, analyticsData.platformGrowth.newStudents - 15),
+                    Math.max(0, analyticsData.platformGrowth.newStudents - 10),
+                    Math.max(0, analyticsData.platformGrowth.newStudents - 5),
+                    analyticsData.platformGrowth.newStudents
+                  ],
+                  color: '#10B981'
+                },
+                {
+                  label: 'Faculty',
+                  data: [
+                    Math.max(0, analyticsData.platformGrowth.newFaculty - 5),
+                    Math.max(0, analyticsData.platformGrowth.newFaculty - 3),
+                    Math.max(0, analyticsData.platformGrowth.newFaculty - 1),
+                    analyticsData.platformGrowth.newFaculty
+                  ],
+                  color: '#3B82F6'
+                }
+              ]
+            }}
+            type="line"
+          />
+          
+          <GrowthChart
+            title="Subject-wise Test Distribution"
+            data={{
+              labels: ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'],
+              datasets: [
+                {
+                  label: 'Tests Created',
+                  data: [
+                    testCounts?.bySubject?.Verbal || 0,
+                    testCounts?.bySubject?.Reasoning || 0,
+                    testCounts?.bySubject?.Technical || 0,
+                    testCounts?.bySubject?.Arithmetic || 0,
+                    testCounts?.bySubject?.Communication || 0
+                  ],
+                  color: '#8B5CF6'
+                }
+              ]
+            }}
+            type="bar"
+          />
+        </div>
       )}
 
       {/* Modals */}

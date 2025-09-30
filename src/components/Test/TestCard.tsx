@@ -53,6 +53,8 @@ const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, showActions
       'Assignment': 'bg-purple-100 text-purple-800',
       'Mock Test': 'bg-orange-100 text-orange-800',
       'Specific Company Test': 'bg-red-100 text-red-800'
+      'Mock Test': 'bg-orange-100 text-orange-800',
+      'Specific Company Test': 'bg-red-100 text-red-800'
     };
     return colors[testType as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };

@@ -86,7 +86,7 @@ const TestTabs: React.FC<TestTabsProps> = ({
                 >
                   <Icon size={16} />
                   {type.label}
-                  {testCounts && type.id !== 'all' && (
+                  {testCounts && (
                     <span className={`px-2 py-0.5 rounded-full text-xs ${
                       isActive ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-600'
                     }`}>
@@ -116,7 +116,7 @@ const TestTabs: React.FC<TestTabsProps> = ({
                 >
                   <Icon size={16} />
                   {subject.label}
-                  {testCounts && subject.id !== 'all' && (
+                  {testCounts && (
                     <span className={`px-2 py-0.5 rounded-full text-xs ${
                       isActive ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-600'
                     }`}>

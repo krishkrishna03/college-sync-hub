@@ -137,8 +137,8 @@ router.post('/', auth, authorize('master_admin'), [
       test: {
         id: test._id,
         testName: test.testName,
-        subject: test.subject,
         testType: test.testType,
+        subject: test.subject,
         topics: test.topics,
         difficulty: test.difficulty,
         numberOfQuestions: test.numberOfQuestions,
@@ -216,7 +216,19 @@ router.get('/sample-questions/:subject', auth, authorize('master_admin'), async 
 // Get all tests (Master Admin only)
 router.get('/', auth, authorize('master_admin'), async (req, res) => {
   try {
-    const tests = await Test.find({ isActive: true })
+    const { testType, subject } = req.query;
+    
+    let query = { isActive: true };
+    
+    if (testType && testType !== 'all') {
+      query.testType = testType;
+    }
+    
+    if (subject && subject !== 'all') {
+      query.subject = subject;
+    }
+    
+    const tests = await Test.find(query)
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 });
 
@@ -309,6 +321,8 @@ router.post('/:id/assign-college', auth, authorize('master_admin'), [
 // Get assigned tests for college (College Admin)
 router.get('/college/assigned', auth, authorize('college_admin'), async (req, res) => {
   try {
+    const { testType, subject } = req.query;
+    
     const assignments = await TestAssignment.find({
       collegeId: req.user.collegeId,
       assignedTo: 'college',
@@ -318,7 +332,22 @@ router.get('/college/assigned', auth, authorize('college_admin'), async (req, re
     .populate('assignedBy', 'name email')
     .sort({ createdAt: -1 });
 
-    res.json(assignments);
+    // Filter by test type and subject if provided
+    let filteredAssignments = assignments;
+    
+    if (testType && testType !== 'all') {
+      filteredAssignments = filteredAssignments.filter(assignment => 
+        assignment.testId.testType === testType
+      );
+    }
+    
+    if (subject && subject !== 'all') {
+      filteredAssignments = filteredAssignments.filter(assignment => 
+        assignment.testId.subject === subject
+      );
+    }
+    
+    res.json(filteredAssignments);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
