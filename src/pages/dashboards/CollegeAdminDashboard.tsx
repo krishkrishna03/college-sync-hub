@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, GraduationCap, CheckCircle, Clock, FileText, Send, Eye,Upload } from 'lucide-react';
+import { Plus, Users, GraduationCap, CheckCircle, Clock, FileText, Send, Eye, Upload, Bell } from 'lucide-react';
 import apiService from '../../services/api';
 import Modal from '../../components/UI/Modal';
 import UserForm from '../../components/Forms/UserForm';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import NotificationForm from '../../components/Notifications/NotificationForm';
 import BulkUploadForm from '../../components/Forms/BulkUploadForm';
+import TestTabs from '../../components/Test/TestTabs';
+import AnalyticsCard from '../../components/Dashboard/AnalyticsCard';
 
 interface User {
   _id: string;
@@ -65,6 +67,10 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [faculty, setFaculty] = useState<User[]>([]);
   const [students, setStudents] = useState<User[]>([]);
   const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
+  const [activeTestType, setActiveTestType] = useState('all');
+  const [activeSubject, setActiveSubject] = useState('all');
+  const [testCounts, setTestCounts] = useState<any>(null);
+  const [collegeAnalytics, setCollegeAnalytics] = useState<any>(null);
   const [showUserForm, setShowUserForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showStudentAssignment, setShowStudentAssignment] = useState(false);
@@ -77,14 +83,15 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
 
   useEffect(() => {
     loadDashboardData();
+    loadCollegeAnalytics();
     if (activeTab === 'faculty') {
       loadFaculty();
     } else if (activeTab === 'students') {
       loadStudents();
     } else if (activeTab === 'assigned-tests') {
-      loadAssignedTests();
+      loadAssignedTests(activeTestType, activeSubject);
     }
-  }, [activeTab]);
+  }, [activeTab, activeTestType, activeSubject]);
 
   const loadDashboardData = async () => {
     try {
@@ -95,6 +102,14 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     }
   };
 
+  const loadCollegeAnalytics = async () => {
+    try {
+      const data = await apiService.getCollegeDashboardAnalytics();
+      setCollegeAnalytics(data);
+    } catch (error) {
+      console.error('Failed to load college analytics:', error);
+    }
+  };
   const loadFaculty = async () => {
     try {
       setLoading(true);
@@ -119,11 +134,36 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     }
   };
 
-  const loadAssignedTests = async () => {
+  const loadAssignedTests = async (testType?: string, subject?: string) => {
     try {
       setLoading(true);
-      const data = await apiService.getAssignedTests();
+      const data = await apiService.getAssignedTests(
+        testType === 'all' ? undefined : testType,
+        subject === 'all' ? undefined : subject
+      );
       setAssignedTests(data);
+      
+      // Calculate test counts for tabs
+      const allTests = await apiService.getAssignedTests();
+      const counts = {
+        byType: {
+          all: allTests.length,
+          Assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
+          Practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
+          Assignment: allTests.filter((t: any) => t.testId.testType === 'Assignment').length,
+          'Mock Test': allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
+          'Specific Company Test': allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
+        },
+        bySubject: {
+          all: allTests.length,
+          Verbal: allTests.filter((t: any) => t.testId.subject === 'Verbal').length,
+          Reasoning: allTests.filter((t: any) => t.testId.subject === 'Reasoning').length,
+          Technical: allTests.filter((t: any) => t.testId.subject === 'Technical').length,
+          Arithmetic: allTests.filter((t: any) => t.testId.subject === 'Arithmetic').length,
+          Communication: allTests.filter((t: any) => t.testId.subject === 'Communication').length
+        }
+      };
+      setTestCounts(counts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
     } finally {
@@ -283,6 +323,13 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
           <h2 className="text-2xl font-bold text-gray-900">Assigned Tests</h2>
         </div>
 
+        <TestTabs
+          activeTestType={activeTestType}
+          activeSubject={activeSubject}
+          onTestTypeChange={setActiveTestType}
+          onSubjectChange={setActiveSubject}
+          testCounts={testCounts}
+        />
         <div className="grid gap-6">
           {assignedTests.map((assignment) => (
             <div key={assignment._id} className="bg-white rounded-lg shadow p-6">
@@ -416,6 +463,57 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   }
 
   if (activeTab === 'notifications') {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Bell className="h-8 w-8 text-blue-600" />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Notification Center</h2>
+                <p className="text-gray-600">Send notifications to faculty and students in your college</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNotificationForm(true)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
+            >
+              <Plus size={20} />
+              Create Notification
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-green-50 p-4 rounded-lg text-center">
+              <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <h3 className="font-medium text-gray-900">Notify Faculty</h3>
+              <p className="text-sm text-gray-600 mt-1">Send to faculty members in your college</p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg text-center">
+              <GraduationCap className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+              <h3 className="font-medium text-gray-900">Notify Students</h3>
+              <p className="text-sm text-gray-600 mt-1">Send to students by branch, batch, or section</p>
+            </div>
+          </div>
+        </div>
+
+        <Modal
+          isOpen={showNotificationForm}
+          onClose={() => setShowNotificationForm(false)}
+          title="Create New Notification"
+          size="lg"
+        >
+          <NotificationForm 
+            onSubmit={handleCreateNotification} 
+            loading={formLoading}
+            onClose={() => setShowNotificationForm(false)}
+          />
+        </Modal>
+      </div>
+    );
+  }
+
+  if (activeTab === 'notifications-old') {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -633,61 +731,55 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   // Default dashboard view
   return (
     <div className="space-y-6">
+      {/* Header with Notification Button */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">College Dashboard</h1>
+          <p className="text-gray-600">Manage your college faculty and students</p>
+        </div>
+        <button
+          onClick={() => setShowNotificationForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Bell size={16} />
+          Send Notification
+        </button>
+      </div>
+
       {dashboardData && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center">
-                <Users className="h-8 w-8 text-blue-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Faculty</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardData.totalFaculty}</p>
-                </div>
-              </div>
-            </div>
+            <AnalyticsCard
+              title="Total Faculty"
+              value={dashboardData.totalFaculty}
+              icon={Users}
+              iconColor="text-blue-600"
+              onClick={() => setActiveTab('faculty')}
+            />
             
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center">
-        <Modal
-          isOpen={showBulkUpload}
-          onClose={() => setShowBulkUpload(false)}
-          title="Bulk Upload Students"
-          size="lg"
-        >
-          <BulkUploadForm 
-            role="student"
-            onSubmit={handleBulkUpload} 
-            loading={formLoading}
-            onClose={() => setShowBulkUpload(false)}
-          />
-        </Modal>
-                <GraduationCap className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Students</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardData.totalStudents}</p>
-                </div>
-              </div>
-            </div>
+            <AnalyticsCard
+              title="Total Students"
+              value={dashboardData.totalStudents}
+              icon={GraduationCap}
+              iconColor="text-green-600"
+              onClick={() => setActiveTab('students')}
+            />
             
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center">
-                <CheckCircle className="h-8 w-8 text-purple-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardData.loginStats.hasLoggedIn}</p>
-                </div>
-              </div>
-            </div>
+            <AnalyticsCard
+              title="Active Users"
+              value={dashboardData.loginStats.hasLoggedIn}
+              subtitle="Have logged in"
+              icon={CheckCircle}
+              iconColor="text-purple-600"
+            />
 
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex items-center">
-                <Clock className="h-8 w-8 text-orange-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardData.loginStats.neverLoggedIn}</p>
-                </div>
-              </div>
-            </div>
+            <AnalyticsCard
+              title="Pending Users"
+              value={dashboardData.loginStats.neverLoggedIn}
+              subtitle="Never logged in"
+              icon={Clock}
+              iconColor="text-orange-600"
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -728,6 +820,13 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                     Bulk Students
                   </button>
                 </div>
+                <button
+                  onClick={() => setShowNotificationForm(true)}
+                  className="w-full bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 flex items-center justify-center gap-2 text-sm"
+                >
+                  <Bell size={16} />
+                  Send Notification
+                </button>
               </div>
             </div>
 
@@ -764,6 +863,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
         </>
       )}
 
+      {/* Modals */}
       <Modal
         isOpen={showUserForm}
         onClose={() => setShowUserForm(false)}
@@ -790,11 +890,24 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
           onClose={() => setShowBulkUpload(false)}
         />
       </Modal>
-       </div>
+
+      <Modal
+        isOpen={showNotificationForm}
+        onClose={() => setShowNotificationForm(false)}
+        title="Create New Notification"
+        size="lg"
+      >
+        <NotificationForm 
+          onSubmit={handleCreateNotification} 
+          loading={formLoading}
+          onClose={() => setShowNotificationForm(false)}
+        />
+      </Modal>
+    </div>
   );
 };
 
-// Student Assignment Form Component
+// Student Assignment Form Component (keeping existing implementation)
 interface StudentAssignmentFormProps {
   assignment: TestAssignment;
   students: User[];
@@ -936,3 +1049,4 @@ const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
 };
 
 export default CollegeAdminDashboard;
+

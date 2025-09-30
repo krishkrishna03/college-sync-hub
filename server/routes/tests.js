@@ -447,6 +447,8 @@ router.post('/assignment/:id/assign-students', auth, authorize('college_admin'),
 // Get assigned tests for student
 router.get('/student/assigned', auth, authorize('student'), async (req, res) => {
   try {
+    const { testType, subject } = req.query;
+    
     const assignments = await TestAssignment.find({
       'studentFilters.specificStudents': req.user._id,
       assignedTo: 'students',
@@ -472,7 +474,21 @@ router.get('/student/assigned', auth, authorize('student'), async (req, res) => 
       })
     );
 
-    res.json(testsWithAttempts);
+    // Filter by test type and subject if provided
+    let filteredTests = testsWithAttempts;
+    
+    if (testType && testType !== 'all') {
+      filteredTests = filteredTests.filter(test => 
+        test.testId.testType === testType
+      );
+    }
+    
+    if (subject && subject !== 'all') {
+      filteredTests = filteredTests.filter(test => 
+        test.testId.subject === subject
+      );
+    }
+    res.json(filteredTests);
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }

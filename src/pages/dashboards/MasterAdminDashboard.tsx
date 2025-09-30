@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Building, Users, GraduationCap, TrendingUp, CheckCircle, Clock, FileText, BarChart3, AlertCircle, BookOpen, Activity, Search, Filter, Eye, CreditCard as Edit, Trash2, Settings } from 'lucide-react';
+import { Plus, Building, Users, GraduationCap, TrendingUp, CheckCircle, Clock, FileText, BarChart3, AlertCircle, BookOpen, Activity, Search, Filter, Eye, CreditCard as Edit, Trash2, Settings, Bell } from 'lucide-react';
 import apiService from '../../services/api';
 import Modal from '../../components/UI/Modal';
 import CollegeForm from '../../components/Forms/CollegeForm';
@@ -8,6 +8,11 @@ import TestCard from '../../components/Test/TestCard';
 import TestAssignmentModal from '../../components/Test/TestAssignmentModal';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import NotificationForm from '../../components/Notifications/NotificationForm';
+import AnalyticsCard from '../../components/Dashboard/AnalyticsCard';
+import RecentActivity from '../../components/Dashboard/RecentActivity';
+import PendingActions from '../../components/Dashboard/PendingActions';
+import PlatformGrowth from '../../components/Dashboard/PlatformGrowth';
+import TestTabs from '../../components/Test/TestTabs';
 
 interface College {
   id: string;
@@ -114,7 +119,10 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   const [colleges, setColleges] = useState<College[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [activeTestType, setActiveTestType] = useState('all');
+  const [activeSubject, setActiveSubject] = useState('all');
+  const [testCounts, setTestCounts] = useState<any>(null);
   const [showCollegeForm, setShowCollegeForm] = useState(false);
   const [showTestForm, setShowTestForm] = useState(false);
   const [showNotificationForm, setShowNotificationForm] = useState(false);
@@ -131,11 +139,11 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   useEffect(() => {
     if (activeTab === 'colleges' || activeTab === 'college-management' || activeTab === 'dashboard' || activeTab === 'stats') {
       loadData();
-      loadDashboardStats();
+      loadAnalyticsData();
     } else if (activeTab === 'tests') {
-      loadTests();
+      loadTests(activeTestType, activeSubject);
     }
-  }, [activeTab]);
+  }, [activeTab, activeTestType, activeSubject]);
 
   const loadData = async () => {
     try {
@@ -153,38 +161,46 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     }
   };
 
-  const loadDashboardStats = async () => {
+  const loadAnalyticsData = async () => {
     try {
       const response = await apiService.getDashboardStats();
-      setDashboardStats(response);
+      setAnalyticsData(response);
     } catch (error) {
-      console.error('Failed to load dashboard stats:', error);
-      // Set default values if API fails
-      setDashboardStats({
-        totalColleges: 0,
-        totalStudents: 0,
-        activeExams: 0,
-        completedTests: 0,
-        pendingActions: {
-          aiTestRequests: 0,
-          newCollegeApplications: 0,
-          testsCompletedToday: 0
-        },
-        platformGrowth: {
-          collegeGrowth: 0,
-          studentEnrollment: 0,
-          testCompletionRate: 0
-        },
-        recentActivity: []
-      });
+      console.error('Failed to load analytics data:', error);
+      setAnalyticsData(null);
     }
   };
 
-  const loadTests = async () => {
+  const loadTests = async (testType?: string, subject?: string) => {
     try {
       setLoading(true);
-      const testsData = await apiService.getTests();
+      const testsData = await apiService.getTests(
+        testType === 'all' ? undefined : testType,
+        subject === 'all' ? undefined : subject
+      );
       setTests(testsData);
+      
+      // Calculate test counts for tabs
+      const allTests = await apiService.getTests();
+      const counts = {
+        byType: {
+          all: allTests.length,
+          Assessment: allTests.filter((t: any) => t.testType === 'Assessment').length,
+          Practice: allTests.filter((t: any) => t.testType === 'Practice').length,
+          Assignment: allTests.filter((t: any) => t.testType === 'Assignment').length,
+          'Mock Test': allTests.filter((t: any) => t.testType === 'Mock Test').length,
+          'Specific Company Test': allTests.filter((t: any) => t.testType === 'Specific Company Test').length
+        },
+        bySubject: {
+          all: allTests.length,
+          Verbal: allTests.filter((t: any) => t.subject === 'Verbal').length,
+          Reasoning: allTests.filter((t: any) => t.subject === 'Reasoning').length,
+          Technical: allTests.filter((t: any) => t.subject === 'Technical').length,
+          Arithmetic: allTests.filter((t: any) => t.subject === 'Arithmetic').length,
+          Communication: allTests.filter((t: any) => t.subject === 'Communication').length
+        }
+      };
+      setTestCounts(counts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load tests');
     } finally {
@@ -261,6 +277,22 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     }
   };
 
+  const handlePendingActionClick = (action: string) => {
+    switch (action) {
+      case 'test-assignments':
+        // Navigate to test assignments or show modal
+        console.log('Navigate to test assignments');
+        break;
+      case 'college-credentials':
+        // Navigate to colleges with pending credentials
+        setActiveTab('colleges');
+        break;
+      case 'resend-credentials':
+        // Implement resend credentials functionality
+        console.log('Resend credentials');
+        break;
+    }
+  };
   const toggleCollegeStatus = async (collegeId: string) => {
     try {
       await apiService.toggleCollegeStatus(collegeId);
@@ -422,6 +454,62 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   if (activeTab === 'notifications') {
     return (
       <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Bell className="h-8 w-8 text-blue-600" />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Notification Center</h2>
+                <p className="text-gray-600">Send notifications to colleges, faculty, and students</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNotificationForm(true)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
+            >
+              <Plus size={20} />
+              Create Notification
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-blue-50 p-4 rounded-lg text-center">
+              <Building className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+              <h3 className="font-medium text-gray-900">Notify Colleges</h3>
+              <p className="text-sm text-gray-600 mt-1">Send to college administrators</p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg text-center">
+              <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <h3 className="font-medium text-gray-900">Notify Faculty</h3>
+              <p className="text-sm text-gray-600 mt-1">Send to faculty members</p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg text-center">
+              <GraduationCap className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+              <h3 className="font-medium text-gray-900">Notify Students</h3>
+              <p className="text-sm text-gray-600 mt-1">Send to student accounts</p>
+            </div>
+          </div>
+        </div>
+
+        <Modal
+          isOpen={showNotificationForm}
+          onClose={() => setShowNotificationForm(false)}
+          title="Create New Notification"
+          size="lg"
+        >
+          <NotificationForm 
+            onSubmit={handleCreateNotification} 
+            loading={formLoading}
+            onClose={() => setShowNotificationForm(false)}
+          />
+        </Modal>
+      </div>
+    );
+  }
+
+  if (activeTab === 'notifications-old') {
+    return (
+      <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">Create Notification</h2>
           <button
@@ -463,6 +551,13 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
           </button>
         </div>
 
+        <TestTabs
+          activeTestType={activeTestType}
+          activeSubject={activeSubject}
+          onTestTypeChange={setActiveTestType}
+          onSubjectChange={setActiveSubject}
+          testCounts={testCounts}
+        />
         <div className="grid gap-6">
           {tests.map((test) => (
             <TestCard
@@ -875,200 +970,85 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Last updated: {new Date().toLocaleString()}</p>
+          <p className="text-gray-600 mt-1">
+            Last updated: {new Date().toLocaleString()} • 
+            {analyticsData ? ' Live data' : ' Loading...'}
+          </p>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-600">Welcome, Master</p>
+          <button
+            onClick={() => setShowNotificationForm(true)}
+            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+          >
+            <Bell size={16} />
+            Send Notification
+          </button>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Colleges</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardStats?.totalColleges || stats?.totalColleges || 15}</p>
-              <p className="text-xs text-green-600 mt-1">+17% from last month</p>
-            </div>
-            <Building className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
+        <AnalyticsCard
+          title="Total Colleges"
+          value={analyticsData?.overview?.totalColleges || stats?.totalColleges || 0}
+          icon={Building}
+          iconColor="text-blue-600"
+          trend={{
+            value: analyticsData?.platformGrowth?.collegeGrowthPercentage || 0,
+            isPositive: (analyticsData?.platformGrowth?.collegeGrowthPercentage || 0) >= 0
+          }}
+          onClick={() => setActiveTab('colleges')}
+        />
         
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Students</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardStats?.totalStudents || stats?.totalStudents || 3000}</p>
-              <p className="text-xs text-green-600 mt-1">+8% from last month</p>
-            </div>
-            <Users className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
+        <AnalyticsCard
+          title="Total Students"
+          value={analyticsData?.overview?.totalStudents || stats?.totalStudents || 0}
+          icon={GraduationCap}
+          iconColor="text-green-600"
+          trend={{
+            value: analyticsData?.platformGrowth?.studentGrowthPercentage || 0,
+            isPositive: (analyticsData?.platformGrowth?.studentGrowthPercentage || 0) >= 0
+          }}
+        />
         
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Active Exams</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardStats?.activeExams || 12}</p>
-              <p className="text-xs text-red-600 mt-1">-5% from last month</p>
-            </div>
-            <BookOpen className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
+        <AnalyticsCard
+          title="Active Exams"
+          value={analyticsData?.overview?.activeExams || 0}
+          subtitle="Currently running"
+          icon={BookOpen}
+          iconColor="text-purple-600"
+          onClick={() => setActiveTab('tests')}
+        />
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Completed Tests</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardStats?.completedTests || 240}</p>
-              <p className="text-xs text-green-600 mt-1">+15% from last month</p>
-            </div>
-            <BarChart3 className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
+        <AnalyticsCard
+          title="Completed Tests"
+          value={analyticsData?.overview?.completedTests || 0}
+          icon={BarChart3}
+          iconColor="text-orange-600"
+          trend={{
+            value: analyticsData?.platformGrowth?.testCompletionGrowthPercentage || 0,
+            isPositive: (analyticsData?.platformGrowth?.testCompletionGrowthPercentage || 0) >= 0
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pending Actions */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-gray-600" />
-              <h3 className="text-lg font-medium">Pending Actions</h3>
-            </div>
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
-                <div>
-                  <p className="font-medium text-gray-900">AI Test Requests</p>
-                  <p className="text-sm text-gray-600">{dashboardStats?.pendingActions?.aiTestRequests || 8} pending approval</p>
-                </div>
-              </div>
-              <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
-                Urgent
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Building className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="font-medium text-gray-900">New College Applications</p>
-                  <p className="text-sm text-gray-600">{dashboardStats?.pendingActions?.newCollegeApplications || 3} this month</p>
-                </div>
-              </div>
-              <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                Review
-              </button>
-            </div>
-            
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-gray-900">Tests Completed Today</p>
-                  <p className="text-sm text-gray-600">{dashboardStats?.pendingActions?.testsCompletedToday || 47} tests completed</p>
-                </div>
-              </div>
-              <div className="text-green-600 text-sm font-medium">
-                ✓ Done
-              </div>
-            </div>
-          </div>
-        </div>
+        {analyticsData?.pendingActions && (
+          <PendingActions 
+            data={analyticsData.pendingActions}
+            onActionClick={handlePendingActionClick}
+          />
+        )}
 
-        {/* Platform Growth */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-gray-600" />
-              <h3 className="text-lg font-medium">Platform Growth</h3>
-            </div>
-          </div>
-          <div className="p-6 space-y-6">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">College Growth</span>
-                <span className="text-sm font-medium text-green-600">+{dashboardStats?.platformGrowth?.collegeGrowth || 12}% this month</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: `${dashboardStats?.platformGrowth?.collegeGrowth || 85}%` }}></div>
-              </div>
-            </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Student Enrollment</span>
-                <span className="text-sm font-medium text-blue-600">+{dashboardStats?.platformGrowth?.studentEnrollment || 8}% this month</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${dashboardStats?.platformGrowth?.studentEnrollment || 70}%` }}></div>
-              </div>
-            </div>
-            
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Test Completion Rate</span>
-                <span className="text-sm font-medium text-purple-600">+{dashboardStats?.platformGrowth?.testCompletionRate || 15}% this month</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-purple-600 h-2 rounded-full" style={{ width: `${dashboardStats?.platformGrowth?.testCompletionRate || 92}%` }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {analyticsData?.platformGrowth && (
+          <PlatformGrowth data={analyticsData.platformGrowth} />
+        )}
       </div>
 
-      {/* Recent Platform Activity */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-gray-600" />
-            <h3 className="text-lg font-medium">Recent Platform Activity</h3>
-          </div>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {(dashboardStats?.recentActivity?.length ? dashboardStats.recentActivity : [
-              {
-                id: '1',
-                type: 'college_registered',
-                description: 'New college registered',
-                timestamp: '2 hours ago',
-                college: 'Chennai Institute of Technology joined the platform'
-              },
-              {
-                id: '2',
-                type: 'test_completed',
-                description: 'Test completed',
-                timestamp: '3 hours ago',
-                college: 'Mathematics Test completed by 45 students'
-              },
-              {
-                id: '3',
-                type: 'admin_login',
-                description: 'Admin login',
-                timestamp: '5 hours ago',
-                college: 'College admin logged in for the first time'
-              }
-            ]).map((activity) => (
-              <div key={activity.id} className="flex items-start gap-4 p-4 border-l-4 border-blue-500 bg-blue-50">
-                <div className="flex-shrink-0">
-                  <Building className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">{activity.description}</p>
-                  <p className="text-sm text-gray-600">{activity.college}</p>
-                  <p className="text-xs text-gray-500 mt-1">{activity.timestamp}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {analyticsData?.recentActivity && (
+        <RecentActivity activities={analyticsData.recentActivity} />
+      )}
 
       {/* Modals */}
       <Modal
@@ -1087,6 +1067,19 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
         size="xl"
       >
         <TestForm onSubmit={handleCreateTest} loading={formLoading} />
+      </Modal>
+
+      <Modal
+        isOpen={showNotificationForm}
+        onClose={() => setShowNotificationForm(false)}
+        title="Create New Notification"
+        size="lg"
+      >
+        <NotificationForm 
+          onSubmit={handleCreateNotification} 
+          loading={formLoading}
+          onClose={() => setShowNotificationForm(false)}
+        />
       </Modal>
     </div>
   );

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Users, BookOpen, Building, User, GraduationCap, FileText, Clock, Play, CheckCircle } from 'lucide-react';
+import { Users, BookOpen, Building, User, GraduationCap, FileText, Clock, Play, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import StudentTestInterface from '../../components/Test/StudentTestInterface';
 import TestResults from '../../components/Test/TestResults';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import TestTabs from '../../components/Test/TestTabs';
 
 interface College {
   name: string;
@@ -53,6 +54,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const { state } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [assignedTests, setAssignedTests] = useState<AssignedTest[]>([]);
+  const [activeTestType, setActiveTestType] = useState('all');
+  const [activeSubject, setActiveSubject] = useState('all');
+  const [testCounts, setTestCounts] = useState<any>(null);
   const [activeTest, setActiveTest] = useState<any>(null);
   const [testStartTime, setTestStartTime] = useState<Date | null>(null);
   const [showResults, setShowResults] = useState(false);
@@ -66,9 +70,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     if (activeTab === 'dashboard' || activeTab === 'profile') {
       loadDashboardData();
     } else if (activeTab === 'my-tests') {
-      loadAssignedTests();
+      loadAssignedTests(activeTestType, activeSubject);
     }
-  }, []);
+  }, [activeTab, activeTestType, activeSubject]);
 
   const loadDashboardData = async () => {
     try {
@@ -82,11 +86,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     }
   };
 
-  const loadAssignedTests = async () => {
+  const loadAssignedTests = async (testType?: string, subject?: string) => {
     try {
       setLoading(true);
-      const data = await apiService.getStudentAssignedTests();
+      const data = await apiService.getStudentAssignedTests(
+        testType === 'all' ? undefined : testType,
+        subject === 'all' ? undefined : subject
+      );
       setAssignedTests(data);
+      
+      // Calculate test counts for tabs
+      const allTests = await apiService.getStudentAssignedTests();
+      const counts = {
+        byType: {
+          all: allTests.length,
+          Assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
+          Practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
+          Assignment: allTests.filter((t: any) => t.testId.testType === 'Assignment').length,
+          'Mock Test': allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
+          'Specific Company Test': allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
+        },
+        bySubject: {
+          all: allTests.length,
+          Verbal: allTests.filter((t: any) => t.testId.subject === 'Verbal').length,
+          Reasoning: allTests.filter((t: any) => t.testId.subject === 'Reasoning').length,
+          Technical: allTests.filter((t: any) => t.testId.subject === 'Technical').length,
+          Arithmetic: allTests.filter((t: any) => t.testId.subject === 'Arithmetic').length,
+          Communication: allTests.filter((t: any) => t.testId.subject === 'Communication').length
+        }
+      };
+      setTestCounts(counts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
     } finally {
@@ -350,6 +379,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
           <h2 className="text-2xl font-bold text-gray-900">My Tests</h2>
         </div>
 
+        <TestTabs
+          activeTestType={activeTestType}
+          activeSubject={activeSubject}
+          onTestTypeChange={setActiveTestType}
+          onSubjectChange={setActiveSubject}
+          testCounts={testCounts}
+        />
         <div className="grid gap-6">
           {assignedTests.map((test) => {
             const status = getTestStatus(test);

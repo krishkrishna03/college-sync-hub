@@ -60,6 +60,7 @@ app.use('/api/college', require('./routes/college'));
 app.use('/api/tests', require('./routes/tests'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -147,8 +147,13 @@ class ApiService {
     });
   }
 
-  async getTests() {
-    return this.request('/tests');
+  async getTests(testType?: string, subject?: string) {
+    const params = new URLSearchParams();
+    if (testType) params.append('testType', testType);
+    if (subject) params.append('subject', subject);
+    
+    const queryString = params.toString();
+    return this.request(`/tests${queryString ? `?${queryString}` : ''}`);
   }
 
   async getTest(testId: string) {
@@ -162,8 +167,13 @@ class ApiService {
     });
   }
 
-  async getAssignedTests() {
-    return this.request('/tests/college/assigned');
+  async getAssignedTests(testType?: string, subject?: string) {
+    const params = new URLSearchParams();
+    if (testType) params.append('testType', testType);
+    if (subject) params.append('subject', subject);
+    
+    const queryString = params.toString();
+    return this.request(`/tests/college/assigned${queryString ? `?${queryString}` : ''}`);
   }
 
   async updateTestAssignmentStatus(assignmentId: string, status: 'accepted' | 'rejected') {
@@ -180,8 +190,13 @@ class ApiService {
     });
   }
 
-  async getStudentAssignedTests() {
-    return this.request('/tests/student/assigned');
+  async getStudentAssignedTests(testType?: string, subject?: string) {
+    const params = new URLSearchParams();
+    if (testType) params.append('testType', testType);
+    if (subject) params.append('subject', subject);
+    
+    const queryString = params.toString();
+    return this.request(`/tests/student/assigned${queryString ? `?${queryString}` : ''}`);
   }
 
   async startTest(testId: string) {
@@ -274,11 +289,15 @@ class ApiService {
   // Dashboard stats endpoint (fallback to existing data)
   async getDashboardStats() {
     try {
-      // Try to get dashboard stats, fallback to admin stats if not available
-      return await this.getAdminStats();
+      return await this.request('/analytics/dashboard');
     } catch (error) {
-      throw error;
+      // Fallback to admin stats if analytics endpoint fails
+      return await this.getAdminStats();
     }
+  }
+
+  async getCollegeDashboardAnalytics() {
+    return this.request('/analytics/college-dashboard');
   }
 }
 
