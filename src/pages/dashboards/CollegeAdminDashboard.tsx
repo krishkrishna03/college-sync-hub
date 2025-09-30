@@ -631,6 +631,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
           onClose={() => setShowNotificationForm(false)}
         />
       </Modal>
+  </>
     );
   }
 
