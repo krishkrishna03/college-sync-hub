@@ -18,7 +18,7 @@ interface TestFormData {
   testName: string;
   testDescription: string;
   subject: 'Verbal' | 'Reasoning' | 'Technical' | 'Arithmetic' | 'Communication';
-  testType: 'Assessment' | 'Practice' | 'Assignment';
+  testType: 'Assessment' | 'Practice' | 'Assignment' | 'Mock Test' | 'Specific Company Test';
   topics: string[];
   difficulty: 'Easy' | 'Medium' | 'Hard';
   numberOfQuestions: number;
@@ -63,7 +63,7 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
   const [errors, setErrors] = useState<any>({});
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
-  const testTypes = ['Assessment', 'Practice', 'Assignment'];
+  const testTypes = ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'];
   const difficulties = ['Easy', 'Medium', 'Hard'];
   
   // Topic options based on subject
@@ -453,10 +453,10 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
           </div>
 
           {/* Topics Selection for Practice Tests */}
-          {formData.testType === 'Practice' && (
+          {(formData.testType === 'Practice' || formData.testType === 'Mock Test') && (
             <div className="md:col-span-3">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Topics (Select specific topics for practice)
+                Topics (Select specific topics for {formData.testType.toLowerCase()})
               </label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border rounded-lg">
                 {topicOptions[formData.subject].map(topic => (
@@ -476,10 +476,13 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
           )}
 
           {/* Topics Selection for Assignment Tests */}
-          {formData.testType === 'Assignment' && (
+          {(formData.testType === 'Assignment' || formData.testType === 'Specific Company Test') && (
             <div className="md:col-span-3">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Topics (Select multiple topics for comprehensive coverage)
+                {formData.testType === 'Specific Company Test' 
+                  ? 'Company-specific Topics (Select relevant areas for company assessment)'
+                  : 'Topics (Select multiple topics for comprehensive coverage)'
+                }
               </label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 border rounded-lg">
                 {topicOptions[formData.subject].map(topic => (

@@ -214,20 +214,8 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     try {
       setFormLoading(true);
       
-      // Transform the form data to match API expectations
-      const testData = {
-        testName: formData.testName,
-        testDescription: formData.testDescription,
-        subject: formData.subject,
-        numberOfQuestions: formData.numberOfQuestions,
-        totalMarks: formData.numberOfQuestions * formData.marksPerQuestion,
-        duration: formData.duration,
-        startDateTime: formData.startDateTime,
-        endDateTime: formData.endDateTime
-      };
-      
-      console.log('Creating test with data:', testData);
-      await apiService.createTest(testData);
+      console.log('Creating test with data:', formData);
+      await apiService.createTest(formData);
       setShowTestForm(false);
       loadTests();
     } catch (error) {
