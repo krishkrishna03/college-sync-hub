@@ -9,6 +9,7 @@ const User = require('../models/User');
 const { auth, authorize } = require('../middleware/auth');
 const emailService = require('../utils/emailService');
 const PDFExtractor = require('../utils/pdfExtractor');
+const FileExtractor = require('../utils/fileExtractor');
 const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
@@ -34,6 +35,21 @@ const upload = multer({
   },
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+const fileUpload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['application/json', 'text/csv', 'application/vnd.ms-excel'];
+    if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JSON and CSV files are allowed'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
 
@@ -206,9 +222,9 @@ router.get('/sample-questions/:subject', auth, authorize('master_admin'), async 
   try {
     const { subject } = req.params;
     const count = parseInt(req.query.count) || 5;
-    
+
     const questions = PDFExtractor.generateSampleQuestions(count, subject);
-    
+
     res.json({
       message: `Generated ${questions.length} sample questions for ${subject}`,
       questions: questions.map(q => ({
@@ -220,6 +236,43 @@ router.get('/sample-questions/:subject', auth, authorize('master_admin'), async 
   } catch (error) {
     console.error('Sample questions error:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Extract questions from JSON/CSV file
+router.post('/extract-file', auth, authorize('master_admin'), fileUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'File is required' });
+    }
+
+    const filePath = req.file.path;
+    const fileExtension = path.extname(req.file.originalname).toLowerCase();
+
+    let questions = [];
+
+    if (fileExtension === '.json') {
+      questions = await FileExtractor.extractFromJSON(filePath);
+    } else if (fileExtension === '.csv') {
+      questions = await FileExtractor.extractFromCSV(filePath);
+    } else {
+      return res.status(400).json({ error: 'Unsupported file type' });
+    }
+
+    res.json({
+      message: `Successfully extracted ${questions.length} questions from ${fileExtension.toUpperCase()} file`,
+      questions: questions.map(q => ({
+        ...q,
+        marks: 1
+      }))
+    });
+
+  } catch (error) {
+    console.error('File extraction error:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to extract questions from file',
+      details: error.toString()
+    });
   }
 });
 

@@ -8,17 +8,47 @@ class EmailService {
       port: process.env.EMAIL_PORT,
       user: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
     });
-    
-    this.transporter = nodemailer.createTransport({
 
+    this.transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: process.env.EMAIL_PORT,
       secure: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-      }
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100
     });
+
+    this.maxRetries = 3;
+    this.retryDelay = 2000;
+  }
+
+  async sendWithRetry(mailOptions, retries = this.maxRetries) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        await this.transporter.sendMail(mailOptions);
+        return { success: true, attempt };
+      } catch (error) {
+        logger.errorLog(error, {
+          context: 'Email send attempt',
+          attempt,
+          to: mailOptions.to
+        });
+
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
+        } else {
+          return { success: false, error: error.message, attempts: retries };
+        }
+      }
+    }
+    return { success: false, error: 'Max retries exceeded', attempts: retries };
   }
 
   async sendLoginCredentials(userEmail, userName, password, role, collegeName = null) {
@@ -27,7 +57,14 @@ class EmailService {
       role,
       collegeName
     });
-    
+
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      logger.errorLog(new Error('Email configuration missing'), {
+        context: 'Send Login Credentials'
+      });
+      return { success: false, error: 'Email not configured', email: userEmail, password, role };
+    }
+
     const roleText = this.getRoleDisplayName(role);
     
     const mailOptions = {
@@ -68,16 +105,28 @@ class EmailService {
       `
     };
 
-    try {
-      await this.transporter.sendMail(mailOptions);
-      logger.info('Login credentials email sent successfully', { to: userEmail });
-      return true;
-    } catch (error) {
-      logger.errorLog(error, { 
-        context: 'Send Login Credentials Email', 
-        to: userEmail 
+    const result = await this.sendWithRetry(mailOptions);
+
+    if (result.success) {
+      logger.info('Login credentials email sent successfully', {
+        to: userEmail,
+        attempt: result.attempt
       });
-      return false;
+      return { success: true };
+    } else {
+      logger.errorLog(new Error(result.error), {
+        context: 'Send Login Credentials Email',
+        to: userEmail,
+        attempts: result.attempts
+      });
+      return {
+        success: false,
+        error: result.error,
+        email: userEmail,
+        password,
+        role,
+        collegeName
+      };
     }
   }
 
@@ -114,16 +163,21 @@ class EmailService {
       `
     };
 
-    try {
-      await this.transporter.sendMail(mailOptions);
-      logger.info('Password reset email sent successfully', { to: userEmail });
-      return true;
-    } catch (error) {
-      logger.errorLog(error, { 
-        context: 'Send Password Reset Email', 
-        to: userEmail 
+    const result = await this.sendWithRetry(mailOptions);
+
+    if (result.success) {
+      logger.info('Password reset email sent successfully', {
+        to: userEmail,
+        attempt: result.attempt
       });
-      return false;
+      return { success: true };
+    } else {
+      logger.errorLog(new Error(result.error), {
+        context: 'Send Password Reset Email',
+        to: userEmail,
+        attempts: result.attempts
+      });
+      return { success: false, error: result.error };
     }
   }
 
@@ -180,16 +234,21 @@ class EmailService {
       `
     };
 
-    try {
-      await this.transporter.sendMail(mailOptions);
-      logger.info('Test assignment notification sent successfully', { to: collegeEmail });
-      return true;
-    } catch (error) {
-      logger.errorLog(error, { 
-        context: 'Send Test Assignment Email', 
-        to: collegeEmail 
+    const result = await this.sendWithRetry(mailOptions);
+
+    if (result.success) {
+      logger.info('Test assignment notification sent successfully', {
+        to: collegeEmail,
+        attempt: result.attempt
       });
-      return false;
+      return { success: true };
+    } else {
+      logger.errorLog(new Error(result.error), {
+        context: 'Send Test Assignment Email',
+        to: collegeEmail,
+        attempts: result.attempts
+      });
+      return { success: false, error: result.error };
     }
   }
 
@@ -238,16 +297,21 @@ class EmailService {
       `
     };
 
-    try {
-      await this.transporter.sendMail(mailOptions);
-      logger.info('Student test assignment email sent successfully', { to: studentEmail });
-      return true;
-    } catch (error) {
-      logger.errorLog(error, { 
-        context: 'Send Student Test Assignment Email', 
-        to: studentEmail 
+    const result = await this.sendWithRetry(mailOptions);
+
+    if (result.success) {
+      logger.info('Student test assignment email sent successfully', {
+        to: studentEmail,
+        attempt: result.attempt
       });
-      return false;
+      return { success: true };
+    } else {
+      logger.errorLog(new Error(result.error), {
+        context: 'Send Student Test Assignment Email',
+        to: studentEmail,
+        attempts: result.attempts
+      });
+      return { success: false, error: result.error };
     }
   }
 
@@ -311,16 +375,21 @@ class EmailService {
       `
     };
 
-    try {
-      await this.transporter.sendMail(mailOptions);
-      logger.info('Notification email sent successfully', { to: userEmail });
-      return true;
-    } catch (error) {
-      logger.errorLog(error, { 
-        context: 'Send Notification Email', 
-        to: userEmail 
+    const result = await this.sendWithRetry(mailOptions);
+
+    if (result.success) {
+      logger.info('Notification email sent successfully', {
+        to: userEmail,
+        attempt: result.attempt
       });
-      return false;
+      return { success: true };
+    } else {
+      logger.errorLog(new Error(result.error), {
+        context: 'Send Notification Email',
+        to: userEmail,
+        attempts: result.attempts
+      });
+      return { success: false, error: result.error };
     }
   }
 }

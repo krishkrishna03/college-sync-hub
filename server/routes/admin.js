@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const College = require('../models/College');
+const PendingEmail = require('../models/PendingEmail');
 const { auth, authorize } = require('../middleware/auth');
 const emailService = require('../utils/emailService');
 const PasswordGenerator = require('../utils/passwordGenerator');
@@ -57,13 +58,32 @@ router.post('/colleges', auth, authorize('master_admin'), [
     await college.save();
 
     // Send credentials via email
-    const emailSent = await emailService.sendLoginCredentials(
+    const emailResult = await emailService.sendLoginCredentials(
       email,
       collegeAdmin.name,
       password,
       'college_admin',
       name
     );
+
+    if (!emailResult.success) {
+      await PendingEmail.create({
+        type: 'login_credentials',
+        recipientEmail: email,
+        recipientName: collegeAdmin.name,
+        userId: collegeAdmin._id,
+        data: {
+          email,
+          password,
+          role: 'college_admin',
+          collegeName: name
+        },
+        status: 'failed',
+        attempts: 1,
+        lastAttemptAt: new Date(),
+        error: emailResult.error || 'Email sending failed'
+      });
+    }
 
     res.status(201).json({
       message: 'College created successfully',
@@ -75,7 +95,7 @@ router.post('/colleges', auth, authorize('master_admin'), [
         address: college.address,
         createdAt: college.createdAt
       },
-      emailSent
+      emailSent: emailResult.success
     });
 
   } catch (error) {

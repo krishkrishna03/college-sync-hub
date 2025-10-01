@@ -332,6 +332,36 @@ class ApiService {
     return this.request('/notifications/stats');
   }
 
+  async getSentNotifications(page = 1, limit = 20) {
+    return this.request(`/notifications/sent-notifications?page=${page}&limit=${limit}`);
+  }
+
+  async getNotificationRecipients(notificationId: string, page = 1, limit = 50, filter?: string) {
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    if (filter) params.append('filter', filter);
+    return this.request(`/notifications/${notificationId}/recipients?${params.toString()}`);
+  }
+
+  async extractQuestionsFromFile(file: File) {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/tests/extract-file`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Request failed');
+    }
+    return data;
+  }
+
   // Dashboard stats endpoint (fallback to existing data)
   async getDashboardStats() {
     try {

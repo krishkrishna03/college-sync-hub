@@ -317,6 +317,138 @@ router.get('/stats', auth, authorize('master_admin', 'college_admin'), async (re
   }
 });
 
+// Get all sent notifications with tracking data (Master Admin)
+router.get('/sent-notifications', auth, authorize('master_admin', 'college_admin'), async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const matchCondition = req.user.role === 'college_admin'
+      ? { createdBy: req.user._id }
+      : {};
+
+    const notifications = await Notification.find(matchCondition)
+      .populate('createdBy', 'name email role')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalCount = await Notification.countDocuments(matchCondition);
+
+    const notificationsWithStats = await Promise.all(
+      notifications.map(async (notification) => {
+        const recipientStats = await NotificationRecipient.aggregate([
+          { $match: { notificationId: notification._id } },
+          {
+            $group: {
+              _id: null,
+              totalRecipients: { $sum: 1 },
+              totalRead: { $sum: { $cond: ['$isRead', 1, 0] } }
+            }
+          }
+        ]);
+
+        const stats = recipientStats[0] || { totalRecipients: 0, totalRead: 0 };
+
+        return {
+          id: notification._id,
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          priority: notification.priority,
+          targetType: notification.targetType,
+          totalRecipients: stats.totalRecipients,
+          totalRead: stats.totalRead,
+          totalUnread: stats.totalRecipients - stats.totalRead,
+          readPercentage: stats.totalRecipients > 0 ? (stats.totalRead / stats.totalRecipients) * 100 : 0,
+          emailsSent: notification.emailsSent || 0,
+          createdBy: notification.createdBy,
+          createdAt: notification.createdAt
+        };
+      })
+    );
+
+    res.json({
+      notifications: notificationsWithStats,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount,
+        hasNext: page < Math.ceil(totalCount / limit),
+        hasPrev: page > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('Get sent notifications error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get detailed notification recipients
+router.get('/:notificationId/recipients', auth, authorize('master_admin', 'college_admin'), async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+    const filter = req.query.filter;
+
+    const notification = await Notification.findById(notificationId);
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    if (req.user.role === 'college_admin' && notification.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const matchCondition = { notificationId: notification._id };
+    if (filter === 'read') {
+      matchCondition.isRead = true;
+    } else if (filter === 'unread') {
+      matchCondition.isRead = false;
+    }
+
+    const recipients = await NotificationRecipient.find(matchCondition)
+      .populate('recipientId', 'name email role branch batch section')
+      .sort({ isRead: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalCount = await NotificationRecipient.countDocuments(matchCondition);
+
+    res.json({
+      notification: {
+        id: notification._id,
+        title: notification.title,
+        message: notification.message
+      },
+      recipients: recipients.map(r => ({
+        id: r._id,
+        user: r.recipientId,
+        isRead: r.isRead,
+        readAt: r.readAt,
+        emailSent: r.emailSent,
+        emailSentAt: r.emailSentAt,
+        deliveryStatus: r.deliveryStatus
+      })),
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount,
+        hasNext: page < Math.ceil(totalCount / limit),
+        hasPrev: page > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('Get notification recipients error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Helper functions
 async function getMasterAdminRecipients(notification) {
   let recipients = [];

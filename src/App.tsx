@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
+import { LoadingProvider } from './contexts/LoadingContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import LoadingSpinner from './components/UI/LoadingSpinner';
+import GlobalLoader from './components/UI/GlobalLoader';
 import apiService from './services/api';
 
 function App() {
@@ -75,9 +77,12 @@ function App() {
   }
 
   return (
-    <div className="App min-h-screen bg-gray-50">
-      {state.user ? <Dashboard /> : <Login />}
-    </div>
+    <LoadingProvider>
+      <div className="App min-h-screen bg-gray-50">
+        {state.user ? <Dashboard /> : <Login />}
+        <GlobalLoader />
+      </div>
+    </LoadingProvider>
   );
 }
 
