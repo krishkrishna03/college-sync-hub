@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, ChevronRight, ChevronDown, GraduationCap, BookOpen, User, Mail, Phone, Hash, Calendar, CheckCircle, Clock, Edit, Trash2 } from 'lucide-react';
+import { Users, ChevronRight, ChevronDown, GraduationCap, BookOpen, User, Mail, Phone, Hash, Calendar, CheckCircle, Clock, CreditCard as Edit, Trash2 } from 'lucide-react';
 import apiService from '../../services/api';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import Modal from '../UI/Modal';

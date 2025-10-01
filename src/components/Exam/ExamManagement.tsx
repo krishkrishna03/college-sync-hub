@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, BookOpen, GraduationCap, Calculator, MessageSquare, Brain, Building, Eye, Send, Edit, Trash2, Plus } from 'lucide-react';
+import { FileText, BookOpen, GraduationCap, Calculator, MessageSquare, Brain, Building, Eye, Send, CreditCard as Edit, Trash2, Plus } from 'lucide-react';
 import apiService from '../../services/api';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import Modal from '../UI/Modal';
