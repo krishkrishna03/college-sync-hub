@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, X } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
+import Loader3D from '../UI/Loader3D';
 
 interface BulkUploadFormProps {
   role: 'faculty' | 'student';
@@ -176,6 +177,14 @@ const BulkUploadForm: React.FC<BulkUploadFormProps> = ({ role, onSubmit, onClose
             Close
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (uploading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader3D size="lg" message={`Creating ${role === 'faculty' ? 'faculty' : 'student'} accounts...`} />
       </div>
     );
   }

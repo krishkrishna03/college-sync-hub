@@ -16,6 +16,9 @@ import ProfileModal from '../components/Profile/ProfileModal';
 import NotificationsList from '../components/Notifications/NotificationsList';
 import ProfilePage from '../components/Profile/ProfilePage';
 import NotificationForm from '../components/Notifications/NotificationForm';
+import StudentHierarchy from '../components/Student/StudentHierarchy';
+import ReportsPage from '../components/Reports/ReportsPage';
+import ExamManagement from '../components/Exam/ExamManagement';
 import { Bell } from 'lucide-react';
 import apiService from '../services/api';
 
