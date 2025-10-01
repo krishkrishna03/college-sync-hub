@@ -239,30 +239,76 @@ router.put('/mark-all-read', auth, async (req, res) => {
 // Get notification statistics (for admins)
 router.get('/stats', auth, authorize('master_admin', 'college_admin'), async (req, res) => {
   try {
-    const matchCondition = req.user.role === 'college_admin' 
+    const matchCondition = req.user.role === 'college_admin'
       ? { createdBy: req.user._id }
       : {};
 
-    const stats = await Notification.aggregate([
-      { $match: matchCondition },
+    const notifications = await Notification.find(matchCondition);
+    const notificationIds = notifications.map(n => n._id);
+
+    const recipientStats = await NotificationRecipient.aggregate([
+      { $match: { notificationId: { $in: notificationIds } } },
       {
         $group: {
           _id: null,
-          totalNotifications: { $sum: 1 },
-          totalRecipients: { $sum: '$totalRecipients' },
-          avgRecipients: { $avg: '$totalRecipients' }
+          totalRecipients: { $sum: 1 },
+          totalRead: { $sum: { $cond: ['$isRead', 1, 0] } },
+          totalUnread: { $sum: { $cond: ['$isRead', 0, 1] } }
         }
       }
     ]);
 
-    const recentNotifications = await Notification.find(matchCondition)
-      .populate('createdBy', 'name email')
+    const roleDistribution = await NotificationRecipient.aggregate([
+      { $match: { notificationId: { $in: notificationIds } } },
+      {
+        $group: {
+          _id: '$recipientRole',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const priorityDistribution = await Notification.aggregate([
+      { $match: matchCondition },
+      {
+        $group: {
+          _id: '$priority',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const recipientData = recipientStats[0] || { totalRecipients: 0, totalRead: 0, totalUnread: 0 };
+    const readPercentage = recipientData.totalRecipients > 0
+      ? (recipientData.totalRead / recipientData.totalRecipients) * 100
+      : 0;
+
+    const byRole = {
+      colleges: roleDistribution.find(r => r._id === 'college_admin')?.count || 0,
+      faculty: roleDistribution.find(r => r._id === 'faculty')?.count || 0,
+      students: roleDistribution.find(r => r._id === 'student')?.count || 0
+    };
+
+    const byPriority = {
+      high: priorityDistribution.find(p => p._id === 'high')?.count || 0,
+      medium: priorityDistribution.find(p => p._id === 'medium')?.count || 0,
+      low: priorityDistribution.find(p => p._id === 'low')?.count || 0
+    };
+
+    const recentActivity = await Notification.find(matchCondition)
+      .select('_id title totalRecipients emailsSent createdAt')
       .sort({ createdAt: -1 })
       .limit(5);
 
     res.json({
-      stats: stats[0] || { totalNotifications: 0, totalRecipients: 0, avgRecipients: 0 },
-      recentNotifications
+      totalNotifications: notifications.length,
+      totalRecipients: recipientData.totalRecipients,
+      totalRead: recipientData.totalRead,
+      totalUnread: recipientData.totalUnread,
+      readPercentage,
+      byRole,
+      byPriority,
+      recentActivity
     });
 
   } catch (error) {

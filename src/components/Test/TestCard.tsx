@@ -87,25 +87,25 @@ const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, showActions
   const status = getStatus();
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-200">
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-semibold text-gray-900">{test.testName}</h3>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSubjectColor(test.subject)}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-xl font-bold text-gray-900">{test.testName}</h3>
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getSubjectColor(test.subject)} shadow-sm`}>
               {test.subject}
             </span>
             {test.testType && (
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTestTypeColor(test.testType)}`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getTestTypeColor(test.testType)} shadow-sm`}>
                 {test.testType}
               </span>
             )}
             {test.difficulty && (
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(test.difficulty)}`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(test.difficulty)} shadow-sm`}>
                 {test.difficulty}
               </span>
             )}
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.color} shadow-sm animate-pulse`}>
               {status.text}
             </span>
           </div>
@@ -126,23 +126,23 @@ const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, showActions
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <div className="text-center p-2 bg-gray-50 rounded">
-          <FileText className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+        <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-sm">
+          <FileText className="w-6 h-6 mx-auto mb-1 text-blue-600" />
           <p className="text-xs text-gray-600">Questions</p>
           <p className="font-semibold">{test.numberOfQuestions}</p>
         </div>
-        <div className="text-center p-2 bg-gray-50 rounded">
-          <Users className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+        <div className="text-center p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-sm">
+          <Users className="w-6 h-6 mx-auto mb-1 text-green-600" />
           <p className="text-xs text-gray-600">Total Marks</p>
           <p className="font-semibold">{test.totalMarks}</p>
         </div>
-        <div className="text-center p-2 bg-gray-50 rounded">
-          <Clock className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+        <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-sm">
+          <Clock className="w-6 h-6 mx-auto mb-1 text-purple-600" />
           <p className="text-xs text-gray-600">Duration</p>
           <p className="font-semibold">{test.duration} min</p>
         </div>
-        <div className="text-center p-2 bg-gray-50 rounded">
-          <Calendar className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+        <div className="text-center p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow-sm">
+          <Calendar className="w-6 h-6 mx-auto mb-1 text-orange-600" />
           <p className="text-xs text-gray-600">Created</p>
           <p className="font-semibold text-xs">{formatDate(test.createdAt)}</p>
         </div>
@@ -155,19 +155,19 @@ const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, showActions
         </div>
 
         {showActions && (
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => onView(test._id)}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
             >
-              <Eye size={16} />
+              <Eye size={18} />
               View
             </button>
             <button
               onClick={() => onAssign(test._id)}
-              className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
+              className="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white py-2.5 px-4 rounded-lg hover:from-green-700 hover:to-green-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
             >
-              <Send size={16} />
+              <Send size={18} />
               Assign
             </button>
           </div>

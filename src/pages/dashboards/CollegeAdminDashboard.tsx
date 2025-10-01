@@ -5,6 +5,7 @@ import Modal from '../../components/UI/Modal';
 import UserForm from '../../components/Forms/UserForm';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import NotificationForm from '../../components/Notifications/NotificationForm';
+import NotificationsPage from '../../components/Notifications/NotificationsPage';
 import TestTabs from '../../components/Test/TestTabs';
 import BulkUploadForm from '../../components/Forms/BulkUploadForm';
 
@@ -297,7 +298,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
         />
 
         <div className="grid gap-6">
-          {assignedTests.map((assignment) => (
+          {Array.isArray(assignedTests) && assignedTests.length > 0 ? assignedTests.map((assignment) => (
             <div key={assignment._id} className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
@@ -391,10 +392,10 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                 </div>
               </div>
             </div>
-          ))}
+          )) : null}
         </div>
 
-        {assignedTests.length === 0 && !loading && (
+        {(!Array.isArray(assignedTests) || assignedTests.length === 0) && !loading && (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No tests assigned yet</h3>
@@ -429,11 +430,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   }
 
   if (activeTab === 'notifications') {
-    return (
-      <div className="space-y-6">
-        <NotificationsList />
-      </div>
-    );
+    return <NotificationsPage />;
   }
 
   const renderUserTable = (users: User[], userType: string) => (
@@ -486,7 +483,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user) => (
+            {Array.isArray(users) && users.length > 0 ? users.map((user) => (
               <tr key={user._id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
@@ -536,12 +533,12 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                   </button>
                 </td>
               </tr>
-            ))}
+            )) : null}
           </tbody>
         </table>
       </div>
-      
-      {users.length === 0 && (
+
+      {(!Array.isArray(users) || users.length === 0) && (
         <div className="text-center py-12 text-gray-500">
           <p>No {userType.toLowerCase()} found</p>
           <div className="mt-2 space-x-2">
@@ -750,7 +747,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
               </div>
               <div className="p-6">
                 <div className="space-y-4">
-                  {dashboardData.recentUsers.slice(0, 5).map((user) => (
+                  {Array.isArray(dashboardData.recentUsers) && dashboardData.recentUsers.length > 0 ? dashboardData.recentUsers.slice(0, 5).map((user) => (
                     <div key={user._id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <h4 className="font-medium text-gray-900">{user.name}</h4>
@@ -769,7 +766,11 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                         </p>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center text-gray-500 py-4">
+                      <p className="text-sm">No recent users</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

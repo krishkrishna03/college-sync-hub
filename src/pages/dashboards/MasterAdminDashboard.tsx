@@ -8,6 +8,7 @@ import TestCard from '../../components/Test/TestCard';
 import TestAssignmentModal from '../../components/Test/TestAssignmentModal';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import NotificationForm from '../../components/Notifications/NotificationForm';
+import NotificationsPage from '../../components/Notifications/NotificationsPage';
 import AnalyticsCard from '../../components/Dashboard/AnalyticsCard';
 import RecentActivity from '../../components/Dashboard/RecentActivity';
 import PendingActions from '../../components/Dashboard/PendingActions';
@@ -453,11 +454,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   }
 
   if (activeTab === 'notifications') {
-    return (
-      <div className="space-y-6">
-        <NotificationsList />
-      </div>
-    );
+    return <NotificationsPage />;
   }
 
   if (activeTab === 'notifications-old') {
@@ -512,17 +509,17 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
           testCounts={testCounts}
         />
         <div className="grid gap-6">
-          {tests.map((test) => (
+          {Array.isArray(tests) && tests.length > 0 ? tests.map((test) => (
             <TestCard
               key={test._id}
               test={test}
               onView={handleViewTest}
               onAssign={handleAssignTestClick}
             />
-          ))}
+          )) : null}
         </div>
 
-        {tests.length === 0 && !loading && (
+        {(!Array.isArray(tests) || tests.length === 0) && !loading && (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No tests created yet</h3>
@@ -585,7 +582,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
         </div>
 
         <div className="grid gap-6">
-          {colleges.map((college) => (
+          {Array.isArray(colleges) && colleges.length > 0 ? colleges.map((college) => (
             <div key={college.id} className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -595,24 +592,24 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
                       {college.code}
                     </span>
                     <span className={`px-2 py-1 text-xs font-medium rounded ${
-                      college.isActive 
-                        ? 'bg-green-100 text-green-800' 
+                      college.isActive
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
                       {college.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  
+
                   <p className="text-gray-600 mb-2">{college.email}</p>
                   <p className="text-gray-600 text-sm mb-4">{college.address}</p>
-                  
+
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="text-center p-3 bg-blue-50 rounded">
-                      <p className="text-2xl font-bold text-blue-600">{college.totalFaculty}</p>
+                      <p className="text-2xl font-bold text-blue-600">{college.totalFaculty || 0}</p>
                       <p className="text-sm text-gray-600">Faculty</p>
                     </div>
                     <div className="text-center p-3 bg-green-50 rounded">
-                      <p className="text-2xl font-bold text-green-600">{college.totalStudents}</p>
+                      <p className="text-2xl font-bold text-green-600">{college.totalStudents || 0}</p>
                       <p className="text-sm text-gray-600">Students</p>
                     </div>
                   </div>
@@ -627,7 +624,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
                           <Clock size={16} className="text-orange-500" />
                         )}
                         <span className="text-xs text-gray-500">
-                          {college.adminInfo.hasLoggedIn 
+                          {college.adminInfo.hasLoggedIn
                             ? `Last login: ${college.adminInfo.lastLogin ? formatDate(college.adminInfo.lastLogin) : 'Unknown'}`
                             : 'Never logged in'
                           }
@@ -660,7 +657,12 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
                 </div>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="text-center py-12 text-gray-500">
+              <Building className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+              <p>No colleges found</p>
+            </div>
+          )}
         </div>
 
         <Modal
@@ -751,7 +753,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
 
         {/* College Cards */}
         <div className="grid gap-6">
-          {filteredColleges.map((college) => (
+          {Array.isArray(filteredColleges) && filteredColleges.length > 0 ? filteredColleges.map((college) => (
             <div key={college.id} className="bg-white rounded-lg shadow border">
               {/* College Card Header */}
               <div className="p-6">
@@ -908,7 +910,12 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
                 </div>
               )}
             </div>
-          ))}
+          )) : (
+            <div className="text-center py-12 text-gray-500">
+              <Building className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+              <p>No colleges found matching your search</p>
+            </div>
+          )}
         </div>
 
         {/* Modals */}
