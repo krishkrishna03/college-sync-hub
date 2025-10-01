@@ -48,6 +48,21 @@ const Dashboard: React.FC = () => {
       return <NotificationsList />;
     }
     
+    // Handle exam management tab for all roles
+    if (activeTab === 'exam-management') {
+      return <ExamManagement userRole={state.user.role} />;
+    }
+    
+    // Handle student hierarchy tab for college admin
+    if (activeTab === 'student-hierarchy') {
+      return <StudentHierarchy />;
+    }
+    
+    // Handle reports tab for college admin and faculty
+    if (activeTab === 'reports') {
+      return <ReportsPage userRole={state.user.role} />;
+    }
+    
     // Handle create notification tab for admins
     if (activeTab === 'create-notification') {
       return (

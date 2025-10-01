@@ -32,22 +32,23 @@ interface TestFormData {
 interface TestFormProps {
   onSubmit: (data: TestFormData) => Promise<void>;
   loading: boolean;
+  initialData?: any;
 }
 
-const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
+const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) => {
   const [formData, setFormData] = useState<TestFormData>({
-    testName: '',
-    testDescription: '',
-    subject: 'Technical',
-    testType: 'Assessment',
-    topics: [],
-    difficulty: 'Medium',
-    numberOfQuestions: 10,
-    marksPerQuestion: 1,
-    duration: 60,
-    startDateTime: '',
-    endDateTime: '',
-    questions: []
+    testName: initialData?.testName || '',
+    testDescription: initialData?.testDescription || '',
+    subject: initialData?.subject || 'Technical',
+    testType: initialData?.testType || 'Assessment',
+    topics: initialData?.topics || [],
+    difficulty: initialData?.difficulty || 'Medium',
+    numberOfQuestions: initialData?.numberOfQuestions || 10,
+    marksPerQuestion: initialData?.marksPerQuestion || 1,
+    duration: initialData?.duration || 60,
+    startDateTime: initialData?.startDateTime ? new Date(initialData.startDateTime).toISOString().slice(0, 16) : '',
+    endDateTime: initialData?.endDateTime ? new Date(initialData.endDateTime).toISOString().slice(0, 16) : '',
+    questions: initialData?.questions || []
   });
 
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
@@ -241,6 +242,47 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
     } catch (error) {
       console.error('PDF upload error:', error);
       alert('Error uploading PDF. Please check your connection and try again.\n\nIf the problem persists, try using the "Add Sample" or "Add Manual" options instead.');
+    } finally {
+      setPdfLoading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    if (!['json', 'csv'].includes(fileExtension || '')) {
+      alert('Please select a valid JSON or CSV file');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      e.target.value = '';
+      return;
+    }
+
+    setPdfLoading(true);
+    try {
+      const data = await apiService.extractQuestionsFromFile(file);
+      
+      const extractedQuestions = data.questions.map((q: any) => ({
+        ...q,
+        marks: formData.marksPerQuestion
+      }));
+      
+      setFormData(prev => ({
+        ...prev,
+        questions: [...prev.questions, ...extractedQuestions].slice(0, formData.numberOfQuestions)
+      }));
+      
+      alert(`Successfully extracted ${data.questions.length} questions from ${fileExtension.toUpperCase()}`);
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert(`Error processing ${fileExtension.toUpperCase()} file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setPdfLoading(false);
       e.target.value = '';
@@ -633,6 +675,17 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading }) => {
                 type="file"
                 accept=".pdf"
                 onChange={handlePDFUpload}
+                className="hidden"
+                disabled={pdfLoading}
+              />
+            </label>
+            <label className="px-3 py-1 bg-orange-600 text-white rounded text-sm hover:bg-orange-700 cursor-pointer flex items-center gap-1">
+              <Upload size={14} />
+              {pdfLoading ? 'Processing...' : 'Upload JSON/CSV'}
+              <input
+                type="file"
+                accept=".json,.csv"
+                onChange={handleFileUpload}
                 className="hidden"
                 disabled={pdfLoading}
               />

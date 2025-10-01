@@ -420,4 +420,179 @@ router.get('/student/performance', auth, authorize('student'), async (req, res) 
   }
 });
 
+// College Admin - Hierarchical reports
+router.get('/college/hierarchical', auth, authorize('college_admin'), async (req, res) => {
+  try {
+    const { batch, branch, section } = req.query;
+    const collegeId = req.user.collegeId;
+
+    // Build filter query
+    let studentFilter = { collegeId, role: 'student', isActive: true };
+    if (batch && batch !== 'all') studentFilter.batch = batch;
+    if (branch && branch !== 'all') studentFilter.branch = branch;
+    if (section && section !== 'all') studentFilter.section = section;
+
+    // Get students matching filter
+    const students = await User.find(studentFilter).select('_id name email branch batch section');
+    const studentIds = students.map(s => s._id);
+
+    if (studentIds.length === 0) {
+      return res.json({
+        students: [],
+        performance: [],
+        summary: {
+          totalStudents: 0,
+          totalAttempts: 0,
+          averagePercentage: 0
+        }
+      });
+    }
+
+    // Get test attempts for these students
+    const attempts = await TestAttempt.find({
+      studentId: { $in: studentIds },
+      isActive: true
+    })
+    .populate('testId', 'testName subject testType')
+    .populate('studentId', 'name email branch batch section')
+    .sort({ createdAt: -1 });
+
+    // Calculate student performance
+    const studentPerformance = {};
+    attempts.forEach(attempt => {
+      const studentId = attempt.studentId._id.toString();
+      if (!studentPerformance[studentId]) {
+        studentPerformance[studentId] = {
+          student: attempt.studentId,
+          attempts: [],
+          totalAttempts: 0,
+          averagePercentage: 0,
+          totalMarks: 0,
+          marksObtained: 0
+        };
+      }
+      
+      studentPerformance[studentId].attempts.push(attempt);
+      studentPerformance[studentId].totalAttempts++;
+      studentPerformance[studentId].totalMarks += attempt.totalMarks;
+      studentPerformance[studentId].marksObtained += attempt.marksObtained;
+    });
+
+    // Calculate averages
+    Object.values(studentPerformance).forEach(perf => {
+      perf.averagePercentage = perf.totalMarks > 0 ? (perf.marksObtained / perf.totalMarks) * 100 : 0;
+    });
+
+    // Summary statistics
+    const totalAttempts = attempts.length;
+    const averagePercentage = attempts.length > 0 
+      ? attempts.reduce((sum, attempt) => sum + attempt.percentage, 0) / attempts.length 
+      : 0;
+
+    res.json({
+      students,
+      performance: Object.values(studentPerformance),
+      attempts,
+      summary: {
+        totalStudents: students.length,
+        totalAttempts,
+        averagePercentage
+      }
+    });
+
+  } catch (error) {
+    console.error('Hierarchical reports error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Faculty - Branch/Section hierarchical reports
+router.get('/faculty/hierarchical', auth, authorize('faculty'), async (req, res) => {
+  try {
+    const { batch, section } = req.query;
+    const facultyBranch = req.user.branch;
+    const collegeId = req.user.collegeId;
+
+    // Build filter for students in faculty's branch
+    let studentFilter = {
+      collegeId,
+      role: 'student',
+      branch: facultyBranch,
+      isActive: true
+    };
+    
+    if (batch && batch !== 'all') studentFilter.batch = batch;
+    if (section && section !== 'all') studentFilter.section = section;
+
+    const students = await User.find(studentFilter).select('_id name email branch batch section');
+    const studentIds = students.map(s => s._id);
+
+    if (studentIds.length === 0) {
+      return res.json({
+        students: [],
+        performance: [],
+        summary: {
+          totalStudents: 0,
+          totalAttempts: 0,
+          averagePercentage: 0
+        }
+      });
+    }
+
+    const attempts = await TestAttempt.find({
+      studentId: { $in: studentIds },
+      isActive: true
+    })
+    .populate('testId', 'testName subject testType')
+    .populate('studentId', 'name email branch batch section')
+    .sort({ createdAt: -1 });
+
+    // Group by section for faculty view
+    const sectionPerformance = {};
+    attempts.forEach(attempt => {
+      const section = attempt.studentId.section;
+      if (!sectionPerformance[section]) {
+        sectionPerformance[section] = {
+          section,
+          attempts: [],
+          students: new Set(),
+          totalAttempts: 0,
+          totalMarks: 0,
+          marksObtained: 0,
+          averagePercentage: 0
+        };
+      }
+      
+      sectionPerformance[section].attempts.push(attempt);
+      sectionPerformance[section].students.add(attempt.studentId._id.toString());
+      sectionPerformance[section].totalAttempts++;
+      sectionPerformance[section].totalMarks += attempt.totalMarks;
+      sectionPerformance[section].marksObtained += attempt.marksObtained;
+    });
+
+    // Calculate section averages
+    Object.values(sectionPerformance).forEach(section => {
+      section.averagePercentage = section.totalMarks > 0 ? (section.marksObtained / section.totalMarks) * 100 : 0;
+      section.studentsCount = section.students.size;
+    });
+
+    res.json({
+      students,
+      sectionPerformance: Object.values(sectionPerformance),
+      attempts,
+      summary: {
+        totalStudents: students.length,
+        totalAttempts: attempts.length,
+        averagePercentage: attempts.length > 0 
+          ? attempts.reduce((sum, attempt) => sum + attempt.percentage, 0) / attempts.length 
+          : 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Faculty hierarchical reports error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;

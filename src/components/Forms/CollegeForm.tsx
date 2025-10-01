@@ -12,14 +12,15 @@ interface CollegeFormData {
 interface CollegeFormProps {
   onSubmit: (data: CollegeFormData) => Promise<void>;
   loading: boolean;
+  initialData?: CollegeFormData;
 }
 
-const CollegeForm: React.FC<CollegeFormProps> = ({ onSubmit, loading }) => {
+const CollegeForm: React.FC<CollegeFormProps> = ({ onSubmit, loading, initialData }) => {
   const [formData, setFormData] = useState<CollegeFormData>({
-    name: '',
-    code: '',
-    email: '',
-    address: '',
+    name: initialData?.name || '',
+    code: initialData?.code || '',
+    email: initialData?.email || '',
+    address: initialData?.address || '',
   });
 
   const [errors, setErrors] = useState<Partial<CollegeFormData>>({});

@@ -87,6 +87,14 @@ const testSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  sourceType: {
+    type: String,
+    enum: ['manual', 'pdf', 'json', 'csv'],
+    default: 'manual'
+  },
+  originalFileName: {
+    type: String
+  },
   isActive: {
     type: Boolean,
     default: true

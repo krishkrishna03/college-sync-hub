@@ -317,9 +317,8 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   }) => {
     try {
       setFormLoading(true);
-      console.log('Updating college with data:', collegeData);
-      // Add API call for updating college when available
-      // await apiService.updateCollege(editingCollege?.id, collegeData);
+      if (!editingCollege) return;
+      await apiService.updateCollege(editingCollege.id, collegeData);
       setShowEditForm(false);
       setEditingCollege(null);
       loadData();
@@ -649,6 +648,12 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
                   >
                     {college.isActive ? 'Deactivate' : 'Activate'}
                   </button>
+                  <button
+                    onClick={() => handleEditCollege(college)}
+                    className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-sm"
+                  >
+                    Edit
+                  </button>
                   <p className="text-xs text-gray-500">
                     Created: {formatDate(college.createdAt)}
                   </p>
@@ -665,6 +670,29 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
           size="md"
         >
           <CollegeForm onSubmit={handleCreateCollege} loading={formLoading} />
+        </Modal>
+
+        <Modal
+          isOpen={showEditForm}
+          onClose={() => {
+            setShowEditForm(false);
+            setEditingCollege(null);
+          }}
+          title="Edit College"
+          size="md"
+        >
+          {editingCollege && (
+            <CollegeForm 
+              onSubmit={handleUpdateCollege} 
+              loading={formLoading}
+              initialData={{
+                name: editingCollege.name,
+                code: editingCollege.code,
+                email: editingCollege.email,
+                address: editingCollege.address
+              }}
+            />
+          )}
         </Modal>
       </div>
     );

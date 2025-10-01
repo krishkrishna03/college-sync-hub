@@ -172,6 +172,85 @@ router.put('/colleges/:id/toggle-status', auth, authorize('master_admin'), async
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// Update college details (Master Admin only)
+router.put('/colleges/:id', auth, authorize('master_admin'), [
+  body('name').trim().isLength({ min: 2 }),
+  body('email').isEmail().normalizeEmail(),
+  body('address').trim().isLength({ min: 10 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { name, email, address } = req.body;
+    const collegeId = req.params.id;
+
+    // Check if email is already used by another college
+    const existingCollege = await College.findOne({
+      email,
+      _id: { $ne: collegeId }
+    });
+
+    if (existingCollege) {
+      return res.status(400).json({ error: 'Email already used by another college' });
+    }
+
+    const college = await College.findByIdAndUpdate(
+      collegeId,
+      { name, email, address },
+      { new: true, runValidators: true }
+    );
+
+    if (!college) {
+      return res.status(404).json({ error: 'College not found' });
+    }
+
+    // Update college admin email if it matches college email
+    await User.findOneAndUpdate(
+      { collegeId, role: 'college_admin' },
+      { email }
+    );
+
+    res.json({
+      message: 'College updated successfully',
+      college
+    });
+
+  } catch (error) {
+    console.error('Update college error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete college (Master Admin only)
+router.delete('/colleges/:id', auth, authorize('master_admin'), async (req, res) => {
+  try {
+    const collegeId = req.params.id;
+
+    // Check if college has users
+    const userCount = await User.countDocuments({ collegeId });
+    if (userCount > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete college with existing users. Please remove all users first.' 
+      });
+    }
+
+    const college = await College.findByIdAndDelete(collegeId);
+    if (!college) {
+      return res.status(404).json({ error: 'College not found' });
+    }
+
+    res.json({ message: 'College deleted successfully' });
+
+  } catch (error) {
+    console.error('Delete college error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Update Master Admin email
 router.put('/update-email', auth, authorize('master_admin'), [
   body('email').isEmail().normalizeEmail()

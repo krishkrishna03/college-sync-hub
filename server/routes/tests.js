@@ -750,4 +750,209 @@ router.get('/:id/results', auth, authorize('student'), async (req, res) => {
   }
 });
 
+// Update test (Master Admin only)
+router.put('/:id', auth, authorize('master_admin'), [
+  body('testName').trim().isLength({ min: 3 }),
+  body('testDescription').trim().isLength({ min: 10 }),
+  body('subject').isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']),
+  body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test']),
+  body('numberOfQuestions').isInt({ min: 1, max: 100 }),
+  body('marksPerQuestion').isInt({ min: 1, max: 10 }),
+  body('duration').isInt({ min: 5, max: 300 }),
+  body('startDateTime').isISO8601(),
+  body('endDateTime').isISO8601(),
+  body('questions').isArray({ min: 1 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const testId = req.params.id;
+    const updateData = req.body;
+
+    // Validate questions count
+    if (updateData.questions.length !== updateData.numberOfQuestions) {
+      return res.status(400).json({ 
+        error: `Number of questions (${updateData.questions.length}) must match the specified count (${updateData.numberOfQuestions})` 
+      });
+    }
+
+    // Add marks to each question
+    updateData.questions.forEach(question => {
+      question.marks = updateData.marksPerQuestion;
+    });
+
+    const test = await Test.findByIdAndUpdate(
+      testId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!test) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    res.json({
+      message: 'Test updated successfully',
+      test
+    });
+
+  } catch (error) {
+    console.error('Update test error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete test (Master Admin only)
+router.delete('/:id', auth, authorize('master_admin'), async (req, res) => {
+  try {
+    const testId = req.params.id;
+
+    // Check if test has attempts
+    const attemptCount = await TestAttempt.countDocuments({ testId });
+    if (attemptCount > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete test with existing attempts. Test has been taken by students.' 
+      });
+    }
+
+    // Check if test has assignments
+    const assignmentCount = await TestAssignment.countDocuments({ testId });
+    if (assignmentCount > 0) {
+      // Delete assignments first
+      await TestAssignment.deleteMany({ testId });
+    }
+
+    const test = await Test.findByIdAndDelete(testId);
+    if (!test) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    res.json({ message: 'Test deleted successfully' });
+
+  } catch (error) {
+    console.error('Delete test error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Extract questions from JSON/CSV
+router.post('/extract-file', auth, authorize('master_admin'), upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'File is required' });
+    }
+
+    const fileExtension = path.extname(req.file.originalname).toLowerCase();
+    let questions = [];
+
+    if (fileExtension === '.json') {
+      questions = await extractFromJSON(req.file.path);
+    } else if (fileExtension === '.csv') {
+      questions = await extractFromCSV(req.file.path);
+    } else {
+      return res.status(400).json({ error: 'Only JSON and CSV files are supported' });
+    }
+
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
+
+    if (questions.length === 0) {
+      return res.status(400).json({ 
+        error: 'No valid questions found in the file. Please check the format.' 
+      });
+    }
+
+    res.json({
+      message: `Successfully extracted ${questions.length} questions`,
+      questions: questions.map(q => ({
+        ...q,
+        marks: 1 // Default marks
+      }))
+    });
+
+  } catch (error) {
+    // Clean up file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error('File extraction error:', error);
+    res.status(500).json({ error: error.message || 'Failed to process file' });
+  }
+});
+
+// Helper functions for file extraction
+async function extractFromJSON(filePath) {
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const data = JSON.parse(fileContent);
+    
+    // Support both array of questions and object with questions array
+    const questions = Array.isArray(data) ? data : data.questions || [];
+    
+    return questions.filter(q => 
+      q.questionText && 
+      q.options && 
+      q.options.A && q.options.B && q.options.C && q.options.D &&
+      q.correctAnswer && 
+      ['A', 'B', 'C', 'D'].includes(q.correctAnswer)
+    );
+  } catch (error) {
+    throw new Error('Invalid JSON format or structure');
+  }
+}
+
+async function extractFromCSV(filePath) {
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const lines = fileContent.split('\n').filter(line => line.trim());
+    
+    if (lines.length < 2) {
+      throw new Error('CSV file must have at least a header and one data row');
+    }
+    
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const questions = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      
+      if (values.length !== headers.length) continue;
+      
+      const question = {};
+      headers.forEach((header, index) => {
+        question[header] = values[index];
+      });
+      
+      // Map CSV columns to expected format
+      const formattedQuestion = {
+        questionText: question['Question'] || question['questionText'],
+        options: {
+          A: question['Option A'] || question['A'],
+          B: question['Option B'] || question['B'],
+          C: question['Option C'] || question['C'],
+          D: question['Option D'] || question['D']
+        },
+        correctAnswer: question['Correct Answer'] || question['correctAnswer']
+      };
+      
+      // Validate question
+      if (formattedQuestion.questionText && 
+          formattedQuestion.options.A && 
+          formattedQuestion.options.B && 
+          formattedQuestion.options.C && 
+          formattedQuestion.options.D &&
+          ['A', 'B', 'C', 'D'].includes(formattedQuestion.correctAnswer)) {
+        questions.push(formattedQuestion);
+      }
+    }
+    
+    return questions;
+  } catch (error) {
+    throw new Error('Invalid CSV format or structure');
+  }
+}
+
 module.exports = router;

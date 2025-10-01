@@ -493,6 +493,83 @@ router.put('/users/:userId/toggle-status', auth, authorize('college_admin'), asy
   }
 });
 
+// Get hierarchical student data (College Admin only)
+router.get('/hierarchy', auth, authorize('college_admin'), async (req, res) => {
+  try {
+    const students = await User.find({
+      collegeId: req.user.collegeId,
+      role: 'student',
+      isActive: true
+    }).select('name email idNumber branch batch section phoneNumber hasLoggedIn lastLogin createdAt');
+
+    // Group students by batch -> branch -> section
+    const hierarchy = {};
+    
+    students.forEach(student => {
+      const batch = student.batch || 'Unknown';
+      const branch = student.branch || 'Unknown';
+      const section = student.section || 'Unknown';
+      
+      if (!hierarchy[batch]) {
+        hierarchy[batch] = {};
+      }
+      if (!hierarchy[batch][branch]) {
+        hierarchy[batch][branch] = {};
+      }
+      if (!hierarchy[batch][branch][section]) {
+        hierarchy[batch][branch][section] = [];
+      }
+      
+      hierarchy[batch][branch][section].push(student);
+    });
+
+    // Calculate counts
+    const summary = {
+      totalStudents: students.length,
+      totalBatches: Object.keys(hierarchy).length,
+      totalBranches: new Set(students.map(s => s.branch)).size,
+      totalSections: new Set(students.map(s => `${s.batch}-${s.branch}-${s.section}`)).size
+    };
+
+    res.json({
+      hierarchy,
+      summary,
+      students
+    });
+
+  } catch (error) {
+    console.error('Get hierarchy error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get students by filters (batch, branch, section)
+router.get('/students/filtered', auth, authorize('college_admin', 'faculty'), async (req, res) => {
+  try {
+    const { batch, branch, section } = req.query;
+    
+    let query = {
+      collegeId: req.user.collegeId,
+      role: 'student',
+      isActive: true
+    };
+
+    if (batch && batch !== 'all') query.batch = batch;
+    if (branch && branch !== 'all') query.branch = branch;
+    if (section && section !== 'all') query.section = section;
+
+    const students = await User.find(query)
+      .select('name email idNumber branch batch section phoneNumber hasLoggedIn lastLogin createdAt')
+      .sort({ batch: 1, branch: 1, section: 1, name: 1 });
+
+    res.json(students);
+
+  } catch (error) {
+    console.error('Get filtered students error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Helper function to validate Excel row data
 function validateExcelRow(row, role, rowNumber) {
   const errors = [];

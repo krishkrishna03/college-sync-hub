@@ -241,6 +241,39 @@ class ApiService {
     return this.request('/reports/student/performance');
   }
 
+  async getCollegeHierarchy() {
+    return this.request('/college/hierarchy');
+  }
+
+  async getFilteredStudents(batch?: string, branch?: string, section?: string) {
+    const params = new URLSearchParams();
+    if (batch) params.append('batch', batch);
+    if (branch) params.append('branch', branch);
+    if (section) params.append('section', section);
+    
+    const queryString = params.toString();
+    return this.request(`/college/students/filtered${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getHierarchicalReports(batch?: string, branch?: string, section?: string) {
+    const params = new URLSearchParams();
+    if (batch) params.append('batch', batch);
+    if (branch) params.append('branch', branch);
+    if (section) params.append('section', section);
+    
+    const queryString = params.toString();
+    return this.request(`/reports/college/hierarchical${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getFacultyHierarchicalReports(batch?: string, section?: string) {
+    const params = new URLSearchParams();
+    if (batch) params.append('batch', batch);
+    if (section) params.append('section', section);
+    
+    const queryString = params.toString();
+    return this.request(`/reports/faculty/hierarchical${queryString ? `?${queryString}` : ''}`);
+  }
+
   // Notification endpoints
   async createNotification(notificationData: any) {
     return this.request('/notifications', {

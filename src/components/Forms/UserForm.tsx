@@ -17,18 +17,19 @@ interface UserFormProps {
   onSubmit: (data: UserFormData) => Promise<void>;
   loading: boolean;
   defaultRole?: 'faculty' | 'student';
+  initialData?: UserFormData;
 }
 
-const UserForm: React.FC<UserFormProps> = ({ onSubmit, loading, defaultRole = 'student' }) => {
+const UserForm: React.FC<UserFormProps> = ({ onSubmit, loading, defaultRole = 'student', initialData }) => {
   const [formData, setFormData] = useState<UserFormData>({
-    name: '',
-    email: '',
-    role: defaultRole,
-    idNumber: '',
-    branch: '',
-    batch: '',
-    section: '',
-    phoneNumber: '',
+    name: initialData?.name || '',
+    email: initialData?.email || '',
+    role: initialData?.role || defaultRole,
+    idNumber: initialData?.idNumber || '',
+    branch: initialData?.branch || '',
+    batch: initialData?.batch || '',
+    section: initialData?.section || '',
+    phoneNumber: initialData?.phoneNumber || '',
   });
 
   const [errors, setErrors] = useState<Partial<UserFormData>>({});
