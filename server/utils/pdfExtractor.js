@@ -44,23 +44,29 @@ class PDFExtractor {
   static parseMCQText(text) {
     const questions = [];
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    
+
     let currentQuestion = null;
     let questionCounter = 0;
-    
+    let optionCount = 0;
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+
       // Check if line starts with a number (question) - more flexible patterns
       const questionMatch = line.match(/^(\d+)[\.\)\s]+(.+)/);
       if (questionMatch) {
         // Save previous question if exists
         if (currentQuestion && this.isValidQuestion(currentQuestion)) {
-          questions.push(currentQuestion);
+          questions.push({
+            questionText: currentQuestion.questionText,
+            options: { ...currentQuestion.options },
+            correctAnswer: currentQuestion.correctAnswer
+          });
         }
-        
+
         // Start new question
         questionCounter++;
+        optionCount = 0;
         currentQuestion = {
           questionText: questionMatch[2].trim(),
           options: {},
@@ -68,37 +74,46 @@ class PDFExtractor {
         };
         continue;
       }
-      
+
       // Check for options - more flexible patterns
       const optionMatch = line.match(/^[(\[]?([ABCD])[)\]\.:\s]*(.+)/i);
       if (optionMatch && currentQuestion) {
         const optionLetter = optionMatch[1].toUpperCase();
         const optionText = optionMatch[2].trim();
-        if (optionText.length > 0) {
+        if (optionText.length > 0 && !currentQuestion.options[optionLetter]) {
           currentQuestion.options[optionLetter] = optionText;
+          optionCount++;
         }
         continue;
       }
-      
+
       // Check for answer indication - more flexible patterns
       const answerMatch = line.match(/^(?:Answer|Ans|Correct|Solution)?[\s:]*[(\[]?([ABCD])[)\]]?/i);
-      if (answerMatch && currentQuestion) {
-        currentQuestion.correctAnswer = answerMatch[1].toUpperCase();
+      if (answerMatch && currentQuestion && optionCount === 4) {
+        const answer = answerMatch[1].toUpperCase();
+        if (!currentQuestion.correctAnswer) {
+          currentQuestion.correctAnswer = answer;
+        }
         continue;
       }
-      
-      // If we have a current question and this line doesn't match patterns, 
+
+      // If we have a current question and this line doesn't match patterns,
       // it might be continuation of question text
-      if (currentQuestion && !currentQuestion.options.A && line.length > 10) {
+      if (currentQuestion && optionCount === 0 && line.length > 10) {
         currentQuestion.questionText += ' ' + line;
       }
     }
-    
+
     // Add the last question
     if (currentQuestion && this.isValidQuestion(currentQuestion)) {
-      questions.push(currentQuestion);
+      questions.push({
+        questionText: currentQuestion.questionText,
+        options: { ...currentQuestion.options },
+        correctAnswer: currentQuestion.correctAnswer
+      });
     }
-    
+
+    console.log('Parsed questions count:', questions.length);
     return questions;
   }
 

@@ -16,6 +16,7 @@ interface Test {
   testDescription: string;
   subject: string;
   testType: string;
+  companyName?: string;
   difficulty?: string;
   numberOfQuestions: number;
   totalMarks: number;
@@ -372,6 +373,11 @@ const ExamManagement: React.FC<ExamManagementProps> = ({ userRole }) => {
                           'bg-yellow-100 text-yellow-800'
                         }`}>
                           {test.difficulty}
+                        </span>
+                      )}
+                      {test.companyName && test.testType === 'Specific Company Test' && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {test.companyName}
                         </span>
                       )}
                     </div>

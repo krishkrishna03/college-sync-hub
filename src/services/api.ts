@@ -147,6 +147,19 @@ class ApiService {
     });
   }
 
+  async updateTest(testId: string, testData: any) {
+    return this.request(`/tests/${testId}`, {
+      method: 'PUT',
+      body: JSON.stringify(testData),
+    });
+  }
+
+  async deleteTest(testId: string) {
+    return this.request(`/tests/${testId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getTests(testType?: string, subject?: string) {
     const params = new URLSearchParams();
     if (testType) params.append('testType', testType);

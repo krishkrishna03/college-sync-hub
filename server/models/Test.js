@@ -45,6 +45,11 @@ const testSchema = new mongoose.Schema({
     enum: ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'],
     default: 'Assessment'
   },
+  companyName: {
+    type: String,
+    trim: true,
+    default: null
+  },
   topics: [{
     type: String,
     trim: true

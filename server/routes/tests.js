@@ -66,6 +66,7 @@ router.post('/', auth, authorize('master_admin'), [
       testDescription,
       subject,
       testType = 'Assessment',
+      companyName,
       topics = [],
       difficulty = 'Medium',
       numberOfQuestions,
@@ -75,6 +76,13 @@ router.post('/', auth, authorize('master_admin'), [
       endDateTime,
       questions
     } = req.body;
+
+    // Validate companyName for Specific Company Test
+    if (testType === 'Specific Company Test' && (!companyName || !companyName.trim())) {
+      return res.status(400).json({
+        error: 'Company name is required for Specific Company tests'
+      });
+    }
 
     // Validate questions
     if (questions.length !== numberOfQuestions) {
@@ -118,6 +126,7 @@ router.post('/', auth, authorize('master_admin'), [
       testDescription,
       subject,
       testType,
+      companyName: companyName || null,
       topics,
       difficulty,
       numberOfQuestions,
@@ -138,6 +147,7 @@ router.post('/', auth, authorize('master_admin'), [
         id: test._id,
         testName: test.testName,
         testType: test.testType,
+        companyName: test.companyName,
         subject: test.subject,
         topics: test.topics,
         difficulty: test.difficulty,

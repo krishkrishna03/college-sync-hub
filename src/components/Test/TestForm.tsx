@@ -19,6 +19,7 @@ interface TestFormData {
   testDescription: string;
   subject: 'Verbal' | 'Reasoning' | 'Technical' | 'Arithmetic' | 'Communication';
   testType: 'Assessment' | 'Practice' | 'Assignment' | 'Mock Test' | 'Specific Company Test';
+  companyName?: string;
   topics: string[];
   difficulty: 'Easy' | 'Medium' | 'Hard';
   numberOfQuestions: number;
@@ -41,6 +42,7 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
     testDescription: initialData?.testDescription || '',
     subject: initialData?.subject || 'Technical',
     testType: initialData?.testType || 'Assessment',
+    companyName: initialData?.companyName || '',
     topics: initialData?.topics || [],
     difficulty: initialData?.difficulty || 'Medium',
     numberOfQuestions: initialData?.numberOfQuestions || 10,
@@ -111,6 +113,9 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
     if (formData.testType === 'Specific Company Test' && formData.topics.length === 0) {
       newErrors.topics = 'Please select at least one topic for company-specific tests';
     }
+    if (formData.testType === 'Specific Company Test' && !formData.companyName?.trim()) {
+      newErrors.companyName = 'Company name is required for Specific Company tests';
+    }
     if (formData.questions.length !== formData.numberOfQuestions) {
       newErrors.questions = `You need exactly ${formData.numberOfQuestions} questions`;
     }
@@ -140,6 +145,7 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
         testDescription: '',
         subject: 'Technical',
         testType: 'Assessment',
+        companyName: '',
         topics: [],
         difficulty: 'Medium',
         numberOfQuestions: 10,
@@ -226,13 +232,18 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
           ...q,
           marks: formData.marksPerQuestion
         }));
-        
+
         setFormData(prev => ({
           ...prev,
           questions: [...prev.questions, ...extractedQuestions].slice(0, formData.numberOfQuestions)
         }));
-        
-        alert(`Successfully extracted ${data.questions.length} questions from PDF`);
+
+        // Show preview of all extracted questions
+        const questionsList = extractedQuestions.map((q: any, idx: number) =>
+          `Q${idx + 1}: ${q.questionText.substring(0, 50)}...`
+        ).join('\n');
+
+        alert(`Successfully extracted ${data.questions.length} questions from PDF:\n\n${questionsList.substring(0, 500)}${questionsList.length > 500 ? '\n...(and more)' : ''}\n\nScroll down to review all questions before submitting.`);
       } else {
         console.error('PDF extraction error:', data);
         // Show more helpful error message
@@ -485,7 +496,26 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
               ))}
             </select>
           </div>
-          
+
+          {/* Company Name field for Specific Company Test */}
+          {formData.testType === 'Specific Company Test' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.companyName || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                  errors.companyName ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Enter company name (e.g., Google, Amazon)"
+              />
+              {errors.companyName && <p className="mt-1 text-sm text-red-600">{errors.companyName}</p>}
+            </div>
+          )}
+
           <div className="md:col-span-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <textarea
