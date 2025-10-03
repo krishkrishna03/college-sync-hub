@@ -115,6 +115,7 @@ const Login: React.FC = () => {
                   <input
                     id="forgot-email"
                     type="email"
+                    autoComplete="email"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     required
@@ -199,6 +200,7 @@ const Login: React.FC = () => {
                     id="email"
                     name="email"
                     type="email"
+                    autoComplete="email"
                     required
                     value={formData.email}
                     onChange={handleChange}
@@ -218,6 +220,7 @@ const Login: React.FC = () => {
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
                     required
                     value={formData.password}
                     onChange={handleChange}
