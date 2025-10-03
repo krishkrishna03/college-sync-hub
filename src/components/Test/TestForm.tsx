@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
+import apiService from '../../services/api';
 
 interface Question {
   questionText: string;
@@ -226,8 +227,17 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
+        if (!data || !data.questions || !Array.isArray(data.questions)) {
+          throw new Error('Invalid response from server');
+        }
+
+        if (data.questions.length === 0) {
+          alert('No questions found in PDF. Please check the file format.');
+          return;
+        }
+
         const extractedQuestions = data.questions.map((q: any) => ({
           ...q,
           marks: formData.marksPerQuestion
@@ -238,7 +248,6 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
           questions: [...prev.questions, ...extractedQuestions].slice(0, formData.numberOfQuestions)
         }));
 
-        // Show preview of all extracted questions
         const questionsList = extractedQuestions.map((q: any, idx: number) =>
           `Q${idx + 1}: ${q.questionText.substring(0, 50)}...`
         ).join('\n');
@@ -246,7 +255,6 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
         alert(`Successfully extracted ${data.questions.length} questions from PDF:\n\n${questionsList.substring(0, 500)}${questionsList.length > 500 ? '\n...(and more)' : ''}\n\nScroll down to review all questions before submitting.`);
       } else {
         console.error('PDF extraction error:', data);
-        // Show more helpful error message
         const errorMessage = data.error || 'Failed to extract questions from PDF';
         alert(`${errorMessage}\n\nTips for better PDF extraction:\n• Ensure questions are numbered (1., 2., etc.)\n• Options should be labeled A), B), C), D)\n• Include clear answer indicators (Answer: A, Correct: B, etc.)\n• Use clear formatting with line breaks between questions`);
       }
@@ -279,21 +287,30 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
     setPdfLoading(true);
     try {
       const data = await apiService.extractQuestionsFromFile(file);
-      
+
+      if (!data || !data.questions || !Array.isArray(data.questions)) {
+        throw new Error('Invalid response from server');
+      }
+
+      if (data.questions.length === 0) {
+        alert(`No questions found in ${fileExtension?.toUpperCase()} file. Please check the file format.`);
+        return;
+      }
+
       const extractedQuestions = data.questions.map((q: any) => ({
         ...q,
         marks: formData.marksPerQuestion
       }));
-      
+
       setFormData(prev => ({
         ...prev,
         questions: [...prev.questions, ...extractedQuestions].slice(0, formData.numberOfQuestions)
       }));
-      
-      alert(`Successfully extracted ${data.questions.length} questions from ${fileExtension.toUpperCase()}`);
+
+      alert(`Successfully extracted ${data.questions.length} questions from ${fileExtension?.toUpperCase()}`);
     } catch (error) {
       console.error('File upload error:', error);
-      alert(`Error processing ${fileExtension.toUpperCase()} file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`Error processing ${fileExtension?.toUpperCase()} file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setPdfLoading(false);
       e.target.value = '';
