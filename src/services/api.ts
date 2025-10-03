@@ -139,6 +139,12 @@ class ApiService {
     });
   }
 
+  async deleteUser(userId: string) {
+    return this.request(`/college/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Test endpoints
   async createTest(testData: any) {
     return this.request('/tests', {

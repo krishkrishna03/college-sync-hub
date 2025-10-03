@@ -487,7 +487,7 @@ router.put('/users/:userId', auth, authorize('college_admin'), [
 router.put('/users/:userId/toggle-status', auth, authorize('college_admin'), async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     const user = await User.findOne({
       _id: userId,
       collegeId: req.user.collegeId
@@ -504,11 +504,45 @@ router.put('/users/:userId/toggle-status', auth, authorize('college_admin'), asy
     const college = await College.findById(req.user.collegeId);
     await college.updateStats();
 
-    res.json({ 
+    res.json({
       message: `User ${user.isActive ? 'activated' : 'deactivated'} successfully`,
-      isActive: user.isActive 
+      isActive: user.isActive
     });
   } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete user (College Admin only)
+router.delete('/users/:userId', auth, authorize('college_admin'), async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findOne({
+      _id: userId,
+      collegeId: req.user.collegeId
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent deletion of college admin
+    if (user.role === 'college_admin') {
+      return res.status(403).json({ error: 'Cannot delete college admin' });
+    }
+
+    await User.findByIdAndDelete(userId);
+
+    // Update college statistics
+    const college = await College.findById(req.user.collegeId);
+    await college.updateStats();
+
+    res.json({
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    logger.errorLog(error, { context: 'Delete User' });
     res.status(500).json({ error: 'Server error' });
   }
 });

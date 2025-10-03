@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, GraduationCap, CheckCircle, Clock, FileText, Send, Eye,Upload, Bell } from 'lucide-react';
+import { Plus, Users, GraduationCap, CheckCircle, Clock, FileText, Send, Eye,Upload, Bell, Edit, Trash2 } from 'lucide-react';
 import apiService from '../../services/api';
 import Modal from '../../components/UI/Modal';
 import UserForm from '../../components/Forms/UserForm';
@@ -74,6 +74,8 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [showStudentAssignment, setShowStudentAssignment] = useState(false);
   const [showNotificationForm, setShowNotificationForm] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<TestAssignment | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [defaultRole, setDefaultRole] = useState<'faculty' | 'student'>('student');
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
@@ -228,7 +230,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const toggleUserStatus = async (userId: string, currentRole: string) => {
     try {
       await apiService.toggleUserStatus(userId);
-      
+
       // Reload data
       loadDashboardData();
       if (currentRole === 'faculty') {
@@ -238,6 +240,54 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update user status');
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setShowEditForm(true);
+  };
+
+  const handleUpdateUser = async (userData: any) => {
+    if (!selectedUser) return;
+
+    try {
+      setFormLoading(true);
+      await apiService.updateUser(selectedUser._id, userData);
+      setShowEditForm(false);
+      setSelectedUser(null);
+
+      // Reload data
+      loadDashboardData();
+      if (selectedUser.role === 'faculty') {
+        loadFaculty();
+      } else {
+        loadStudents();
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string, currentRole: string) => {
+    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await apiService.deleteUser(userId);
+
+      // Reload data
+      loadDashboardData();
+      if (currentRole === 'faculty') {
+        loadFaculty();
+      } else {
+        loadStudents();
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to delete user');
     }
   };
 
@@ -521,16 +571,22 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => toggleUserStatus(user._id, user.role)}
-                    className={`px-3 py-1 rounded text-xs ${
-                      user.isActive
-                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                        : 'bg-green-100 text-green-700 hover:bg-green-200'
-                    }`}
-                  >
-                    {user.isActive ? 'Deactivate' : 'Activate'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEditUser(user)}
+                      className="text-blue-600 hover:text-blue-900"
+                      title="Edit"
+                    >
+                      <Edit size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(user._id, user.name, user.role)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Delete"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             )) : null}
@@ -565,34 +621,62 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     return (
       <div className="space-y-6">
         {renderUserTable(faculty, 'Faculty')}
-        
+
         <Modal
           isOpen={showUserForm}
           onClose={() => setShowUserForm(false)}
           title="Create New Faculty"
           size="lg"
         >
-          <UserForm 
-            onSubmit={handleCreateUser} 
+          <UserForm
+            onSubmit={handleCreateUser}
             loading={formLoading}
             defaultRole="faculty"
           />
         </Modal>
-    
+
         <Modal
           isOpen={showBulkUpload}
           onClose={() => setShowBulkUpload(false)}
           title="Bulk Upload Faculty"
           size="lg"
         >
-          <BulkUploadForm 
+          <BulkUploadForm
             role="faculty"
-            onSubmit={handleBulkUpload} 
+            onSubmit={handleBulkUpload}
             loading={formLoading}
             onClose={() => setShowBulkUpload(false)}
           />
         </Modal>
-         </div>
+
+        <Modal
+          isOpen={showEditForm}
+          onClose={() => {
+            setShowEditForm(false);
+            setSelectedUser(null);
+          }}
+          title="Edit Faculty"
+          size="lg"
+        >
+          {selectedUser && (
+            <UserForm
+              onSubmit={handleUpdateUser}
+              loading={formLoading}
+              defaultRole="faculty"
+              initialData={{
+                name: selectedUser.name,
+                email: selectedUser.email,
+                role: 'faculty',
+                idNumber: selectedUser.idNumber,
+                branch: selectedUser.branch,
+                batch: selectedUser.batch,
+                section: selectedUser.section,
+                phoneNumber: selectedUser.phoneNumber || ''
+              }}
+            />
+          )}
+        </Modal>
+      </div>
     );
   }
          
@@ -600,36 +684,78 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   if (activeTab === 'students') {
     return (
       <>
-      <div className="space-y-6">
-        {renderUserTable(students, 'Students')}
-        
+        <div className="space-y-6">
+          {renderUserTable(students, 'Students')}
+
+          <Modal
+            isOpen={showUserForm}
+            onClose={() => setShowUserForm(false)}
+            title="Create New Student"
+            size="lg"
+          >
+            <UserForm
+              onSubmit={handleCreateUser}
+              loading={formLoading}
+              defaultRole="student"
+            />
+          </Modal>
+
+          <Modal
+            isOpen={showBulkUpload}
+            onClose={() => setShowBulkUpload(false)}
+            title="Bulk Upload Students"
+            size="lg"
+          >
+            <BulkUploadForm
+              role="student"
+              onSubmit={handleBulkUpload}
+              loading={formLoading}
+              onClose={() => setShowBulkUpload(false)}
+            />
+          </Modal>
+
+          <Modal
+            isOpen={showEditForm}
+            onClose={() => {
+              setShowEditForm(false);
+              setSelectedUser(null);
+            }}
+            title="Edit Student"
+            size="lg"
+          >
+            {selectedUser && (
+              <UserForm
+                onSubmit={handleUpdateUser}
+                loading={formLoading}
+                defaultRole="student"
+                initialData={{
+                  name: selectedUser.name,
+                  email: selectedUser.email,
+                  role: 'student',
+                  idNumber: selectedUser.idNumber,
+                  branch: selectedUser.branch,
+                  batch: selectedUser.batch,
+                  section: selectedUser.section,
+                  phoneNumber: selectedUser.phoneNumber || ''
+                }}
+              />
+            )}
+          </Modal>
+        </div>
+
         <Modal
-          isOpen={showUserForm}
-          onClose={() => setShowUserForm(false)}
-          title="Create New Student"
+          isOpen={showNotificationForm}
+          onClose={() => setShowNotificationForm(false)}
+          title="Create New Notification"
           size="lg"
         >
-          <UserForm 
-            onSubmit={handleCreateUser} 
+          <NotificationForm
+            onSubmit={handleCreateNotification}
             loading={formLoading}
-            defaultRole="student"
+            onClose={() => setShowNotificationForm(false)}
           />
         </Modal>
-      </div>
-
-      <Modal
-        isOpen={showNotificationForm}
-        onClose={() => setShowNotificationForm(false)}
-        title="Create New Notification"
-        size="lg"
-      >
-        <NotificationForm 
-          onSubmit={handleCreateNotification} 
-          loading={formLoading}
-          onClose={() => setShowNotificationForm(false)}
-        />
-      </Modal>
-  </>
+      </>
     );
   }
 
@@ -651,19 +777,6 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
             
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="flex items-center">
-        <Modal
-          isOpen={showBulkUpload}
-          onClose={() => setShowBulkUpload(false)}
-          title="Bulk Upload Students"
-          size="lg"
-        >
-          <BulkUploadForm 
-            role="student"
-            onSubmit={handleBulkUpload} 
-            loading={formLoading}
-            onClose={() => setShowBulkUpload(false)}
-          />
-        </Modal>
                 <GraduationCap className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Students</p>
