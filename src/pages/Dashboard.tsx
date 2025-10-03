@@ -16,6 +16,7 @@ import ProfileModal from '../components/Profile/ProfileModal';
 import NotificationsList from '../components/Notifications/NotificationsList';
 import ProfilePage from '../components/Profile/ProfilePage';
 import NotificationForm from '../components/Notifications/NotificationForm';
+import NotificationAnalytics from '../components/Notifications/NotificationAnalytics';
 import StudentHierarchy from '../components/Student/StudentHierarchy';
 import ReportsPage from '../components/Reports/ReportsPage';
 import ExamManagement from '../components/Exam/ExamManagement';
@@ -50,22 +51,27 @@ const Dashboard: React.FC = () => {
     if (activeTab === 'notifications') {
       return <NotificationsList />;
     }
-    
+
+    // Handle notification analytics tab for master admin
+    if (activeTab === 'notification-analytics') {
+      return <NotificationAnalytics />;
+    }
+
     // Handle exam management tab for all roles
     if (activeTab === 'exam-management') {
       return <ExamManagement userRole={state.user.role} />;
     }
-    
+
     // Handle student hierarchy tab for college admin
     if (activeTab === 'student-hierarchy') {
       return <StudentHierarchy />;
     }
-    
+
     // Handle reports tab for college admin and faculty
     if (activeTab === 'reports') {
       return <ReportsPage userRole={state.user.role} />;
     }
-    
+
     // Handle create notification tab for admins
     if (activeTab === 'create-notification') {
       return (
@@ -80,10 +86,10 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-            <NotificationForm 
+            <NotificationForm
               onSubmit={async (formData) => {
                 await apiService.createNotificationWithFile(formData);
-              }} 
+              }}
               loading={false}
               onClose={() => setActiveTab('notifications')}
             />
@@ -91,7 +97,7 @@ const Dashboard: React.FC = () => {
         </div>
       );
     }
-    
+
     // Handle profile tab for all roles
     if (activeTab === 'profile') {
       return <ProfilePage />;

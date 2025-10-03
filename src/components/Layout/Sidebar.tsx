@@ -1,15 +1,16 @@
 import React from 'react';
-import { 
-  Home, 
-  Users, 
-  GraduationCap, 
-  Building, 
+import {
+  Home,
+  Users,
+  GraduationCap,
+  Building,
   BookOpen,
   UserPlus,
   BarChart3,
   FileText,
   ClipboardList,
-  Bell
+  Bell,
+  TrendingUp
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -62,6 +63,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       label: 'Create Notification',
       icon: <Bell size={20} />,
       roles: ['master_admin', 'college_admin'],
+    },
+    {
+      id: 'notification-analytics',
+      label: 'Notification Analytics',
+      icon: <TrendingUp size={20} />,
+      roles: ['master_admin'],
     },
     {
       id: 'faculty',

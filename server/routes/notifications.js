@@ -449,6 +449,137 @@ router.get('/:notificationId/recipients', auth, authorize('master_admin', 'colle
   }
 });
 
+router.get('/analytics/report', auth, authorize('master_admin'), async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const dateFilter = {};
+    if (startDate) dateFilter.$gte = new Date(startDate);
+    if (endDate) dateFilter.$lte = new Date(endDate);
+
+    const matchCondition = Object.keys(dateFilter).length > 0
+      ? { createdAt: dateFilter }
+      : {};
+
+    const totalNotifications = await Notification.countDocuments(matchCondition);
+
+    const notificationList = await Notification.find(matchCondition)
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
+
+    const notificationsWithStats = await Promise.all(
+      notificationList.map(async (notification) => {
+        const recipientStats = await NotificationRecipient.aggregate([
+          { $match: { notificationId: notification._id } },
+          {
+            $group: {
+              _id: null,
+              totalRecipients: { $sum: 1 },
+              seenCount: { $sum: { $cond: ['$isRead', 1, 0] } },
+              unseenCount: { $sum: { $cond: ['$isRead', 0, 1] } }
+            }
+          }
+        ]);
+
+        const stats = recipientStats[0] || { totalRecipients: 0, seenCount: 0, unseenCount: 0 };
+
+        const seenByUsers = await NotificationRecipient.find({
+          notificationId: notification._id,
+          isRead: true
+        })
+        .populate('recipientId', 'name email role')
+        .select('recipientId readAt');
+
+        return {
+          id: notification._id,
+          title: notification.title,
+          message: notification.message,
+          createdBy: notification.createdBy,
+          sentTo: notification.targetType,
+          targetColleges: notification.targetColleges,
+          targetUsers: notification.targetUsers,
+          createdAt: notification.createdAt,
+          totalRecipients: stats.totalRecipients,
+          seenCount: stats.seenCount,
+          unseenCount: stats.unseenCount,
+          seenPercentage: stats.totalRecipients > 0
+            ? Math.round((stats.seenCount / stats.totalRecipients) * 100)
+            : 0,
+          seenBy: seenByUsers.map(s => ({
+            userId: s.recipientId._id,
+            userName: s.recipientId.name,
+            userEmail: s.recipientId.email,
+            userRole: s.recipientId.role,
+            seenAt: s.readAt
+          }))
+        };
+      })
+    );
+
+    const dailyStats = await NotificationRecipient.aggregate([
+      {
+        $match: Object.keys(dateFilter).length > 0
+          ? { createdAt: dateFilter }
+          : {}
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            day: { $dayOfMonth: '$createdAt' }
+          },
+          sent: { $sum: 1 },
+          seen: { $sum: { $cond: ['$isRead', 1, 0] } }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 }
+      },
+      {
+        $project: {
+          _id: 0,
+          date: {
+            $dateFromParts: {
+              year: '$_id.year',
+              month: '$_id.month',
+              day: '$_id.day'
+            }
+          },
+          sent: 1,
+          seen: 1
+        }
+      }
+    ]);
+
+    const totalRecipients = await NotificationRecipient.countDocuments(
+      Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
+    );
+    const totalSeen = await NotificationRecipient.countDocuments({
+      isRead: true,
+      ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {})
+    });
+
+    res.json({
+      summary: {
+        totalNotificationsSent: totalNotifications,
+        totalRecipients,
+        totalSeen,
+        totalUnseen: totalRecipients - totalSeen,
+        overallSeenPercentage: totalRecipients > 0
+          ? Math.round((totalSeen / totalRecipients) * 100)
+          : 0
+      },
+      notifications: notificationsWithStats,
+      dailyAnalytics: dailyStats
+    });
+
+  } catch (error) {
+    console.error('Get analytics report error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Helper functions
 async function getMasterAdminRecipients(notification) {
   let recipients = [];

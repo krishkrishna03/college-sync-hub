@@ -381,6 +381,15 @@ class ApiService {
   async getCollegeDashboardAnalytics() {
     return this.request('/analytics/college-dashboard');
   }
+
+  async getNotificationAnalyticsReport(startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    const queryString = params.toString();
+    return this.request(`/notifications/analytics/report${queryString ? `?${queryString}` : ''}`);
+  }
 }
 
 export default new ApiService();
