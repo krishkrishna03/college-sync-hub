@@ -5,7 +5,7 @@ import apiService from '../../services/api';
 import StudentTestInterface from '../../components/Test/StudentTestInterface';
 import TestResults from '../../components/Test/TestResults';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import TestTabs from '../../components/Test/TestTabs';
+import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
 
 interface College {
   name: string;
@@ -54,7 +54,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const { state } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [assignedTests, setAssignedTests] = useState<AssignedTest[]>([]);
-  const [activeTestType, setActiveTestType] = useState('all');
+  const [activeTestType, setActiveTestType] = useState('Assessment');
   const [activeSubject, setActiveSubject] = useState('all');
   const [testCounts, setTestCounts] = useState<any>(null);
   const [activeTest, setActiveTest] = useState<any>(null);
@@ -94,27 +94,37 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         subject === 'all' ? undefined : subject
       );
       setAssignedTests(data);
-      
-      // Calculate test counts for tabs
+
+      // Calculate test counts by category and subject
       const allTests = await apiService.getStudentAssignedTests();
+
+      const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
+
       const counts = {
-        byType: {
-          all: allTests.length,
-          Assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
-          Practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
-          Assignment: allTests.filter((t: any) => t.testId.testType === 'Assignment').length,
-          'Mock Test': allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
-          'Specific Company Test': allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
-        },
-        bySubject: {
-          all: allTests.length,
-          Verbal: allTests.filter((t: any) => t.testId.subject === 'Verbal').length,
-          Reasoning: allTests.filter((t: any) => t.testId.subject === 'Reasoning').length,
-          Technical: allTests.filter((t: any) => t.testId.subject === 'Technical').length,
-          Arithmetic: allTests.filter((t: any) => t.testId.subject === 'Arithmetic').length,
-          Communication: allTests.filter((t: any) => t.testId.subject === 'Communication').length
-        }
+        assessment: {} as { [key: string]: number },
+        practice: {} as { [key: string]: number },
+        mockTest: {} as { [key: string]: number },
+        company: {} as { [key: string]: number }
       };
+
+      subjects.forEach(subject => {
+        counts.assessment[subject] = allTests.filter((t: any) =>
+          t.testId.testType === 'Assessment' && t.testId.subject === subject
+        ).length;
+
+        counts.practice[subject] = allTests.filter((t: any) =>
+          t.testId.testType === 'Practice' && t.testId.subject === subject
+        ).length;
+
+        counts.mockTest[subject] = allTests.filter((t: any) =>
+          t.testId.testType === 'Mock Test' && t.testId.subject === subject
+        ).length;
+
+        counts.company[subject] = allTests.filter((t: any) =>
+          t.testId.testType === 'Specific Company Test' && t.testId.subject === subject
+        ).length;
+      });
+
       setTestCounts(counts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
@@ -379,12 +389,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
           <h2 className="text-2xl font-bold text-gray-900">My Tests</h2>
         </div>
 
-        <TestTabs
-          activeTestType={activeTestType}
-          activeSubject={activeSubject}
-          onTestTypeChange={setActiveTestType}
-          onSubjectChange={setActiveSubject}
+        <CategorizedTestTabs
+          onFilterChange={(testType, subject) => {
+            setActiveTestType(testType);
+            setActiveSubject(subject);
+            loadAssignedTests(testType, subject);
+          }}
           testCounts={testCounts}
+          loading={loading}
         />
         <div className="grid gap-6">
           {assignedTests.map((test) => {

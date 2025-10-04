@@ -3,6 +3,7 @@ import { Users, BookOpen, Building, User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import FacultyTestsPage from '../../components/Test/FacultyTestsPage';
 
 interface College {
   name: string;
@@ -74,6 +75,10 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ activeTab }) => {
 
   if (!dashboardData) {
     return <div>No data available</div>;
+  }
+
+  if (activeTab === 'tests') {
+    return <FacultyTestsPage />;
   }
 
   if (activeTab === 'profile') {

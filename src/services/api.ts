@@ -213,9 +213,18 @@ class ApiService {
     const params = new URLSearchParams();
     if (testType) params.append('testType', testType);
     if (subject) params.append('subject', subject);
-    
+
     const queryString = params.toString();
     return this.request(`/tests/student/assigned${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getCollegeAssignedTests(testType?: string, subject?: string) {
+    const params = new URLSearchParams();
+    if (testType) params.append('testType', testType);
+    if (subject) params.append('subject', subject);
+
+    const queryString = params.toString();
+    return this.request(`/tests/college/assigned${queryString ? `?${queryString}` : ''}`);
   }
 
   async startTest(testId: string) {
