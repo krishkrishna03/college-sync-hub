@@ -3,48 +3,113 @@ const logger = require('../middleware/logger');
 
 class EmailService {
   constructor() {
+    const emailPort = parseInt(process.env.EMAIL_PORT || '587', 10);
+    const isSecure = emailPort === 465;
+    const environment = process.env.NODE_ENV || 'development';
+
     logger.info('Initializing Email Service', {
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: emailPort,
+      secure: isSecure,
+      environment,
       user: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
     });
 
     this.transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
-      secure: true,
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: emailPort,
+      secure: isSecure,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 15000,
       pool: true,
       maxConnections: 5,
-      maxMessages: 100
+      maxMessages: 100,
+      requireTLS: !isSecure,
+      tls: {
+        rejectUnauthorized: environment === 'production',
+        minVersion: 'TLSv1.2'
+      },
+      debug: environment === 'development',
+      logger: environment === 'development'
     });
 
     this.maxRetries = 3;
     this.retryDelay = 2000;
+    this.isConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+    if (this.isConfigured) {
+      this.verifyConnection();
+    } else {
+      logger.warn('Email service not configured - missing EMAIL_USER or EMAIL_PASS environment variables');
+    }
+  }
+
+  async verifyConnection() {
+    try {
+      await this.transporter.verify();
+      logger.info('✓ Email service connection verified successfully');
+    } catch (error) {
+      logger.errorLog(error, {
+        context: 'Email Service Connection Verification',
+        host: process.env.EMAIL_HOST,
+        port: process.env.EMAIL_PORT
+      });
+    }
   }
 
   async sendWithRetry(mailOptions, retries = this.maxRetries) {
+    if (!this.isConfigured) {
+      logger.warn('Email service not configured - skipping email send', {
+        to: mailOptions.to,
+        subject: mailOptions.subject
+      });
+      return {
+        success: false,
+        error: 'Email service not configured',
+        attempts: 0
+      };
+    }
+
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        await this.transporter.sendMail(mailOptions);
-        return { success: true, attempt };
+        const info = await this.transporter.sendMail(mailOptions);
+        logger.info('✓ Email sent successfully', {
+          to: mailOptions.to,
+          subject: mailOptions.subject,
+          attempt,
+          messageId: info.messageId
+        });
+        return { success: true, attempt, messageId: info.messageId };
       } catch (error) {
         logger.errorLog(error, {
           context: 'Email send attempt',
           attempt,
-          to: mailOptions.to
+          maxRetries: retries,
+          to: mailOptions.to,
+          subject: mailOptions.subject,
+          errorCode: error.code,
+          command: error.command
         });
 
         if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
+          const delay = this.retryDelay * attempt;
+          logger.info(`Retrying email send in ${delay}ms...`, {
+            attempt: attempt + 1,
+            maxRetries: retries
+          });
+          await new Promise(resolve => setTimeout(resolve, delay));
         } else {
-          return { success: false, error: error.message, attempts: retries };
+          return {
+            success: false,
+            error: error.message,
+            attempts: retries,
+            errorCode: error.code
+          };
         }
       }
     }
@@ -108,10 +173,6 @@ class EmailService {
     const result = await this.sendWithRetry(mailOptions);
 
     if (result.success) {
-      logger.info('Login credentials email sent successfully', {
-        to: userEmail,
-        attempt: result.attempt
-      });
       return { success: true };
     } else {
       logger.errorLog(new Error(result.error), {
@@ -166,10 +227,6 @@ class EmailService {
     const result = await this.sendWithRetry(mailOptions);
 
     if (result.success) {
-      logger.info('Password reset email sent successfully', {
-        to: userEmail,
-        attempt: result.attempt
-      });
       return { success: true };
     } else {
       logger.errorLog(new Error(result.error), {
@@ -237,10 +294,6 @@ class EmailService {
     const result = await this.sendWithRetry(mailOptions);
 
     if (result.success) {
-      logger.info('Test assignment notification sent successfully', {
-        to: collegeEmail,
-        attempt: result.attempt
-      });
       return { success: true };
     } else {
       logger.errorLog(new Error(result.error), {
@@ -300,10 +353,6 @@ class EmailService {
     const result = await this.sendWithRetry(mailOptions);
 
     if (result.success) {
-      logger.info('Student test assignment email sent successfully', {
-        to: studentEmail,
-        attempt: result.attempt
-      });
       return { success: true };
     } else {
       logger.errorLog(new Error(result.error), {
@@ -378,10 +427,6 @@ class EmailService {
     const result = await this.sendWithRetry(mailOptions);
 
     if (result.success) {
-      logger.info('Notification email sent successfully', {
-        to: userEmail,
-        attempt: result.attempt
-      });
       return { success: true };
     } else {
       logger.errorLog(new Error(result.error), {

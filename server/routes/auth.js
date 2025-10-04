@@ -201,24 +201,30 @@ router.post('/forgot-password', [
       email: user.email 
     });
 
-    const emailSent = await emailService.sendPasswordReset(
+    const emailResult = await emailService.sendPasswordReset(
       user.email,
       user.name,
       resetToken
     );
 
-    if (emailSent) {
-      logger.info('Password reset email sent successfully', { 
-        userId: user._id, 
-        email: user.email 
+    if (emailResult.success) {
+      logger.info('Password reset email sent successfully', {
+        userId: user._id,
+        email: user.email
       });
-      res.json({ message: 'Password reset email sent' });
+      res.json({
+        message: 'Password reset email sent successfully. Please check your email.'
+      });
     } else {
-      logger.error('Failed to send password reset email', { 
-        userId: user._id, 
-        email: user.email 
+      logger.error('Failed to send password reset email', {
+        userId: user._id,
+        email: user.email,
+        error: emailResult.error
       });
-      res.status(500).json({ error: 'Failed to send email' });
+      res.status(500).json({
+        error: 'Failed to send password reset email. Please try again later.',
+        details: emailResult.error
+      });
     }
   } catch (error) {
     logger.errorLog(error, { context: 'Forgot Password', email: req.body.email });
