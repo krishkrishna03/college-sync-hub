@@ -36,7 +36,14 @@ class ApiService {
         if (response.status === 403) {
           throw new Error('Access denied. You do not have permission to access this resource.');
         }
-        throw new Error(data.error || 'Request failed');
+
+        // Better error handling for validation errors
+        if (data.errors && Array.isArray(data.errors)) {
+          const errorMessages = data.errors.map((err: any) => err.msg || err.message).join(', ');
+          throw new Error(errorMessages || 'Validation failed');
+        }
+
+        throw new Error(data.error || data.message || 'Request failed');
       }
 
       return data;

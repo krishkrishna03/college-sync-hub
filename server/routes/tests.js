@@ -55,26 +55,32 @@ const fileUpload = multer({
 
 // Create test (Master Admin only)
 router.post('/', auth, authorize('master_admin'), [
-  body('testName').trim().isLength({ min: 3 }),
-  body('testDescription').trim().isLength({ min: 10 }),
-  body('subject').isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']),
-  body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test']),
-  body('topics').optional().isArray(),
-  body('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']),
-  body('numberOfQuestions').isInt({ min: 1, max: 100 }),
-  body('marksPerQuestion').isInt({ min: 1, max: 10 }),
-  body('duration').isInt({ min: 5, max: 300 }),
-  body('startDateTime').isISO8601(),
-  body('endDateTime').isISO8601(),
-  body('questions').isArray({ min: 1 })
+  body('testName').trim().isLength({ min: 3 }).withMessage('Test name must be at least 3 characters'),
+  body('testDescription').trim().isLength({ min: 10 }).withMessage('Test description must be at least 10 characters'),
+  body('subject').isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']).withMessage('Invalid subject'),
+  body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test']).withMessage('Invalid test type'),
+  body('topics').optional().isArray().withMessage('Topics must be an array'),
+  body('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']).withMessage('Invalid difficulty'),
+  body('numberOfQuestions').isInt({ min: 1, max: 100 }).withMessage('Number of questions must be between 1 and 100'),
+  body('marksPerQuestion').isInt({ min: 1, max: 10 }).withMessage('Marks per question must be between 1 and 10'),
+  body('duration').isInt({ min: 5, max: 300 }).withMessage('Duration must be between 5 and 300 minutes'),
+  body('startDateTime').isISO8601().withMessage('Invalid start date format'),
+  body('endDateTime').isISO8601().withMessage('Invalid end date format'),
+  body('questions').isArray({ min: 1 }).withMessage('At least one question is required')
 ], async (req, res) => {
   try {
-    console.log('Received test creation request:', req.body);
-    
+    console.log('Received test creation request');
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Test name:', req.body.testName);
+    console.log('Questions count:', req.body.questions?.length);
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('Validation errors:', errors.array());
-      return res.status(400).json({ errors: errors.array() });
+      console.log('Validation errors:', JSON.stringify(errors.array(), null, 2));
+      return res.status(400).json({
+        error: 'Validation failed',
+        errors: errors.array()
+      });
     }
 
     const {

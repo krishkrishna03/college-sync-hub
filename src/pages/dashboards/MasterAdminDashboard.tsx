@@ -232,13 +232,17 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   const handleCreateTest = async (formData: TestFormData) => {
     try {
       setFormLoading(true);
-      
-      console.log('Creating test with data:', formData);
+
+      console.log('Creating test with data:', JSON.stringify(formData, null, 2));
+      console.log('Questions count:', formData.questions.length);
+      console.log('Expected questions:', formData.numberOfQuestions);
+
       await apiService.createTest(formData);
       setShowTestForm(false);
       loadTests();
     } catch (error) {
       console.error('Test creation error:', error);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
       throw error;
     } finally {
       setFormLoading(false);

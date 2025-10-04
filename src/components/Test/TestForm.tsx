@@ -159,6 +159,8 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
       setErrors({});
     } catch (error) {
       console.error('Form submission error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create test';
+      alert(`Test creation failed: ${errorMessage}`);
     }
   };
 
