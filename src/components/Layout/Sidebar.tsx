@@ -92,13 +92,19 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       id: 'reports',
       label: 'Reports',
       icon: <BarChart3 size={20} />,
-      roles: ['college_admin', 'faculty'],
+      roles: ['college_admin', 'faculty', 'student'],
     },
     {
       id: 'assigned-tests',
       label: 'Assigned Tests',
       icon: <ClipboardList size={20} />,
       roles: ['college_admin'],
+    },
+    {
+      id: 'tests',
+      label: 'Tests',
+      icon: <FileText size={20} />,
+      roles: ['faculty'],
     },
     {
       id: 'my-tests',

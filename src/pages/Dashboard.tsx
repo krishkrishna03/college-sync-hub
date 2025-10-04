@@ -67,8 +67,11 @@ const Dashboard: React.FC = () => {
       return <StudentHierarchy />;
     }
 
-    // Handle reports tab for college admin and faculty
+    // Handle reports tab for all roles (student gets their own reports view)
     if (activeTab === 'reports') {
+      if (state.user.role === 'student') {
+        return <StudentDashboard activeTab="reports" />;
+      }
       return <ReportsPage userRole={state.user.role} />;
     }
 

@@ -946,20 +946,162 @@ router.post('/extract-file', auth, authorize('master_admin'), upload.single('fil
   }
 });
 
+// Get student test reports (Student)
+router.get('/student/reports', auth, authorize('student'), async (req, res) => {
+  try {
+    const { testType, subject } = req.query;
+
+    let query = {
+      studentId: req.user._id,
+      status: 'completed'
+    };
+
+    const attempts = await TestAttempt.find(query)
+      .populate({
+        path: 'testId',
+        select: 'testName testType subject totalMarks difficulty companyName'
+      })
+      .sort({ createdAt: -1 });
+
+    let filteredAttempts = attempts;
+
+    if (testType && testType !== 'all') {
+      filteredAttempts = filteredAttempts.filter(attempt =>
+        attempt.testId && attempt.testId.testType === testType
+      );
+    }
+
+    if (subject && subject !== 'all') {
+      filteredAttempts = filteredAttempts.filter(attempt =>
+        attempt.testId && attempt.testId.subject === subject
+      );
+    }
+
+    const reports = filteredAttempts.map(attempt => ({
+      _id: attempt._id,
+      testName: attempt.testId?.testName || 'Unknown Test',
+      testType: attempt.testId?.testType || 'Unknown',
+      subject: attempt.testId?.subject || 'Unknown',
+      companyName: attempt.testId?.companyName,
+      difficulty: attempt.testId?.difficulty,
+      totalMarks: attempt.totalMarks,
+      marksObtained: attempt.marksObtained,
+      percentage: attempt.percentage,
+      correctAnswers: attempt.correctAnswers,
+      incorrectAnswers: attempt.incorrectAnswers,
+      timeSpent: attempt.timeSpent,
+      status: attempt.percentage >= 40 ? 'Pass' : 'Fail',
+      completedAt: attempt.createdAt,
+      startTime: attempt.startTime,
+      endTime: attempt.endTime
+    }));
+
+    res.json(reports);
+  } catch (error) {
+    console.error('Get student reports error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get all students test reports (Faculty and College Admin)
+router.get('/faculty/student-reports', auth, authorize('faculty', 'college_admin'), async (req, res) => {
+  try {
+    const { testType, subject, studentName, batch, branch, section } = req.query;
+
+    let userQuery = {
+      collegeId: req.user.collegeId,
+      role: 'student',
+      isActive: true
+    };
+
+    if (batch) userQuery.batch = batch;
+    if (branch) userQuery.branch = branch;
+    if (section) userQuery.section = section;
+    if (studentName) {
+      userQuery.name = { $regex: studentName, $options: 'i' };
+    }
+
+    const students = await User.find(userQuery).select('_id name email batch branch section');
+
+    if (students.length === 0) {
+      return res.json([]);
+    }
+
+    const studentIds = students.map(s => s._id);
+
+    const attempts = await TestAttempt.find({
+      studentId: { $in: studentIds },
+      status: 'completed'
+    })
+    .populate({
+      path: 'testId',
+      select: 'testName testType subject totalMarks difficulty companyName'
+    })
+    .populate({
+      path: 'studentId',
+      select: 'name email batch branch section'
+    })
+    .sort({ createdAt: -1 });
+
+    let filteredAttempts = attempts;
+
+    if (testType && testType !== 'all') {
+      filteredAttempts = filteredAttempts.filter(attempt =>
+        attempt.testId && attempt.testId.testType === testType
+      );
+    }
+
+    if (subject && subject !== 'all') {
+      filteredAttempts = filteredAttempts.filter(attempt =>
+        attempt.testId && attempt.testId.subject === subject
+      );
+    }
+
+    const reports = filteredAttempts.map(attempt => ({
+      _id: attempt._id,
+      studentName: attempt.studentId?.name || 'Unknown',
+      studentEmail: attempt.studentId?.email || 'Unknown',
+      batch: attempt.studentId?.batch,
+      branch: attempt.studentId?.branch,
+      section: attempt.studentId?.section,
+      testName: attempt.testId?.testName || 'Unknown Test',
+      testType: attempt.testId?.testType || 'Unknown',
+      subject: attempt.testId?.subject || 'Unknown',
+      companyName: attempt.testId?.companyName,
+      difficulty: attempt.testId?.difficulty,
+      totalMarks: attempt.totalMarks,
+      marksObtained: attempt.marksObtained,
+      percentage: attempt.percentage,
+      correctAnswers: attempt.correctAnswers,
+      incorrectAnswers: attempt.incorrectAnswers,
+      timeSpent: attempt.timeSpent,
+      status: attempt.percentage >= 40 ? 'Pass' : 'Fail',
+      completedAt: attempt.createdAt,
+      startTime: attempt.startTime,
+      endTime: attempt.endTime
+    }));
+
+    res.json(reports);
+  } catch (error) {
+    console.error('Get faculty student reports error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Helper functions for file extraction
 async function extractFromJSON(filePath) {
   try {
     const fileContent = fs.readFileSync(filePath, 'utf8');
     const data = JSON.parse(fileContent);
-    
+
     // Support both array of questions and object with questions array
     const questions = Array.isArray(data) ? data : data.questions || [];
-    
-    return questions.filter(q => 
-      q.questionText && 
-      q.options && 
+
+    return questions.filter(q =>
+      q.questionText &&
+      q.options &&
       q.options.A && q.options.B && q.options.C && q.options.D &&
-      q.correctAnswer && 
+      q.correctAnswer &&
       ['A', 'B', 'C', 'D'].includes(q.correctAnswer)
     );
   } catch (error) {
@@ -971,24 +1113,24 @@ async function extractFromCSV(filePath) {
   try {
     const fileContent = fs.readFileSync(filePath, 'utf8');
     const lines = fileContent.split('\n').filter(line => line.trim());
-    
+
     if (lines.length < 2) {
       throw new Error('CSV file must have at least a header and one data row');
     }
-    
+
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
     const questions = [];
-    
+
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-      
+
       if (values.length !== headers.length) continue;
-      
+
       const question = {};
       headers.forEach((header, index) => {
         question[header] = values[index];
       });
-      
+
       // Map CSV columns to expected format
       const formattedQuestion = {
         questionText: question['Question'] || question['questionText'],
@@ -1000,18 +1142,18 @@ async function extractFromCSV(filePath) {
         },
         correctAnswer: question['Correct Answer'] || question['correctAnswer']
       };
-      
+
       // Validate question
-      if (formattedQuestion.questionText && 
-          formattedQuestion.options.A && 
-          formattedQuestion.options.B && 
-          formattedQuestion.options.C && 
+      if (formattedQuestion.questionText &&
+          formattedQuestion.options.A &&
+          formattedQuestion.options.B &&
+          formattedQuestion.options.C &&
           formattedQuestion.options.D &&
           ['A', 'B', 'C', 'D'].includes(formattedQuestion.correctAnswer)) {
         questions.push(formattedQuestion);
       }
     }
-    
+
     return questions;
   } catch (error) {
     throw new Error('Invalid CSV format or structure');

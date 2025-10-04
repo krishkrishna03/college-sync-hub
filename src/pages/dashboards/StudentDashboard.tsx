@@ -6,6 +6,7 @@ import StudentTestInterface from '../../components/Test/StudentTestInterface';
 import TestResults from '../../components/Test/TestResults';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
+import StudentReportsPage from '../../components/Test/StudentReportsPage';
 
 interface College {
   name: string;
@@ -380,6 +381,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
 
   if (!dashboardData) {
     return <div>No data available</div>;
+  }
+
+  if (activeTab === 'reports') {
+    return <StudentReportsPage />;
   }
 
   if (activeTab === 'my-tests') {

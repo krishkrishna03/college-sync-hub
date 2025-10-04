@@ -399,6 +399,28 @@ class ApiService {
     const queryString = params.toString();
     return this.request(`/notifications/analytics/report${queryString ? `?${queryString}` : ''}`);
   }
+
+  async getStudentTestReports(testType?: string, subject?: string) {
+    const params = new URLSearchParams();
+    if (testType) params.append('testType', testType);
+    if (subject) params.append('subject', subject);
+
+    const queryString = params.toString();
+    return this.request(`/tests/student/reports${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getFacultyStudentReports(testType?: string, subject?: string, studentName?: string, batch?: string, branch?: string, section?: string) {
+    const params = new URLSearchParams();
+    if (testType) params.append('testType', testType);
+    if (subject) params.append('subject', subject);
+    if (studentName) params.append('studentName', studentName);
+    if (batch) params.append('batch', batch);
+    if (branch) params.append('branch', branch);
+    if (section) params.append('section', section);
+
+    const queryString = params.toString();
+    return this.request(`/tests/faculty/student-reports${queryString ? `?${queryString}` : ''}`);
+  }
 }
 
 export default new ApiService();

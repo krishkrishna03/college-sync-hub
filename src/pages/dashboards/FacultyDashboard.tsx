@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import FacultyTestsPage from '../../components/Test/FacultyTestsPage';
+import FacultyStudentReports from '../../components/Test/FacultyStudentReports';
 
 interface College {
   name: string;
@@ -79,6 +80,10 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ activeTab }) => {
 
   if (activeTab === 'tests') {
     return <FacultyTestsPage />;
+  }
+
+  if (activeTab === 'reports') {
+    return <FacultyStudentReports />;
   }
 
   if (activeTab === 'profile') {
