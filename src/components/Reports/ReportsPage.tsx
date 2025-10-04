@@ -15,9 +15,9 @@ interface FilterOptions {
 }
 
 interface ReportData {
-  students: any[];
-  performance: any[];
-  attempts: any[];
+  students?: any[];
+  performance?: any[];
+  attempts?: any[];
   summary: {
     totalStudents: number;
     totalAttempts: number;
@@ -42,66 +42,105 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ userRole }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadFilterOptions();
+    let isMounted = true;
+
+    const loadOptions = async () => {
+      try {
+        const hierarchyData = await apiService.getCollegeHierarchy();
+        const hierarchy = hierarchyData?.hierarchy || {};
+
+        if (!isMounted) return;
+
+        const batches = Object.keys(hierarchy);
+        const branches = new Set<string>();
+        const sections = new Set<string>();
+
+        Object.values(hierarchy).forEach((batchData: any) => {
+          Object.keys(batchData).forEach(branch => {
+            branches.add(branch);
+            Object.keys(batchData[branch]).forEach(section => {
+              sections.add(section);
+            });
+          });
+        });
+
+        if (isMounted) {
+          setFilterOptions({
+            batches,
+            branches: Array.from(branches),
+            sections: Array.from(sections)
+          });
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Failed to load filter options:', error);
+          setError('You do not have permission to access this section. Please contact your admin.');
+        }
+      }
+    };
+
+    loadOptions();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
-    loadReportData();
-  }, [filters]);
+    let isMounted = true;
 
-  const loadFilterOptions = async () => {
-    try {
-      const hierarchyData = await apiService.getCollegeHierarchy();
-      const hierarchy = hierarchyData.hierarchy;
-      
-      const batches = Object.keys(hierarchy);
-      const branches = new Set<string>();
-      const sections = new Set<string>();
-      
-      Object.values(hierarchy).forEach((batchData: any) => {
-        Object.keys(batchData).forEach(branch => {
-          branches.add(branch);
-          Object.keys(batchData[branch]).forEach(section => {
-            sections.add(section);
-          });
-        });
-      });
-      
-      setFilterOptions({
-        batches,
-        branches: Array.from(branches),
-        sections: Array.from(sections)
-      });
-    } catch (error) {
-      console.error('Failed to load filter options:', error);
-    }
-  };
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const loadReportData = async () => {
-    try {
-      setLoading(true);
-      
-      let data;
-      if (userRole === 'college_admin') {
-        data = await apiService.getHierarchicalReports(
-          filters.batch === 'all' ? undefined : filters.batch,
-          filters.branch === 'all' ? undefined : filters.branch,
-          filters.section === 'all' ? undefined : filters.section
-        );
-      } else if (userRole === 'faculty') {
-        data = await apiService.getFacultyHierarchicalReports(
-          filters.batch === 'all' ? undefined : filters.batch,
-          filters.section === 'all' ? undefined : filters.section
-        );
+        let data;
+        if (userRole === 'college_admin') {
+          data = await apiService.getHierarchicalReports(
+            filters.batch === 'all' ? undefined : filters.batch,
+            filters.branch === 'all' ? undefined : filters.branch,
+            filters.section === 'all' ? undefined : filters.section
+          );
+        } else if (userRole === 'faculty') {
+          data = await apiService.getFacultyHierarchicalReports(
+            filters.batch === 'all' ? undefined : filters.batch,
+            filters.section === 'all' ? undefined : filters.section
+          );
+        }
+
+        if (!isMounted) return;
+
+        // Ensure arrays have defaults
+        const normalizedData = {
+          ...data,
+          students: data?.students || [],
+          performance: data?.performance || [],
+          attempts: data?.attempts || [],
+          sectionPerformance: data?.sectionPerformance || []
+        };
+        setReportData(normalizedData);
+      } catch (error) {
+        if (!isMounted) return;
+
+        if (error instanceof Error && error.message.includes('403')) {
+          setError('You do not have permission to access this section. Please contact your admin.');
+        } else {
+          setError(error instanceof Error ? error.message : 'Failed to load report data');
+        }
+        setReportData(null);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-      
-      setReportData(data);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load report data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [filters, userRole]);
 
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -127,22 +166,41 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ userRole }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <LoadingSpinner size="lg" />
+              <p className="mt-4 text-gray-600">Loading performance data...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center text-red-600 py-12">
-        <p>{error}</p>
-        <button 
-          onClick={loadReportData}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Retry
-        </button>
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <BarChart3 className="h-8 w-8 text-red-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to Load Reports</h3>
+            <p className="text-red-600 mb-6">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                setFilters({ ...filters }); // Trigger re-fetch
+              }}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -264,7 +322,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ userRole }) => {
           </div>
 
           {/* Performance Table */}
-          {reportData.performance.length > 0 && (
+          {reportData.performance && Array.isArray(reportData.performance) && reportData.performance.length > 0 && (
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b">
                 <h3 className="text-lg font-medium">Student Performance</h3>
@@ -322,7 +380,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ userRole }) => {
           )}
 
           {/* Section Performance for Faculty */}
-          {userRole === 'faculty' && reportData.sectionPerformance && reportData.sectionPerformance.length > 0 && (
+          {userRole === 'faculty' && reportData.sectionPerformance && Array.isArray(reportData.sectionPerformance) && reportData.sectionPerformance.length > 0 && (
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b">
                 <h3 className="text-lg font-medium">Section-wise Performance</h3>
@@ -359,7 +417,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ userRole }) => {
           )}
 
           {/* Recent Test Attempts */}
-          {reportData.attempts.length > 0 && (
+          {reportData.attempts && Array.isArray(reportData.attempts) && reportData.attempts.length > 0 && (
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b">
                 <h3 className="text-lg font-medium">Recent Test Attempts</h3>

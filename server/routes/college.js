@@ -547,23 +547,32 @@ router.delete('/users/:userId', auth, authorize('college_admin'), async (req, re
   }
 });
 
-// Get hierarchical student data (College Admin only)
-router.get('/hierarchy', auth, authorize('college_admin'), async (req, res) => {
+// Get hierarchical student data (College Admin and Faculty)
+router.get('/hierarchy', auth, authorize('college_admin', 'faculty'), async (req, res) => {
   try {
-    const students = await User.find({
+    // Build query based on user role
+    let studentQuery = {
       collegeId: req.user.collegeId,
       role: 'student',
       isActive: true
-    }).select('name email idNumber branch batch section phoneNumber hasLoggedIn lastLogin createdAt');
+    };
+
+    // Faculty can only see students from their branch
+    if (req.user.role === 'faculty') {
+      studentQuery.branch = req.user.branch;
+    }
+
+    const students = await User.find(studentQuery)
+      .select('name email idNumber branch batch section phoneNumber hasLoggedIn lastLogin createdAt');
 
     // Group students by batch -> branch -> section
     const hierarchy = {};
-    
+
     students.forEach(student => {
       const batch = student.batch || 'Unknown';
       const branch = student.branch || 'Unknown';
       const section = student.section || 'Unknown';
-      
+
       if (!hierarchy[batch]) {
         hierarchy[batch] = {};
       }
@@ -573,7 +582,7 @@ router.get('/hierarchy', auth, authorize('college_admin'), async (req, res) => {
       if (!hierarchy[batch][branch][section]) {
         hierarchy[batch][branch][section] = [];
       }
-      
+
       hierarchy[batch][branch][section].push(student);
     });
 
@@ -601,15 +610,21 @@ router.get('/hierarchy', auth, authorize('college_admin'), async (req, res) => {
 router.get('/students/filtered', auth, authorize('college_admin', 'faculty'), async (req, res) => {
   try {
     const { batch, branch, section } = req.query;
-    
+
     let query = {
       collegeId: req.user.collegeId,
       role: 'student',
       isActive: true
     };
 
+    // Faculty can only see students from their branch
+    if (req.user.role === 'faculty') {
+      query.branch = req.user.branch;
+    } else if (branch && branch !== 'all') {
+      query.branch = branch;
+    }
+
     if (batch && batch !== 'all') query.batch = batch;
-    if (branch && branch !== 'all') query.branch = branch;
     if (section && section !== 'all') query.section = section;
 
     const students = await User.find(query)

@@ -520,7 +520,7 @@ router.get('/faculty/hierarchical', auth, authorize('faculty'), async (req, res)
       branch: facultyBranch,
       isActive: true
     };
-    
+
     if (batch && batch !== 'all') studentFilter.batch = batch;
     if (section && section !== 'all') studentFilter.section = section;
 
@@ -531,6 +531,8 @@ router.get('/faculty/hierarchical', auth, authorize('faculty'), async (req, res)
       return res.json({
         students: [],
         performance: [],
+        sectionPerformance: [],
+        attempts: [],
         summary: {
           totalStudents: 0,
           totalAttempts: 0,
@@ -547,6 +549,32 @@ router.get('/faculty/hierarchical', auth, authorize('faculty'), async (req, res)
     .populate('studentId', 'name email branch batch section')
     .sort({ createdAt: -1 });
 
+    // Calculate student performance
+    const studentPerformance = {};
+    attempts.forEach(attempt => {
+      const studentId = attempt.studentId._id.toString();
+      if (!studentPerformance[studentId]) {
+        studentPerformance[studentId] = {
+          student: attempt.studentId,
+          attempts: [],
+          totalAttempts: 0,
+          averagePercentage: 0,
+          totalMarks: 0,
+          marksObtained: 0
+        };
+      }
+
+      studentPerformance[studentId].attempts.push(attempt);
+      studentPerformance[studentId].totalAttempts++;
+      studentPerformance[studentId].totalMarks += attempt.totalMarks;
+      studentPerformance[studentId].marksObtained += attempt.marksObtained;
+    });
+
+    // Calculate student averages
+    Object.values(studentPerformance).forEach(perf => {
+      perf.averagePercentage = perf.totalMarks > 0 ? (perf.marksObtained / perf.totalMarks) * 100 : 0;
+    });
+
     // Group by section for faculty view
     const sectionPerformance = {};
     attempts.forEach(attempt => {
@@ -562,7 +590,7 @@ router.get('/faculty/hierarchical', auth, authorize('faculty'), async (req, res)
           averagePercentage: 0
         };
       }
-      
+
       sectionPerformance[section].attempts.push(attempt);
       sectionPerformance[section].students.add(attempt.studentId._id.toString());
       sectionPerformance[section].totalAttempts++;
@@ -578,13 +606,14 @@ router.get('/faculty/hierarchical', auth, authorize('faculty'), async (req, res)
 
     res.json({
       students,
+      performance: Object.values(studentPerformance),
       sectionPerformance: Object.values(sectionPerformance),
       attempts,
       summary: {
         totalStudents: students.length,
         totalAttempts: attempts.length,
-        averagePercentage: attempts.length > 0 
-          ? attempts.reduce((sum, attempt) => sum + attempt.percentage, 0) / attempts.length 
+        averagePercentage: attempts.length > 0
+          ? attempts.reduce((sum, attempt) => sum + attempt.percentage, 0) / attempts.length
           : 0
       }
     });

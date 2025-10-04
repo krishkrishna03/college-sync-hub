@@ -20,7 +20,7 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -33,6 +33,9 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access denied. You do not have permission to access this resource.');
+        }
         throw new Error(data.error || 'Request failed');
       }
 

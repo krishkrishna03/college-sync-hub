@@ -381,8 +381,8 @@ router.post('/:id/assign-college', auth, authorize('master_admin'), [
   }
 });
 
-// Get assigned tests for college (College Admin)
-router.get('/college/assigned', auth, authorize('college_admin'), async (req, res) => {
+// Get assigned tests for college (College Admin and Faculty)
+router.get('/college/assigned', auth, authorize('college_admin', 'faculty'), async (req, res) => {
   try {
     const { testType, subject } = req.query;
     
