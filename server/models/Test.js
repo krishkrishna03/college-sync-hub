@@ -70,8 +70,7 @@ const testSchema = new mongoose.Schema({
     min: 1
   },
   totalMarks: {
-    type: Number,
-    required: true
+    type: Number
   },
   duration: {
     type: Number, // in minutes
