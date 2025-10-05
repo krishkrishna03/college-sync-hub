@@ -480,6 +480,47 @@ class ApiService {
       body: JSON.stringify(collegeData),
     });
   }
+
+  async getFacultyAssignedTests(testType?: string, subject?: string) {
+    const params = new URLSearchParams();
+    if (testType) params.append('testType', testType);
+    if (subject) params.append('subject', subject);
+
+    const queryString = params.toString();
+    return this.request(`/faculty/tests/assigned${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getFacultyTestReport(testId: string) {
+    return this.request(`/faculty/tests/${testId}/report`);
+  }
+
+  async getFacultyTestStudents(testId: string) {
+    return this.request(`/faculty/tests/${testId}/students`);
+  }
+
+  async exportFacultyTestResults(testId: string, format: 'json' | 'csv' = 'json') {
+    const response = await fetch(
+      `${API_BASE_URL}/faculty/tests/${testId}/export?format=${format}`,
+      {
+        headers: this.getHeaders(true)
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to export results');
+    }
+
+    if (format === 'csv') {
+      const blob = await response.blob();
+      return blob;
+    }
+
+    return response.json();
+  }
+
+  async getFacultyAnalyticsOverview(timeRange = '30') {
+    return this.request(`/faculty/analytics/overview?timeRange=${timeRange}`);
+  }
 }
 
 export default new ApiService();
