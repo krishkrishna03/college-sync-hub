@@ -271,15 +271,29 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     }
   };
 
-  const handleViewTest = (testId: string) => {
-    // Navigate to test details or open modal
-    console.log('View test:', testId);
-    // For now, just show alert. Could implement modal later
-    alert('View test details - Feature to be implemented');
+  const [showTestPreview, setShowTestPreview] = useState(false);
+  const [previewTest, setPreviewTest] = useState<Test | null>(null);
+
+  const handleViewTest = async (testId: string) => {
+    try {
+      const testDetails = await apiService.getTest(testId);
+      setPreviewTest(testDetails);
+      setShowTestPreview(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to load test details');
+    }
   };
 
-  const handleEditTest = (testId: string) => {
-    alert('Edit test - Feature to be implemented. Use Test Form with pre-filled data.');
+  const [editingTest, setEditingTest] = useState<Test | null>(null);
+
+  const handleEditTest = async (testId: string) => {
+    try {
+      const testDetails = await apiService.getTest(testId);
+      setEditingTest(testDetails);
+      setShowTestForm(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to load test details');
+    }
   };
 
   const handleDeleteTest = async (testId: string) => {
@@ -297,9 +311,17 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     }
   };
 
-  const handleTestReport = (testId: string) => {
-    // Navigate to report page
-    window.open(`/master/test-report/${testId}`, '_blank');
+  const [showTestReport, setShowTestReport] = useState(false);
+  const [testReportData, setTestReportData] = useState<any>(null);
+
+  const handleTestReport = async (testId: string) => {
+    try {
+      const reportData = await apiService.getMasterTestReport(testId);
+      setTestReportData(reportData);
+      setShowTestReport(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to load test report');
+    }
   };
 
   const handleAssignTestClick = (testId: string) => {
@@ -568,11 +590,23 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
 
         <Modal
           isOpen={showTestForm}
-          onClose={() => setShowTestForm(false)}
-          title="Create New Test"
+          onClose={() => {
+            setShowTestForm(false);
+            setEditingTest(null);
+          }}
+          title={editingTest ? "Edit Test" : "Create New Test"}
           size="xl"
         >
-          <TestForm onSubmit={handleCreateTest} loading={formLoading} />
+          <TestForm
+            onSubmit={editingTest ? async (data) => {
+              await apiService.updateTest(editingTest._id, data);
+              setShowTestForm(false);
+              setEditingTest(null);
+              loadTests(activeTestType, activeSubject);
+            } : handleCreateTest}
+            loading={formLoading}
+            initialData={editingTest}
+          />
         </Modal>
 
         {selectedTest && (
@@ -594,6 +628,121 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
               }}
               onAssign={handleAssignTest}
             />
+          </Modal>
+        )}
+
+        {previewTest && (
+          <Modal
+            isOpen={showTestPreview}
+            onClose={() => {
+              setShowTestPreview(false);
+              setPreviewTest(null);
+            }}
+            title={`Preview: ${previewTest.testName}`}
+            size="xl"
+          >
+            <div className="space-y-4">
+              <div className="border-b pb-4">
+                <p className="text-gray-600 mb-2">{previewTest.testDescription}</p>
+                <div className="grid grid-cols-4 gap-4 mt-4">
+                  <div className="text-center p-3 bg-blue-50 rounded">
+                    <p className="text-sm text-gray-600">Subject</p>
+                    <p className="font-semibold">{previewTest.subject}</p>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded">
+                    <p className="text-sm text-gray-600">Questions</p>
+                    <p className="font-semibold">{previewTest.numberOfQuestions}</p>
+                  </div>
+                  <div className="text-center p-3 bg-purple-50 rounded">
+                    <p className="text-sm text-gray-600">Duration</p>
+                    <p className="font-semibold">{previewTest.duration} min</p>
+                  </div>
+                  <div className="text-center p-3 bg-orange-50 rounded">
+                    <p className="text-sm text-gray-600">Total Marks</p>
+                    <p className="font-semibold">{previewTest.totalMarks}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="max-h-96 overflow-y-auto space-y-4">
+                {(previewTest as any).questions?.map((q: any, index: number) => (
+                  <div key={index} className="border rounded-lg p-4">
+                    <h4 className="font-medium mb-2">{index + 1}. {q.questionText}</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(q.options).map(([key, value]: [string, any]) => (
+                        <div
+                          key={key}
+                          className={`p-2 rounded ${key === q.correctAnswer ? 'bg-green-100 border border-green-300' : 'bg-gray-50'}`}
+                        >
+                          <span className="font-medium">{key})</span> {value}
+                          {key === q.correctAnswer && <span className="ml-2 text-green-600 text-xs">✓ Correct</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {testReportData && (
+          <Modal
+            isOpen={showTestReport}
+            onClose={() => {
+              setShowTestReport(false);
+              setTestReportData(null);
+            }}
+            title="Test Report & Analytics"
+            size="xl"
+          >
+            <div className="space-y-6">
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-blue-600">{testReportData.totalAssigned || 0}</p>
+                  <p className="text-sm text-gray-600">Assigned</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-green-600">{testReportData.totalAttempted || 0}</p>
+                  <p className="text-sm text-gray-600">Attempted</p>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-orange-600">{testReportData.averageScore ? testReportData.averageScore.toFixed(1) : 0}%</p>
+                  <p className="text-sm text-gray-600">Avg Score</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-purple-600">{testReportData.completionRate ? testReportData.completionRate.toFixed(1) : 0}%</p>
+                  <p className="text-sm text-gray-600">Completion</p>
+                </div>
+              </div>
+
+              {testReportData.collegeResults && testReportData.collegeResults.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-medium mb-3">College-wise Performance</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">College</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attempted</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Score</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {testReportData.collegeResults.map((result: any, index: number) => (
+                          <tr key={index}>
+                            <td className="px-4 py-3 text-sm text-gray-900">{result.collegeName}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{result.assigned}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{result.attempted}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{result.averageScore ? result.averageScore.toFixed(1) : 0}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
           </Modal>
         )}
       </div>

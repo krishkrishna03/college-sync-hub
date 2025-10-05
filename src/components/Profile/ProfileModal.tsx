@@ -105,7 +105,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
   };
 
-  const canEditProfile = ['faculty', 'student'].includes(state.user?.role || '');
+  const canEditProfile = ['faculty', 'student', 'master_admin', 'college_admin'].includes(state.user?.role || '');
 
   return (
     <div className="space-y-6">

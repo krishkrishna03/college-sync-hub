@@ -591,6 +591,26 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     );
   }
 
+  // Calculate statistics
+  const totalTests = assignedTests.length;
+  const completedTests = assignedTests.filter(t => t.hasAttempted).length;
+  const pendingTests = assignedTests.filter(t => !t.hasAttempted && isTestActive(t)).length;
+  const upcomingTests = assignedTests.filter(t => {
+    const now = new Date();
+    const start = new Date(t.testId.startDateTime);
+    return now < start;
+  }).length;
+
+  // Get recent activity
+  const recentActivity = assignedTests
+    .filter(t => t.hasAttempted)
+    .sort((a, b) => {
+      const dateA = a.attempt?.submittedAt ? new Date(a.attempt.submittedAt).getTime() : 0;
+      const dateB = b.attempt?.submittedAt ? new Date(b.attempt.submittedAt).getTime() : 0;
+      return dateB - dateA;
+    })
+    .slice(0, 5);
+
   // Default dashboard view
   return (
     <div className="space-y-6">
@@ -599,48 +619,180 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         <p className="text-blue-100">Track your tests and monitor your academic progress</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-lg shadow border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Assigned Tests</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{assignedTests.length}</p>
+      {/* Test Summary Statistics */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Test Summary</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-5 rounded-lg shadow border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Tests</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">{totalTests}</p>
+                <p className="text-xs text-gray-500 mt-1">All assigned tests</p>
+              </div>
+              <FileText className="h-10 w-10 text-blue-600" />
             </div>
-            <FileText className="h-10 w-10 text-blue-600" />
+          </div>
+
+          <div className="bg-white p-5 rounded-lg shadow border-l-4 border-green-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Completed</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">{completedTests}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {totalTests > 0 ? `${((completedTests / totalTests) * 100).toFixed(0)}% complete` : 'No tests yet'}
+                </p>
+              </div>
+              <CheckCircle className="h-10 w-10 text-green-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-lg shadow border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">{pendingTests}</p>
+                <p className="text-xs text-gray-500 mt-1">Active tests to attempt</p>
+              </div>
+              <Clock className="h-10 w-10 text-orange-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-lg shadow border-l-4 border-purple-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Upcoming</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">{upcomingTests}</p>
+                <p className="text-xs text-gray-500 mt-1">Tests scheduled ahead</p>
+              </div>
+              <Target className="h-10 w-10 text-purple-600" />
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white p-5 rounded-lg shadow border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {assignedTests.filter(t => t.hasAttempted).length}
-              </p>
+      {/* Recent Exam Activity */}
+      {recentActivity.length > 0 && (
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-medium">Recent Exam Activity</h3>
             </div>
-            <CheckCircle className="h-10 w-10 text-green-600" />
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {recentActivity.map((test) => {
+                const submittedDate = test.attempt?.submittedAt
+                  ? new Date(test.attempt.submittedAt)
+                  : null;
+                const score = test.attempt?.score || 0;
+                const totalMarks = test.testId.totalMarks;
+                const percentage = totalMarks > 0 ? (score / totalMarks) * 100 : 0;
+
+                return (
+                  <div
+                    key={test._id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-full ${
+                        percentage >= 75 ? 'bg-green-100' :
+                        percentage >= 50 ? 'bg-yellow-100' :
+                        'bg-red-100'
+                      }`}>
+                        <Award className={`h-5 w-5 ${
+                          percentage >= 75 ? 'text-green-600' :
+                          percentage >= 50 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`} />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">{test.testId.testName}</h4>
+                        <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
+                          <span>{test.testId.subject}</span>
+                          <span>•</span>
+                          <span>{score}/{totalMarks} marks</span>
+                          <span>•</span>
+                          <span className={`font-medium ${
+                            percentage >= 75 ? 'text-green-600' :
+                            percentage >= 50 ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {percentage.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">
+                        {submittedDate ? submittedDate.toLocaleDateString() : 'N/A'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {submittedDate ? submittedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="bg-white p-5 rounded-lg shadow border-l-4 border-orange-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Pending</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {assignedTests.filter(t => !t.hasAttempted && isTestActive(t)).length}
-              </p>
-            </div>
-            <Clock className="h-10 w-10 text-orange-600" />
+      {/* Testing Timeline */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <h3 className="text-lg font-medium">Testing Timeline</h3>
           </div>
         </div>
+        <div className="p-6">
+          <div className="space-y-3">
+            {assignedTests
+              .sort((a, b) => new Date(b.testId.startDateTime).getTime() - new Date(a.testId.startDateTime).getTime())
+              .slice(0, 10)
+              .map((test) => {
+                const status = getTestStatus(test);
+                const startDate = new Date(test.testId.startDateTime);
+                const isCompleted = test.hasAttempted;
 
-        <div className="bg-white p-5 rounded-lg shadow border-l-4 border-gray-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">College</p>
-              <p className="text-lg font-bold text-gray-900 mt-1">{dashboardData.college.name}</p>
-            </div>
-            <Building className="h-10 w-10 text-gray-600" />
+                return (
+                  <div key={test._id} className="flex items-center gap-4">
+                    <div className="flex-shrink-0 w-24 text-right text-sm text-gray-600">
+                      {startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                    <div className="flex-shrink-0">
+                      <div className={`w-3 h-3 rounded-full ${
+                        isCompleted ? 'bg-green-500' :
+                        status.text === 'Available' ? 'bg-blue-500' :
+                        status.text === 'Upcoming' ? 'bg-yellow-500' :
+                        'bg-gray-300'
+                      }`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900 truncate">{test.testId.testName}</p>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                          {isCompleted ? 'Completed' : status.text}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">{test.testId.subject}</p>
+                    </div>
+                    {isCompleted && test.attempt && (
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">
+                          {test.attempt.score}/{test.testId.totalMarks}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {((test.attempt.score / test.testId.totalMarks) * 100).toFixed(0)}%
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>
