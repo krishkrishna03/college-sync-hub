@@ -965,7 +965,7 @@ router.get('/student/reports', auth, authorize('student'), async (req, res) => {
     const attempts = await TestAttempt.find(query)
       .populate({
         path: 'testId',
-        select: 'testName testType subject totalMarks difficulty companyName'
+        select: 'testName testType subject totalMarks difficulty companyName questions'
       })
       .sort({ createdAt: -1 });
 
@@ -985,6 +985,22 @@ router.get('/student/reports', auth, authorize('student'), async (req, res) => {
 
     const reports = filteredAttempts.map(attempt => ({
       _id: attempt._id,
+      testId: {
+        testName: attempt.testId?.testName || 'Unknown Test',
+        testType: attempt.testId?.testType || 'Unknown',
+        subject: attempt.testId?.subject || 'Unknown',
+        companyName: attempt.testId?.companyName,
+        difficulty: attempt.testId?.difficulty,
+        totalMarks: attempt.totalMarks,
+        questions: attempt.testId?.questions || []
+      },
+      studentId: {
+        name: req.user.name,
+        email: req.user.email,
+        batch: req.user.batch,
+        branch: req.user.branch,
+        section: req.user.section
+      },
       testName: attempt.testId?.testName || 'Unknown Test',
       testType: attempt.testId?.testType || 'Unknown',
       subject: attempt.testId?.subject || 'Unknown',
@@ -999,7 +1015,23 @@ router.get('/student/reports', auth, authorize('student'), async (req, res) => {
       status: attempt.percentage >= 40 ? 'Pass' : 'Fail',
       completedAt: attempt.createdAt,
       startTime: attempt.startTime,
-      endTime: attempt.endTime
+      endTime: attempt.endTime,
+      createdAt: attempt.createdAt,
+      questionAnalysis: attempt.testId?.questions?.map((question, index) => {
+        const studentAnswer = attempt.answers.find(a =>
+          a.questionId.toString() === question._id.toString()
+        );
+
+        return {
+          questionText: question.questionText,
+          options: question.options,
+          correctAnswer: question.correctAnswer,
+          studentAnswer: studentAnswer?.selectedAnswer || 'Not answered',
+          isCorrect: studentAnswer?.isCorrect || false,
+          marksObtained: studentAnswer?.marksObtained || 0,
+          marks: question.marks
+        };
+      }) || []
     }));
 
     res.json(reports);

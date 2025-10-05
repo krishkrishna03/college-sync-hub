@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, BookOpen, Building, User, GraduationCap, FileText, Clock, Play, CheckCircle, XCircle } from 'lucide-react';
+import { Users, BookOpen, Building, User, GraduationCap, FileText, Clock, Play, CheckCircle, XCircle, TrendingUp, Award, Target } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import StudentTestInterface from '../../components/Test/StudentTestInterface';
@@ -7,6 +7,9 @@ import TestResults from '../../components/Test/TestResults';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
 import StudentReportsPage from '../../components/Test/StudentReportsPage';
+import TestTypeTable from '../../components/Test/TestTypeTable';
+import StudentPerformanceAnalytics from '../../components/Test/StudentPerformanceAnalytics';
+import DetailedTestReportModal from '../../components/Test/DetailedTestReportModal';
 
 interface College {
   name: string;
@@ -66,12 +69,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const [instantResults, setInstantResults] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [performanceData, setPerformanceData] = useState<any[]>([]);
+  const [showDetailedReport, setShowDetailedReport] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<any>(null);
 
   useEffect(() => {
     if (activeTab === 'dashboard' || activeTab === 'profile') {
       loadDashboardData();
     } else if (activeTab === 'my-tests') {
       loadAssignedTests(activeTestType, activeSubject);
+    } else if (activeTab === 'performance') {
+      loadPerformanceData();
     }
   }, [activeTab, activeTestType, activeSubject]);
 
@@ -80,8 +88,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
       setLoading(true);
       const data = await apiService.getCollegeDashboard();
       setDashboardData(data);
+      await loadAssignedTests();
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPerformanceData = async () => {
+    try {
+      setLoading(true);
+      const reports = await apiService.getStudentReports();
+      setPerformanceData(reports);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to load performance data');
     } finally {
       setLoading(false);
     }
@@ -174,8 +195,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const handleViewResults = async (testId: string) => {
     try {
       const results = await apiService.getTestResults(testId);
-      setTestResults(results);
-      setShowResults(true);
+      setSelectedReport(results);
+      setShowDetailedReport(true);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to load results');
     }
@@ -344,14 +365,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
       </div>
     );
   }
-  // Show test results
-  if (showResults && testResults) {
+  // Show detailed test report
+  if (showDetailedReport && selectedReport) {
     return (
-      <TestResults
-        results={testResults}
+      <DetailedTestReportModal
+        report={selectedReport}
         onClose={() => {
-          setShowResults(false);
-          setTestResults(null);
+          setShowDetailedReport(false);
+          setSelectedReport(null);
         }}
       />
     );
@@ -393,6 +414,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">My Tests</h2>
         </div>
+
+        <TestTypeTable />
 
         <CategorizedTestTabs
           onFilterChange={(testType, subject) => {
@@ -555,40 +578,69 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     );
   }
 
+  // Performance tab
+  if (activeTab === 'performance') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">My Performance</h2>
+          <p className="text-gray-600">Track your progress and analyze your test performance</p>
+        </div>
+        <StudentPerformanceAnalytics testResults={performanceData} />
+      </div>
+    );
+  }
+
   // Default dashboard view
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Welcome, {state.user?.name}!</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <Building className="h-8 w-8 text-blue-600" />
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">College</p>
-                <p className="text-lg font-bold text-gray-900">{dashboardData.college.name}</p>
-              </div>
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow p-6 text-white">
+        <h2 className="text-2xl font-bold mb-2">Welcome, {state.user?.name}!</h2>
+        <p className="text-blue-100">Track your tests and monitor your academic progress</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-lg shadow border-l-4 border-blue-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Assigned Tests</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{assignedTests.length}</p>
             </div>
+            <FileText className="h-10 w-10 text-blue-600" />
           </div>
-          
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <BookOpen className="h-8 w-8 text-green-600" />
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Code</p>
-                <p className="text-lg font-bold text-gray-900">{dashboardData.college.code}</p>
-              </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-lg shadow border-l-4 border-green-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Completed</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {assignedTests.filter(t => t.hasAttempted).length}
+              </p>
             </div>
+            <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
-          
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="flex items-center">
-              <FileText className="h-8 w-8 text-purple-600" />
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Assigned Tests</p>
-                <p className="text-lg font-bold text-gray-900">{assignedTests.length}</p>
-              </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-lg shadow border-l-4 border-orange-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Pending</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">
+                {assignedTests.filter(t => !t.hasAttempted && isTestActive(t)).length}
+              </p>
             </div>
+            <Clock className="h-10 w-10 text-orange-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-lg shadow border-l-4 border-gray-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">College</p>
+              <p className="text-lg font-bold text-gray-900 mt-1">{dashboardData.college.name}</p>
+            </div>
+            <Building className="h-10 w-10 text-gray-600" />
           </div>
         </div>
       </div>

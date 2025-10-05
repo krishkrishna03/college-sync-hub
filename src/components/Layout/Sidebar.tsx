@@ -10,7 +10,8 @@ import {
   FileText,
   ClipboardList,
   Bell,
-  TrendingUp
+  TrendingUp,
+  Target
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -122,6 +123,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       id: 'my-tests',
       label: 'My Tests',
       icon: <FileText size={20} />,
+      roles: ['student'],
+    },
+    {
+      id: 'performance',
+      label: 'My Performance',
+      icon: <Target size={20} />,
       roles: ['student'],
     },
     {
