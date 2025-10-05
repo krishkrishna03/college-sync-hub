@@ -681,6 +681,207 @@ function validateExcelRow(row, role, rowNumber) {
   };
 }
 
+// Get unique branches for college
+router.get('/branches', auth, authorize('college_admin', 'faculty'), async (req, res) => {
+  try {
+    const branches = await User.distinct('branch', {
+      collegeId: req.user.collegeId,
+      role: 'student',
+      isActive: true,
+      branch: { $ne: null, $ne: '' }
+    });
+
+    res.json(branches.sort());
+  } catch (error) {
+    logger.errorLog(error, { context: 'Get Branches' });
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get unique batches for college
+router.get('/batches', auth, authorize('college_admin', 'faculty'), async (req, res) => {
+  try {
+    const batches = await User.distinct('batch', {
+      collegeId: req.user.collegeId,
+      role: 'student',
+      isActive: true,
+      batch: { $ne: null, $ne: '' }
+    });
+
+    res.json(batches.sort());
+  } catch (error) {
+    logger.errorLog(error, { context: 'Get Batches' });
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get unique sections for college
+router.get('/sections', auth, authorize('college_admin', 'faculty'), async (req, res) => {
+  try {
+    const sections = await User.distinct('section', {
+      collegeId: req.user.collegeId,
+      role: 'student',
+      isActive: true,
+      section: { $ne: null, $ne: '' }
+    });
+
+    res.json(sections.sort());
+  } catch (error) {
+    logger.errorLog(error, { context: 'Get Sections' });
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get students based on filters
+router.get('/students', auth, authorize('college_admin', 'faculty'), async (req, res) => {
+  try {
+    const { branch, batch, section, search } = req.query;
+
+    let query = {
+      collegeId: req.user.collegeId,
+      role: 'student',
+      isActive: true
+    };
+
+    if (branch) query.branch = branch;
+    if (batch) query.batch = batch;
+    if (section) query.section = section;
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { idNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const students = await User.find(query)
+      .select('_id name email idNumber branch batch section')
+      .sort({ name: 1 });
+
+    res.json(students);
+  } catch (error) {
+    logger.errorLog(error, { context: 'Get Students' });
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get test report for college
+router.get('/tests/:testId/report', auth, authorize('college_admin', 'faculty'), async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const TestAttempt = require('../models/TestAttempt');
+    const Test = require('../models/Test');
+    const TestAssignment = require('../models/TestAssignment');
+
+    // Get test details
+    const test = await Test.findById(testId);
+    if (!test) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    // Get test assignment for this college
+    const assignment = await TestAssignment.findOne({
+      testId,
+      collegeId: req.user.collegeId,
+      isActive: true
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ error: 'Test not assigned to your college' });
+    }
+
+    // Get all student assignments
+    const studentAssignments = await TestAssignment.find({
+      testId,
+      collegeId: req.user.collegeId,
+      assignedTo: 'students',
+      isActive: true
+    });
+
+    // Get unique student IDs
+    const studentIds = studentAssignments.flatMap(sa =>
+      sa.studentFilters.specificStudents || []
+    );
+
+    // Get student details
+    const students = await User.find({
+      _id: { $in: studentIds }
+    }).select('_id name email idNumber branch batch section');
+
+    // Get all attempts
+    const attempts = await TestAttempt.find({
+      testId,
+      studentId: { $in: studentIds }
+    }).populate('studentId', 'name email idNumber branch batch section');
+
+    // Calculate statistics
+    const totalAssigned = students.length;
+    const totalCompleted = attempts.length;
+    const completionRate = totalAssigned > 0 ? (totalCompleted / totalAssigned * 100).toFixed(2) : 0;
+
+    const scores = attempts.map(a => a.marksObtained);
+    const averageScore = scores.length > 0
+      ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)
+      : 0;
+    const highestScore = scores.length > 0 ? Math.max(...scores) : 0;
+    const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
+
+    const passPercentage = test.totalMarks > 0 ? (test.totalMarks * 0.4) : 0;
+    const passedStudents = attempts.filter(a => a.marksObtained >= passPercentage).length;
+    const passRate = totalCompleted > 0 ? (passedStudents / totalCompleted * 100).toFixed(2) : 0;
+
+    // Student-wise results
+    const studentResults = students.map(student => {
+      const attempt = attempts.find(a => a.studentId._id.toString() === student._id.toString());
+
+      return {
+        studentId: student._id,
+        name: student.name,
+        email: student.email,
+        idNumber: student.idNumber,
+        branch: student.branch,
+        batch: student.batch,
+        section: student.section,
+        status: attempt ? 'Completed' : 'Not Attempted',
+        marksObtained: attempt ? attempt.marksObtained : 0,
+        totalMarks: test.totalMarks,
+        percentage: attempt ? attempt.percentage : 0,
+        timeSpent: attempt ? attempt.timeSpent : 0,
+        submittedAt: attempt ? attempt.createdAt : null
+      };
+    });
+
+    res.json({
+      test: {
+        _id: test._id,
+        testName: test.testName,
+        subject: test.subject,
+        testType: test.testType,
+        difficulty: test.difficulty,
+        totalMarks: test.totalMarks,
+        numberOfQuestions: test.numberOfQuestions,
+        duration: test.duration
+      },
+      statistics: {
+        totalAssigned,
+        totalCompleted,
+        completionRate: parseFloat(completionRate),
+        averageScore: parseFloat(averageScore),
+        highestScore,
+        lowestScore,
+        passRate: parseFloat(passRate),
+        passedStudents
+      },
+      students: studentResults
+    });
+
+  } catch (error) {
+    logger.errorLog(error, { context: 'Get Test Report' });
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Helper function to send bulk credential emails
 async function sendBulkCredentialEmails(createdUsers, collegeName) {
   try {

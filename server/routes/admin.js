@@ -309,5 +309,194 @@ router.put('/update-email', auth, authorize('master_admin'), [
   }
 });
 
+// Get Master Admin profile
+router.get('/profile', auth, authorize('master_admin'), async (req, res) => {
+  try {
+    const masterAdmin = await User.findById(req.user._id).select('-password');
+    res.json(masterAdmin);
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update Master Admin profile
+router.put('/profile', auth, authorize('master_admin'), [
+  body('name').optional().trim().isLength({ min: 2 }),
+  body('phoneNumber').optional().isMobilePhone()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const updates = {};
+    const allowedFields = ['name', 'phoneNumber'];
+
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      updates,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get test analytics/report for Master Admin
+router.get('/tests/:testId/report', auth, authorize('master_admin'), async (req, res) => {
+  try {
+    const { testId } = req.params;
+    const Test = require('../models/Test');
+    const TestAssignment = require('../models/TestAssignment');
+    const TestAttempt = require('../models/TestAttempt');
+    const College = require('../models/College');
+
+    // Get test details
+    const test = await Test.findById(testId);
+    if (!test) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    // Get all college assignments
+    const collegeAssignments = await TestAssignment.find({
+      testId,
+      assignedTo: 'college',
+      isActive: true
+    }).populate('collegeId', 'name code');
+
+    // Get all student assignments across all colleges
+    const studentAssignments = await TestAssignment.find({
+      testId,
+      assignedTo: 'students',
+      isActive: true
+    });
+
+    // Get all student IDs
+    const studentIds = studentAssignments.flatMap(sa =>
+      sa.studentFilters.specificStudents || []
+    );
+
+    // Get all attempts
+    const attempts = await TestAttempt.find({
+      testId,
+      studentId: { $in: studentIds }
+    }).populate('studentId', 'name email idNumber collegeId')
+      .populate('collegeId', 'name code');
+
+    // Calculate global statistics
+    const totalCollegesAssigned = collegeAssignments.length;
+    const totalCollegesAccepted = collegeAssignments.filter(ca => ca.status === 'accepted').length;
+    const totalStudentsAssigned = studentIds.length;
+    const totalStudentsCompleted = attempts.length;
+    const completionRate = totalStudentsAssigned > 0
+      ? (totalStudentsCompleted / totalStudentsAssigned * 100).toFixed(2)
+      : 0;
+
+    const scores = attempts.map(a => a.marksObtained);
+    const averageScore = scores.length > 0
+      ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)
+      : 0;
+    const highestScore = scores.length > 0 ? Math.max(...scores) : 0;
+    const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
+
+    const passPercentage = test.totalMarks > 0 ? (test.totalMarks * 0.4) : 0;
+    const passedStudents = attempts.filter(a => a.marksObtained >= passPercentage).length;
+    const passRate = totalStudentsCompleted > 0
+      ? (passedStudents / totalStudentsCompleted * 100).toFixed(2)
+      : 0;
+
+    // College-wise statistics
+    const collegeStats = await Promise.all(
+      collegeAssignments.map(async (assignment) => {
+        const collegeStudentAssignments = studentAssignments.filter(
+          sa => sa.collegeId.toString() === assignment.collegeId._id.toString()
+        );
+
+        const collegeStudentIds = collegeStudentAssignments.flatMap(sa =>
+          sa.studentFilters.specificStudents || []
+        );
+
+        const collegeAttempts = attempts.filter(a =>
+          collegeStudentIds.some(id => id.toString() === a.studentId._id.toString())
+        );
+
+        const collegeScores = collegeAttempts.map(a => a.marksObtained);
+        const collegeAvg = collegeScores.length > 0
+          ? (collegeScores.reduce((a, b) => a + b, 0) / collegeScores.length).toFixed(2)
+          : 0;
+
+        return {
+          collegeId: assignment.collegeId._id,
+          collegeName: assignment.collegeId.name,
+          collegeCode: assignment.collegeId.code,
+          status: assignment.status,
+          studentsAssigned: collegeStudentIds.length,
+          studentsCompleted: collegeAttempts.length,
+          averageScore: parseFloat(collegeAvg),
+          acceptedAt: assignment.acceptedAt
+        };
+      })
+    );
+
+    // Top performers
+    const topPerformers = attempts
+      .sort((a, b) => b.marksObtained - a.marksObtained)
+      .slice(0, 10)
+      .map(a => ({
+        studentName: a.studentId.name,
+        studentEmail: a.studentId.email,
+        collegeName: a.collegeId?.name || 'N/A',
+        marksObtained: a.marksObtained,
+        percentage: a.percentage,
+        timeSpent: a.timeSpent
+      }));
+
+    res.json({
+      test: {
+        _id: test._id,
+        testName: test.testName,
+        subject: test.subject,
+        testType: test.testType,
+        difficulty: test.difficulty,
+        totalMarks: test.totalMarks,
+        numberOfQuestions: test.numberOfQuestions,
+        duration: test.duration,
+        createdAt: test.createdAt
+      },
+      globalStatistics: {
+        totalCollegesAssigned,
+        totalCollegesAccepted,
+        totalStudentsAssigned,
+        totalStudentsCompleted,
+        completionRate: parseFloat(completionRate),
+        averageScore: parseFloat(averageScore),
+        highestScore,
+        lowestScore,
+        passRate: parseFloat(passRate),
+        passedStudents
+      },
+      collegeStats,
+      topPerformers
+    });
+
+  } catch (error) {
+    console.error('Get test report error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 module.exports = router;
