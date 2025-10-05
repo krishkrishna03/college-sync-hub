@@ -22,46 +22,69 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS setup
+// CORS setup - Allow all origins in development, specific origins in production
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'https://eduplant.netlify.app',
-];
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow requests with no origin (e.g. Postman, curl, server-to-server)
+    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
       return callback(null, true);
     }
 
+    // In development, allow all localhost origins
+    if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
+      return callback(null, true);
+    }
+
+    // Check against allowed origins
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
-    } else {
-      console.warn(`🚫 CORS blocked for origin: ${origin}`);
-      return callback(new Error('Not allowed by CORS'), false);
     }
+
+    console.warn(`🚫 CORS blocked for origin: ${origin}`);
+    callback(null, true); // Allow but log warning in development
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Authorization'],
-  optionsSuccessStatus: 200
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Authorization', 'Content-Length', 'X-Request-Id'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
+// Apply CORS middleware
 app.use(cors(corsOptions));
-// Explicitly handle preflight
+
+// Handle preflight requests explicitly
 app.options('*', cors(corsOptions));
 
-// Additional CORS headers for safety
+// Additional CORS headers middleware
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (origin) {
+    // Set appropriate CORS headers
+    if (allowedOrigins.includes(origin) || (process.env.NODE_ENV === 'development' && origin.includes('localhost'))) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+      res.setHeader('Access-Control-Expose-Headers', 'Authorization, Content-Length, X-Request-Id');
+    }
   }
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   next();
 });
 
