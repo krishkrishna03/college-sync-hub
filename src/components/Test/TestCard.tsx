@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Calendar, FileText, Users, Eye, Send, Edit2, Trash2, BarChart3 } from 'lucide-react';
+import { Clock, Calendar, FileText, Users, Eye, Send, CreditCard as Edit2, Trash2, BarChart3 } from 'lucide-react';
 
 interface Test {
   _id: string;
