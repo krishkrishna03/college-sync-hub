@@ -274,6 +274,32 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   const handleViewTest = (testId: string) => {
     // Navigate to test details or open modal
     console.log('View test:', testId);
+    // For now, just show alert. Could implement modal later
+    alert('View test details - Feature to be implemented');
+  };
+
+  const handleEditTest = (testId: string) => {
+    alert('Edit test - Feature to be implemented. Use Test Form with pre-filled data.');
+  };
+
+  const handleDeleteTest = async (testId: string) => {
+    const test = tests.find(t => t._id === testId);
+    if (!confirm(`Are you sure you want to delete "${test?.testName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await apiService.deleteTest(testId);
+      loadTests(activeTestType, activeSubject);
+      alert('Test deleted successfully');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to delete test');
+    }
+  };
+
+  const handleTestReport = (testId: string) => {
+    // Navigate to report page
+    window.open(`/master/test-report/${testId}`, '_blank');
   };
 
   const handleAssignTestClick = (testId: string) => {
@@ -519,6 +545,9 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
               test={test}
               onView={handleViewTest}
               onAssign={handleAssignTestClick}
+              onEdit={handleEditTest}
+              onDelete={handleDeleteTest}
+              onReport={handleTestReport}
             />
           )) : null}
         </div>

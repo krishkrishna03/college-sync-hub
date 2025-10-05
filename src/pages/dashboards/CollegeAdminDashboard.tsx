@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, GraduationCap, CheckCircle, Clock, FileText, Send, Eye, Upload, Bell, CreditCard as Edit, Trash2 } from 'lucide-react';
+import { Plus, Users, GraduationCap, CheckCircle, Clock, FileText, Send, Eye, Upload, Bell, CreditCard as Edit, Trash2, BarChart3 } from 'lucide-react';
 import apiService from '../../services/api';
 import Modal from '../../components/UI/Modal';
 import UserForm from '../../components/Forms/UserForm';
@@ -8,6 +8,7 @@ import NotificationForm from '../../components/Notifications/NotificationForm';
 import NotificationsPage from '../../components/Notifications/NotificationsPage';
 import TestTabs from '../../components/Test/TestTabs';
 import BulkUploadForm from '../../components/Forms/BulkUploadForm';
+import CollegeTestReport from '../../components/Test/CollegeTestReport';
 
 interface User {
   _id: string;
@@ -80,6 +81,8 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTestReport, setShowTestReport] = useState(false);
+  const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -334,6 +337,18 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   }
 
   if (activeTab === 'assigned-tests') {
+    if (showTestReport && selectedTestId) {
+      return (
+        <CollegeTestReport
+          testId={selectedTestId}
+          onBack={() => {
+            setShowTestReport(false);
+            setSelectedTestId(null);
+          }}
+        />
+      );
+    }
+
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -428,16 +443,28 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                     </>
                   )}
                   {assignment.status === 'accepted' && (
-                    <button
-                      onClick={() => {
-                        setSelectedAssignment(assignment);
-                        setShowStudentAssignment(true);
-                      }}
-                      className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
-                    >
-                      <Send size={16} />
-                      Assign to Students
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          setSelectedAssignment(assignment);
+                          setShowStudentAssignment(true);
+                        }}
+                        className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                      >
+                        <Send size={16} />
+                        Assign to Students
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedTestId(assignment.testId._id);
+                          setShowTestReport(true);
+                        }}
+                        className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
+                      >
+                        <BarChart3 size={16} />
+                        Report
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -935,37 +962,105 @@ const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
   onAssign,
   onClose
 }) => {
-  const [filters, setFilters] = useState({
-    branches: [] as string[],
-    batches: [] as string[],
-    sections: [] as string[],
-    specificStudents: [] as string[]
-  });
+  const [branches, setBranches] = useState<string[]>([]);
+  const [batches, setBatches] = useState<string[]>([]);
+  const [sections, setSections] = useState<string[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<User[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
 
-  // Get unique values for filters
-  const uniqueBranches = [...new Set(students.map(s => s.branch))];
-  const uniqueBatches = [...new Set(students.map(s => s.batch))];
-  const uniqueSections = [...new Set(students.map(s => s.section))];
+  useEffect(() => {
+    loadFilters();
+  }, []);
+
+  useEffect(() => {
+    if (selectedBranch || selectedBatch || selectedSection || searchTerm) {
+      loadStudents();
+    }
+  }, [selectedBranch, selectedBatch, selectedSection, searchTerm]);
+
+  const loadFilters = async () => {
+    try {
+      setLoading(true);
+      const [branchesData, batchesData, sectionsData] = await Promise.all([
+        apiService.getBranches(),
+        apiService.getBatches(),
+        apiService.getSections()
+      ]);
+      setBranches(branchesData);
+      setBatches(batchesData);
+      setSections(sectionsData);
+    } catch (error) {
+      console.error('Failed to load filters:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStudents = async () => {
+    try {
+      const studentsData = await apiService.getStudents(
+        selectedBranch || undefined,
+        selectedBatch || undefined,
+        selectedSection || undefined,
+        searchTerm || undefined
+      );
+      setFilteredStudents(studentsData);
+    } catch (error) {
+      console.error('Failed to load students:', error);
+      setFilteredStudents([]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (selectedStudents.length === 0) {
+      alert('Please select at least one student');
+      return;
+    }
+
     try {
       setAssigning(true);
-      await onAssign(assignment._id, filters);
+      await onAssign(assignment._id, {
+        branches: selectedBranch ? [selectedBranch] : [],
+        batches: selectedBatch ? [selectedBatch] : [],
+        sections: selectedSection ? [selectedSection] : [],
+        specificStudents: selectedStudents
+      });
     } finally {
       setAssigning(false);
     }
   };
 
-  const handleFilterChange = (type: string, value: string, checked: boolean) => {
-    setFilters(prev => ({
-      ...prev,
-      [type]: checked
-        ? [...prev[type as keyof typeof prev], value]
-        : prev[type as keyof typeof prev].filter(item => item !== value)
-    }));
+  const handleStudentToggle = (studentId: string) => {
+    setSelectedStudents(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
   };
+
+  const handleSelectAll = () => {
+    if (selectedStudents.length === filteredStudents.length) {
+      setSelectedStudents([]);
+    } else {
+      setSelectedStudents(filteredStudents.map(s => s._id));
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -974,60 +1069,113 @@ const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
           Assign Test: {assignment.testId.testName}
         </h3>
         <p className="text-sm text-gray-600">
-          Select students by branch, batch, section, or choose specific students
+          Select filters and then choose specific students to assign the test
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <h4 className="font-medium text-gray-700 mb-2">Branches</h4>
-          <div className="space-y-2">
-            {uniqueBranches.map(branch => (
-              <label key={branch} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={filters.branches.includes(branch)}
-                  onChange={(e) => handleFilterChange('branches', branch, e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">{branch}</span>
-              </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Branch
+          </label>
+          <select
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Branches</option>
+            {branches.map(branch => (
+              <option key={branch} value={branch}>{branch}</option>
             ))}
-          </div>
+          </select>
         </div>
 
         <div>
-          <h4 className="font-medium text-gray-700 mb-2">Batches</h4>
-          <div className="space-y-2">
-            {uniqueBatches.map(batch => (
-              <label key={batch} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={filters.batches.includes(batch)}
-                  onChange={(e) => handleFilterChange('batches', batch, e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">{batch}</span>
-              </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Batch
+          </label>
+          <select
+            value={selectedBatch}
+            onChange={(e) => setSelectedBatch(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Batches</option>
+            {batches.map(batch => (
+              <option key={batch} value={batch}>{batch}</option>
             ))}
-          </div>
+          </select>
         </div>
 
         <div>
-          <h4 className="font-medium text-gray-700 mb-2">Sections</h4>
-          <div className="space-y-2">
-            {uniqueSections.map(section => (
-              <label key={section} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={filters.sections.includes(section)}
-                  onChange={(e) => handleFilterChange('sections', section, e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">{section}</span>
-              </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Section
+          </label>
+          <select
+            value={selectedSection}
+            onChange={(e) => setSelectedSection(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Sections</option>
+            {sections.map(section => (
+              <option key={section} value={section}>{section}</option>
             ))}
-          </div>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Search Students
+        </label>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search by name, email, or ID..."
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Select Students ({selectedStudents.length} selected)
+          </label>
+          {filteredStudents.length > 0 && (
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              {selectedStudents.length === filteredStudents.length ? 'Deselect All' : 'Select All'}
+            </button>
+          )}
+        </div>
+        <div className="border rounded-lg max-h-64 overflow-y-auto">
+          {filteredStudents.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No students found. Please adjust your filters.</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredStudents.map(student => (
+                <label key={student._id} className="flex items-center p-3 hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedStudents.includes(student._id)}
+                    onChange={() => handleStudentToggle(student._id)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <div className="ml-3 flex-1">
+                    <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {student.idNumber} | {student.branch} - {student.batch} - {student.section}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1042,7 +1190,7 @@ const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
         </button>
         <button
           type="submit"
-          disabled={assigning}
+          disabled={assigning || selectedStudents.length === 0}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
         >
           {assigning ? (
@@ -1053,7 +1201,7 @@ const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
           ) : (
             <>
               <Send size={16} />
-              Assign Test
+              Assign to {selectedStudents.length} Student{selectedStudents.length !== 1 ? 's' : ''}
             </>
           )}
         </button>

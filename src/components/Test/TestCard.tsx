@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Calendar, FileText, Users, Eye, Send } from 'lucide-react';
+import { Clock, Calendar, FileText, Users, Eye, Send, Edit2, Trash2, BarChart3 } from 'lucide-react';
 
 interface Test {
   _id: string;
@@ -21,10 +21,13 @@ interface TestCardProps {
   test: Test;
   onView: (testId: string) => void;
   onAssign: (testId: string) => void;
+  onEdit?: (testId: string) => void;
+  onDelete?: (testId: string) => void;
+  onReport?: (testId: string) => void;
   showActions?: boolean;
 }
 
-const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, showActions = true }) => {
+const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, onEdit, onDelete, onReport, showActions = true }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
@@ -155,21 +158,55 @@ const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, showActions
         </div>
 
         {showActions && (
-          <div className="flex gap-3">
-            <button
-              onClick={() => onView(test._id)}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
-            >
-              <Eye size={18} />
-              View
-            </button>
-            <button
-              onClick={() => onAssign(test._id)}
-              className="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white py-2.5 px-4 rounded-lg hover:from-green-700 hover:to-green-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105"
-            >
-              <Send size={18} />
-              Assign
-            </button>
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => onView(test._id)}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2 px-3 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all"
+                title="View Test"
+              >
+                <Eye size={16} />
+                View
+              </button>
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(test._id)}
+                  className="bg-gradient-to-r from-yellow-600 to-yellow-700 text-white py-2 px-3 rounded-lg hover:from-yellow-700 hover:to-yellow-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all"
+                  title="Edit Test"
+                >
+                  <Edit2 size={16} />
+                  Edit
+                </button>
+              )}
+              <button
+                onClick={() => onAssign(test._id)}
+                className="bg-gradient-to-r from-green-600 to-green-700 text-white py-2 px-3 rounded-lg hover:from-green-700 hover:to-green-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all"
+                title="Assign Test"
+              >
+                <Send size={16} />
+                Assign
+              </button>
+              {onDelete && (
+                <button
+                  onClick={() => onDelete(test._id)}
+                  className="bg-gradient-to-r from-red-600 to-red-700 text-white py-2 px-3 rounded-lg hover:from-red-700 hover:to-red-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all"
+                  title="Delete Test"
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              )}
+            </div>
+            {onReport && (
+              <button
+                onClick={() => onReport(test._id)}
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-2 px-3 rounded-lg hover:from-purple-700 hover:to-purple-800 flex items-center justify-center gap-2 text-sm font-medium shadow-md hover:shadow-lg transition-all"
+                title="View Report"
+              >
+                <BarChart3 size={16} />
+                View Report & Analytics
+              </button>
+            )}
           </div>
         )}
       </div>

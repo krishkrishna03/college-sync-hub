@@ -431,6 +431,55 @@ class ApiService {
     const queryString = params.toString();
     return this.request(`/tests/faculty/student-reports${queryString ? `?${queryString}` : ''}`);
   }
+
+  async getBranches() {
+    return this.request('/college/branches');
+  }
+
+  async getBatches() {
+    return this.request('/college/batches');
+  }
+
+  async getSections() {
+    return this.request('/college/sections');
+  }
+
+  async getStudents(branch?: string, batch?: string, section?: string, search?: string) {
+    const params = new URLSearchParams();
+    if (branch) params.append('branch', branch);
+    if (batch) params.append('batch', batch);
+    if (section) params.append('section', section);
+    if (search) params.append('search', search);
+
+    const queryString = params.toString();
+    return this.request(`/college/students${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getCollegeTestReport(testId: string) {
+    return this.request(`/college/tests/${testId}/report`);
+  }
+
+  async getMasterProfile() {
+    return this.request('/admin/profile');
+  }
+
+  async updateMasterProfile(data: any) {
+    return this.request('/admin/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMasterTestReport(testId: string) {
+    return this.request(`/admin/tests/${testId}/report`);
+  }
+
+  async updateCollege(collegeId: string, collegeData: any) {
+    return this.request(`/admin/colleges/${collegeId}`, {
+      method: 'PUT',
+      body: JSON.stringify(collegeData),
+    });
+  }
 }
 
 export default new ApiService();
