@@ -59,31 +59,31 @@ const testAttemptSchema = new mongoose.Schema({
     required: true
   },
   marksObtained: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  percentage: {
-    type: Number,
-    required: true,
-    min: 0,
-    max: 100
-  },
-  correctAnswers: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  incorrectAnswers: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  unanswered: {
-    type: Number,
-    required: true,
-    min: 0
-  },
+  type: Number,
+  default: 0,
+  min: 0
+},
+percentage: {
+  type: Number,
+  default: 0,
+  min: 0,
+  max: 100
+},
+correctAnswers: {
+  type: Number,
+  default: 0,
+  min: 0
+},
+incorrectAnswers: {
+  type: Number,
+  default: 0,
+  min: 0
+},
+unanswered: {
+  type: Number,
+  default: 0,
+  min: 0
+},
   status: {
     type: String,
     enum: ['completed', 'timeout', 'submitted'],
