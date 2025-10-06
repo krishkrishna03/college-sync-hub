@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// Create logs directory if it doesn't exist
-const logsDir = path.join(__dirname, '../logs');
+// Use /tmp on Vercel; otherwise local logs folder
+const logsDir = process.env.VERCEL ? '/tmp/logs' : path.join(__dirname, '../logs');
+
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
@@ -32,14 +33,18 @@ class Logger {
   }
 
   writeToFile(filename, content) {
-    const filePath = path.join(logsDir, filename);
-    fs.appendFileSync(filePath, content);
+    try {
+      const filePath = path.join(logsDir, filename);
+      fs.appendFileSync(filePath, content);
+    } catch (err) {
+      console.error('Failed to write log file:', err.message);
+    }
   }
 
   log(level, message, meta = {}) {
     if (LOG_LEVELS[level] <= LOG_LEVELS[this.logLevel]) {
       const formattedMessage = this.formatMessage(level, message, meta);
-      
+
       // Console output with colors
       const colors = {
         ERROR: '\x1b[31m', // Red
@@ -47,38 +52,25 @@ class Logger {
         INFO: '\x1b[36m',  // Cyan
         DEBUG: '\x1b[37m'  // White
       };
-      
+
       console.log(`${colors[level]}[${level}] ${new Date().toISOString()} - ${message}\x1b[0m`, meta);
-      
+
       // File output
       this.writeToFile(`${level.toLowerCase()}.log`, formattedMessage);
       this.writeToFile('combined.log', formattedMessage);
     }
   }
 
-  error(message, meta = {}) {
-    this.log('ERROR', message, meta);
-  }
+  error(message, meta = {}) { this.log('ERROR', message, meta); }
+  warn(message, meta = {}) { this.log('WARN', message, meta); }
+  info(message, meta = {}) { this.log('INFO', message, meta); }
+  debug(message, meta = {}) { this.log('DEBUG', message, meta); }
 
-  warn(message, meta = {}) {
-    this.log('WARN', message, meta);
-  }
-
-  info(message, meta = {}) {
-    this.log('INFO', message, meta);
-  }
-
-  debug(message, meta = {}) {
-    this.log('DEBUG', message, meta);
-  }
-
-  // Request logging middleware
   requestLogger() {
     return (req, res, next) => {
       const start = Date.now();
       const { method, url, ip, headers } = req;
-      
-      // Log request
+
       this.info('Incoming Request', {
         method,
         url,
@@ -86,48 +78,34 @@ class Logger {
         userAgent: headers['user-agent'],
         contentType: headers['content-type'],
         authorization: headers.authorization ? 'Bearer ***' : 'None',
-        body: req.method === 'POST' || req.method === 'PUT' ? 
-          this.sanitizeBody(req.body) : undefined
+        body: req.method === 'POST' || req.method === 'PUT' ? this.sanitizeBody(req.body) : undefined
       });
 
-      // Override res.json to log responses
       const originalJson = res.json;
-      res.json = function(data) {
+      res.json = (data) => {
         const duration = Date.now() - start;
-        
-        // Log response
-        logger.info('Outgoing Response', {
+        this.info('Outgoing Response', {
           method,
           url,
           statusCode: res.statusCode,
           duration: `${duration}ms`,
           responseSize: JSON.stringify(data).length
         });
-
-        return originalJson.call(this, data);
+        return originalJson.call(res, data);
       };
 
       next();
     };
   }
 
-  // Sanitize sensitive data from logs
   sanitizeBody(body) {
     if (!body) return body;
-    
     const sanitized = { ...body };
     const sensitiveFields = ['password', 'token', 'secret', 'key'];
-    
-    sensitiveFields.forEach(field => {
-      if (sanitized[field]) {
-        sanitized[field] = '***';
-      }
-    });
-    
+    sensitiveFields.forEach(field => { if (sanitized[field]) sanitized[field] = '***'; });
     return sanitized;
   }
 
-  // Database operation logger
   dbLog(operation, collection, query = {}, result = {}) {
     this.info('Database Operation', {
       operation,
@@ -138,7 +116,6 @@ class Logger {
     });
   }
 
-  // Authentication logger
   authLog(event, user = {}, meta = {}) {
     this.info('Authentication Event', {
       event,
@@ -149,7 +126,6 @@ class Logger {
     });
   }
 
-  // Error logger with stack trace
   errorLog(error, context = {}) {
     this.error('Application Error', {
       message: error.message,
@@ -161,5 +137,4 @@ class Logger {
 }
 
 const logger = new Logger();
-
 module.exports = logger;
