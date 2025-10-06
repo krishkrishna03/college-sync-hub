@@ -21,7 +21,10 @@ const ProfilePage: React.FC = () => {
     idNumber: '',
     // College specific fields
     address: '',
-    code: ''
+    code: '',
+    // Master admin specific fields
+    companyName: '',
+    companyAddress: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -53,7 +56,9 @@ const ProfilePage: React.FC = () => {
         section: userData.section || '',
         idNumber: userData.idNumber || '',
         address: userData.collegeId?.address || '',
-        code: userData.collegeId?.code || ''
+        code: userData.collegeId?.code || '',
+        companyName: userData.companyName || '',
+        companyAddress: userData.companyAddress || ''
       });
 
       // Load college stats for college admin
@@ -96,6 +101,12 @@ const ProfilePage: React.FC = () => {
       if (state.user?.role === 'college_admin') {
         updateData.address = profileData.address;
         // Note: College code cannot be updated
+      }
+
+      // For master admin, update company info
+      if (state.user?.role === 'master_admin') {
+        updateData.companyName = profileData.companyName;
+        updateData.companyAddress = profileData.companyAddress;
       }
 
       const updatedUser = await apiService.updateProfile(updateData);
@@ -165,6 +176,8 @@ const ProfilePage: React.FC = () => {
   const getEditableFields = () => {
     const role = state.user?.role;
     switch (role) {
+      case 'master_admin':
+        return ['name', 'phoneNumber', 'companyName', 'companyAddress'];
       case 'college_admin':
         return ['name', 'phoneNumber', 'address'];
       case 'faculty':
@@ -336,8 +349,54 @@ const ProfilePage: React.FC = () => {
             {/* Role-specific Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
-                {state.user?.role === 'college_admin' ? 'College Information' : 'Academic Information'}
+                {state.user?.role === 'master_admin'
+                  ? 'Company Information'
+                  : state.user?.role === 'college_admin'
+                    ? 'College Information'
+                    : 'Academic Information'}
               </h3>
+
+              {state.user?.role === 'master_admin' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <Building className="inline w-4 h-4 mr-1" />
+                      Company Name
+                    </label>
+                    {editing && isFieldEditable('companyName') ? (
+                      <input
+                        type="text"
+                        name="companyName"
+                        value={profileData.companyName}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loading}
+                      />
+                    ) : (
+                      <p className="text-gray-900 py-2">{profileData.companyName || 'Not provided'}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <Building className="inline w-4 h-4 mr-1" />
+                      Company Address
+                    </label>
+                    {editing && isFieldEditable('companyAddress') ? (
+                      <textarea
+                        name="companyAddress"
+                        value={profileData.companyAddress}
+                        onChange={handleChange}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loading}
+                      />
+                    ) : (
+                      <p className="text-gray-900 py-2">{profileData.companyAddress || 'Not provided'}</p>
+                    )}
+                  </div>
+                </>
+              )}
 
               {state.user?.role === 'college_admin' && (
                 <>

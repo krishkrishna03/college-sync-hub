@@ -47,6 +47,13 @@ const userSchema = new mongoose.Schema({
   phoneNumber: {
     type: String
   },
+  // Master admin specific fields
+  companyName: {
+    type: String
+  },
+  companyAddress: {
+    type: String
+  },
   // Login tracking
   lastLogin: {
     type: Date

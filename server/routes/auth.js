@@ -93,17 +93,19 @@ router.get('/me', auth, async (req, res) => {
 // Update profile
 router.put('/profile', auth, [
   body('name').trim().isLength({ min: 2 }),
-  body('phoneNumber').optional().isMobilePhone(),
+  body('phoneNumber').optional().trim(),
   body('branch').optional().trim(),
   body('batch').optional().trim(),
-  body('section').optional().trim()
+  body('section').optional().trim(),
+  body('companyName').optional().trim(),
+  body('companyAddress').optional().trim()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      logger.warn('Profile update validation failed', { 
-        userId: req.user._id, 
-        errors: errors.array() 
+      logger.warn('Profile update validation failed', {
+        userId: req.user._id,
+        errors: errors.array()
       });
       return res.status(400).json({ errors: errors.array() });
     }
@@ -111,8 +113,8 @@ router.put('/profile', auth, [
     logger.info('Profile update request', { userId: req.user._id });
 
     const updates = {};
-    const allowedFields = ['name', 'phoneNumber', 'branch', 'batch', 'section'];
-    
+    const allowedFields = ['name', 'phoneNumber', 'branch', 'batch', 'section', 'companyName', 'companyAddress'];
+
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
@@ -125,9 +127,9 @@ router.put('/profile', auth, [
       { new: true, runValidators: true }
     ).select('-password');
 
-    logger.info('Profile updated successfully', { 
-      userId: req.user._id, 
-      updatedFields: Object.keys(updates) 
+    logger.info('Profile updated successfully', {
+      userId: req.user._id,
+      updatedFields: Object.keys(updates)
     });
 
     res.json(user);

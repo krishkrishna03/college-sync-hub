@@ -5,6 +5,7 @@ import Modal from '../../components/UI/Modal';
 import CollegeForm from '../../components/Forms/CollegeForm';
 import TestForm from '../../components/Test/TestForm';
 import TestCard from '../../components/Test/TestCard';
+import AdvancedTestGrid from '../../components/Test/AdvancedTestGrid';
 import TestAssignmentModal from '../../components/Test/TestAssignmentModal';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import NotificationForm from '../../components/Notifications/NotificationForm';
@@ -553,40 +554,15 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
           </button>
         </div>
 
-        <TestTabs
-          activeTestType={activeTestType}
-          activeSubject={activeSubject}
-          onTestTypeChange={setActiveTestType}
-          onSubjectChange={setActiveSubject}
-          testCounts={testCounts}
+        <AdvancedTestGrid
+          tests={tests}
+          onView={handleViewTest}
+          onAssign={handleAssignTestClick}
+          onEdit={handleEditTest}
+          onDelete={handleDeleteTest}
+          onReport={handleTestReport}
+          loading={loading}
         />
-        <div className="grid gap-6">
-          {Array.isArray(tests) && tests.length > 0 ? tests.map((test) => (
-            <TestCard
-              key={test._id}
-              test={test}
-              onView={handleViewTest}
-              onAssign={handleAssignTestClick}
-              onEdit={handleEditTest}
-              onDelete={handleDeleteTest}
-              onReport={handleTestReport}
-            />
-          )) : null}
-        </div>
-
-        {(!Array.isArray(tests) || tests.length === 0) && !loading && (
-          <div className="text-center py-12">
-            <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tests created yet</h3>
-            <p className="text-gray-600 mb-4">Create your first test to get started</p>
-            <button
-              onClick={() => setShowTestForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Create Test
-            </button>
-          </div>
-        )}
 
         <Modal
           isOpen={showTestForm}
