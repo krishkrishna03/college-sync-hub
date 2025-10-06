@@ -183,8 +183,14 @@ const BulkUploadForm: React.FC<BulkUploadFormProps> = ({ role, onSubmit, onClose
 
   if (uploading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
         <Loader3D size="lg" message={`Creating ${role === 'faculty' ? 'faculty' : 'student'} accounts...`} />
+        <div className="text-center text-sm text-gray-600 max-w-md">
+          <p>Processing your file. This may take a moment for large uploads.</p>
+          <p className="mt-2 text-xs text-gray-500">
+            Validating data, checking for duplicates, and creating accounts...
+          </p>
+        </div>
       </div>
     );
   }

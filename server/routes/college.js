@@ -207,73 +207,148 @@ router.post('/users/bulk-upload', auth, authorize('college_admin'), upload.singl
     const college = await College.findById(req.user.collegeId);
     const createdUsers = [];
 
+    // Step 1: Validate all rows first
+    const validRows = [];
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const rowNumber = i + 2; // Excel row number (accounting for header)
+      const rowNumber = i + 2;
 
-      try {
-        // Validate required fields based on role
-        const validationResult = validateExcelRow(row, role, rowNumber);
-        if (!validationResult.isValid) {
-          results.failed++;
-          results.errors.push(...validationResult.errors);
-          continue;
-        }
+      const validationResult = validateExcelRow(row, role, rowNumber);
+      if (!validationResult.isValid) {
+        results.failed++;
+        results.errors.push(...validationResult.errors);
+        continue;
+      }
 
-        // Check for existing user with same email or ID
-        const existingUser = await User.findOne({
-          $or: [
-            { email: row.Email?.toLowerCase() },
-            { idNumber: row[role === 'student' ? 'Roll Number' : 'Faculty ID'], collegeId: req.user.collegeId }
-          ]
-        });
+      validRows.push({ row, rowNumber });
+    }
 
-        if (existingUser) {
-          results.failed++;
-          results.errors.push({
-            row: rowNumber,
-            field: 'Email/ID',
-            message: 'User with this email or ID already exists'
-          });
-          continue;
-        }
+    // Step 2: Batch check for existing users (all at once)
+    const emails = validRows.map(v => v.row.Email?.toLowerCase()).filter(Boolean);
+    const idNumbers = validRows.map(v => v.row[role === 'student' ? 'Roll Number' : 'Faculty ID']).filter(Boolean);
 
-        // Generate password
-        const password = PasswordGenerator.generateSimple(8);
+    const existingUsers = await User.find({
+      $or: [
+        { email: { $in: emails } },
+        { idNumber: { $in: idNumbers }, collegeId: req.user.collegeId }
+      ]
+    }).select('email idNumber');
 
-        // Create user
-        const userData = {
-          name: row.Name,
-          email: row.Email.toLowerCase(),
-          password,
-          role,
-          collegeId: req.user.collegeId,
-          idNumber: row[role === 'student' ? 'Roll Number' : 'Faculty ID'],
-          branch: row.Branch,
-          batch: row.Batch || '',
-          section: row.Section || '',
-          phoneNumber: row.Phone || ''
-        };
+    // Create a Set for quick lookup
+    const existingEmails = new Set(existingUsers.map(u => u.email));
+    const existingIds = new Set(existingUsers.map(u => u.idNumber));
 
-        const user = new User(userData);
-        await user.save();
-        createdUsers.push({ user, password });
+    // Step 3: Prepare user data and filter out duplicates
+    const bcrypt = require('bcryptjs');
+    const usersToCreate = [];
 
-        results.successful++;
-        logger.info('User created via bulk upload', { 
-          userId: user._id, 
-          email: user.email, 
-          role 
-        });
+    for (const { row, rowNumber } of validRows) {
+      const email = row.Email?.toLowerCase();
+      const idNumber = row[role === 'student' ? 'Roll Number' : 'Faculty ID'];
 
-      } catch (error) {
+      if (existingEmails.has(email) || existingIds.has(idNumber)) {
         results.failed++;
         results.errors.push({
           row: rowNumber,
-          field: 'General',
-          message: error.message || 'Failed to create user'
+          field: 'Email/ID',
+          message: 'User with this email or ID already exists'
         });
-        logger.errorLog(error, { context: 'Bulk Upload Row Processing', row: rowNumber });
+        continue;
+      }
+
+      // Generate password (plain text, will hash in bulk later)
+      const password = PasswordGenerator.generateSimple(8);
+
+      const userData = {
+        name: row.Name,
+        email: email,
+        plainPassword: password, // Store plain password temporarily
+        role,
+        collegeId: req.user.collegeId,
+        idNumber: idNumber,
+        branch: row.Branch,
+        batch: row.Batch || '',
+        section: row.Section || '',
+        phoneNumber: row.Phone || ''
+      };
+
+      usersToCreate.push({ userData, password, rowNumber });
+    }
+
+    // Step 3.5: Hash all passwords in parallel (much faster than sequential)
+    const salt = await bcrypt.genSalt(10);
+    const hashPromises = usersToCreate.map(async (item) => {
+      item.userData.password = await bcrypt.hash(item.userData.plainPassword, salt);
+      delete item.userData.plainPassword;
+    });
+    await Promise.all(hashPromises);
+
+    // Step 4: Create users using insertMany for better performance
+    try {
+      // Prepare all user documents
+      const userDocuments = usersToCreate.map(({ userData }) => userData);
+
+      // Use insertMany which is much faster than individual saves
+      // Set ordered: false to continue inserting even if some fail
+      const insertResult = await User.insertMany(userDocuments, {
+        ordered: false,
+        rawResult: true
+      });
+
+      // Get the inserted users to match with passwords for email sending
+      const insertedUserIds = insertResult.insertedIds
+        ? Object.values(insertResult.insertedIds)
+        : insertResult.map(u => u._id);
+
+      const insertedUsers = await User.find({
+        _id: { $in: insertedUserIds }
+      }).select('_id email name role');
+
+      // Match inserted users with their passwords for email
+      for (let i = 0; i < usersToCreate.length; i++) {
+        const { userData, password } = usersToCreate[i];
+        const insertedUser = insertedUsers.find(u => u.email === userData.email);
+
+        if (insertedUser) {
+          createdUsers.push({ user: insertedUser, password });
+          results.successful++;
+        }
+      }
+
+    } catch (error) {
+      // If insertMany fails partially, some documents might still be inserted
+      if (error.writeErrors) {
+        results.successful += error.insertedDocs?.length || 0;
+        results.failed += error.writeErrors.length;
+
+        error.writeErrors.forEach((writeError, index) => {
+          results.errors.push({
+            row: usersToCreate[writeError.index]?.rowNumber || index + 2,
+            field: 'General',
+            message: writeError.errmsg || 'Failed to create user'
+          });
+        });
+
+        // Add successfully inserted users to createdUsers for email
+        if (error.insertedDocs) {
+          error.insertedDocs.forEach((doc, index) => {
+            const matchingItem = usersToCreate[index];
+            if (matchingItem) {
+              createdUsers.push({ user: doc, password: matchingItem.password });
+            }
+          });
+        }
+      } else {
+        // Complete failure
+        logger.errorLog(error, { context: 'Bulk Upload Insert Many' });
+        usersToCreate.forEach(({ rowNumber }) => {
+          results.failed++;
+          results.errors.push({
+            row: rowNumber,
+            field: 'General',
+            message: 'Failed to create user'
+          });
+        });
       }
     }
 
