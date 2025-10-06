@@ -291,22 +291,7 @@ const Login: React.FC = () => {
             </div>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-700 mb-3">Demo Credentials</p>
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2 bg-white rounded shadow-sm">
-                  <span className="font-medium text-gray-700">Master Admin:</span>
-                  <span className="text-gray-600">admin@academic.com</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-white rounded shadow-sm">
-                  <span className="font-medium text-gray-700">Password:</span>
-                  <span className="text-gray-600">admin123</span>
-                </div>
-                <p className="text-gray-500 italic mt-2">Create college accounts to test other roles</p>
-              </div>
-            </div>
-          </div>
+          
         </div>
 
         <p className="text-center text-xs text-gray-500">
