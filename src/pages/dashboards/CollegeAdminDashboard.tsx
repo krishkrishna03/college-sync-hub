@@ -166,23 +166,8 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const handleBulkUpload = async (file: File, role: string) => {
     try {
       setFormLoading(true);
-      const formData = new FormData();
-      formData.append('excel', file);
-      formData.append('role', role);
-      
-      const response = await fetch('/api/college/users/bulk-upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
-      
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed');
-      }
-      
+      const result = await apiService.bulkUploadUsers(file, role);
+
       // Reload data
       loadDashboardData();
       if (role === 'faculty') {
@@ -190,7 +175,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       } else {
         loadStudents();
       }
-      
+
       return result;
     } catch (error) {
       throw error;

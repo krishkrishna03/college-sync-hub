@@ -521,6 +521,27 @@ class ApiService {
   async getFacultyAnalyticsOverview(timeRange = '30') {
     return this.request(`/faculty/analytics/overview?timeRange=${timeRange}`);
   }
+
+  async bulkUploadUsers(file: File, role: string) {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('excel', file);
+    formData.append('role', role);
+
+    const response = await fetch(`${API_BASE_URL}/college/users/bulk-upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Bulk upload failed');
+    }
+    return data;
+  }
 }
 
 export default new ApiService();
