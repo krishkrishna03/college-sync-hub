@@ -19,7 +19,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     phoneNumber: '',
     branch: '',
     batch: '',
-    section: ''
+    section: '',
+    companyName: '',
+    companyAddress: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -37,7 +39,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
           phoneNumber: userData.phoneNumber || '',
           branch: userData.branch || '',
           batch: userData.batch || '',
-          section: userData.section || ''
+          section: userData.section || '',
+          companyName: userData.companyName || '',
+          companyAddress: userData.companyAddress || ''
         });
       } catch (error) {
         console.error('Failed to fetch user data:', error);
@@ -97,7 +101,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     }
   };
 
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setProfileData({ ...profileData, [e.target.name]: e.target.value });
   };
 
@@ -186,7 +190,42 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                 disabled={loading}
               />
             </div>
-            
+
+            {state.user?.role === 'master_admin' && (
+              <>
+                <div>
+                  <label htmlFor="companyName" className="block text-sm font-medium text-gray-700">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    id="companyName"
+                    name="companyName"
+                    value={profileData.companyName}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="companyAddress" className="block text-sm font-medium text-gray-700">
+                    Company Address
+                  </label>
+                  <textarea
+                    id="companyAddress"
+                    name="companyAddress"
+                    value={profileData.companyAddress}
+                    onChange={handleProfileChange}
+                    rows={3}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    disabled={loading}
+                  />
+                </div>
+              </>
+            )}
+
+            {(state.user?.role === 'faculty' || state.user?.role === 'student') && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="branch" className="block text-sm font-medium text-gray-700">
@@ -233,7 +272,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                 />
               </div>
             </div>
-            
+            )}
+
             <button
               type="submit"
               disabled={loading}

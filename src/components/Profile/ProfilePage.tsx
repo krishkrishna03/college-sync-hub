@@ -360,6 +360,15 @@ const ProfilePage: React.FC = () => {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <User className="inline w-4 h-4 mr-1" />
+                      Role
+                    </label>
+                    <p className="text-gray-900 py-2 capitalize">{getRoleDisplayName(state.user.role)}</p>
+                    <p className="text-xs text-gray-500">Role cannot be changed</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       <Building className="inline w-4 h-4 mr-1" />
                       Company Name
                     </label>
