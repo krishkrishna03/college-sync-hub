@@ -35,11 +35,22 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /xlsx|xls/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
+    const allowedExtensions = /xlsx|xls/;
+    const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+
+    // Excel MIME types
+    const allowedMimeTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'application/octet-stream' // Generic binary (sometimes used for Excel files)
+    ];
+
+    const mimetypeValid = allowedMimeTypes.includes(file.mimetype);
+
+    if (extname && mimetypeValid) {
+      return cb(null, true);
+    } else if (extname) {
+      // If extension is correct but mimetype doesn't match, allow it anyway
       return cb(null, true);
     } else {
       cb(new Error('Only Excel files (.xlsx, .xls) are allowed'));
