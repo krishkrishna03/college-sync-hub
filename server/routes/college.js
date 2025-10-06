@@ -170,7 +170,15 @@ router.post('/users', auth, authorize('college_admin'), [
 
 // Bulk create users via Excel upload (College Admin only)
 router.post('/users/bulk-upload', auth, authorize('college_admin'), upload.single('excel'), async (req, res) => {
+  const startTime = Date.now();
+
   try {
+    logger.info('Bulk upload request received', {
+      hasFile: !!req.file,
+      role: req.body.role,
+      collegeId: req.user.collegeId
+    });
+
     if (!req.file) {
       return res.status(400).json({ error: 'Excel file is required' });
     }
@@ -180,10 +188,10 @@ router.post('/users/bulk-upload', auth, authorize('college_admin'), upload.singl
       return res.status(400).json({ error: 'Invalid role specified' });
     }
 
-    logger.info('Processing bulk upload', { 
-      filename: req.file.filename, 
-      role, 
-      collegeId: req.user.collegeId 
+    logger.info('Processing bulk upload', {
+      filename: req.file.filename,
+      role,
+      collegeId: req.user.collegeId
     });
 
     // Read Excel file
@@ -288,67 +296,83 @@ router.post('/users/bulk-upload', auth, authorize('college_admin'), upload.singl
       // Prepare all user documents
       const userDocuments = usersToCreate.map(({ userData }) => userData);
 
-      // Use insertMany which is much faster than individual saves
-      // Set ordered: false to continue inserting even if some fail
-      const insertResult = await User.insertMany(userDocuments, {
+      // Use insertMany which bypasses middleware (passwords already hashed)
+      const insertedDocs = await User.insertMany(userDocuments, {
         ordered: false,
-        rawResult: true
+        lean: false
       });
 
-      // Get the inserted users to match with passwords for email sending
-      const insertedUserIds = insertResult.insertedIds
-        ? Object.values(insertResult.insertedIds)
-        : insertResult.map(u => u._id);
-
-      const insertedUsers = await User.find({
-        _id: { $in: insertedUserIds }
-      }).select('_id email name role');
-
       // Match inserted users with their passwords for email
-      for (let i = 0; i < usersToCreate.length; i++) {
-        const { userData, password } = usersToCreate[i];
-        const insertedUser = insertedUsers.find(u => u.email === userData.email);
-
-        if (insertedUser) {
-          createdUsers.push({ user: insertedUser, password });
+      insertedDocs.forEach((doc) => {
+        const matchingItem = usersToCreate.find(item => item.userData.email === doc.email);
+        if (matchingItem) {
+          createdUsers.push({ user: doc, password: matchingItem.password });
           results.successful++;
         }
-      }
+      });
+
+      logger.info('Bulk insert completed', { inserted: insertedDocs.length });
 
     } catch (error) {
-      // If insertMany fails partially, some documents might still be inserted
-      if (error.writeErrors) {
-        results.successful += error.insertedDocs?.length || 0;
-        results.failed += error.writeErrors.length;
+      logger.errorLog(error, { context: 'Bulk Upload Insert Many' });
 
-        error.writeErrors.forEach((writeError, index) => {
-          results.errors.push({
-            row: usersToCreate[writeError.index]?.rowNumber || index + 2,
-            field: 'General',
-            message: writeError.errmsg || 'Failed to create user'
-          });
-        });
+      // If insertMany fails partially with BulkWriteError
+      if (error.name === 'MongoBulkWriteError' && error.result) {
+        const insertedCount = error.result.nInserted || 0;
+        results.successful = insertedCount;
+        results.failed = usersToCreate.length - insertedCount;
 
-        // Add successfully inserted users to createdUsers for email
-        if (error.insertedDocs) {
-          error.insertedDocs.forEach((doc, index) => {
-            const matchingItem = usersToCreate[index];
+        // Try to get inserted documents
+        if (error.insertedDocs && error.insertedDocs.length > 0) {
+          error.insertedDocs.forEach((doc) => {
+            const matchingItem = usersToCreate.find(item => item.userData.email === doc.email);
             if (matchingItem) {
               createdUsers.push({ user: doc, password: matchingItem.password });
             }
           });
         }
-      } else {
-        // Complete failure
-        logger.errorLog(error, { context: 'Bulk Upload Insert Many' });
-        usersToCreate.forEach(({ rowNumber }) => {
-          results.failed++;
-          results.errors.push({
-            row: rowNumber,
-            field: 'General',
-            message: 'Failed to create user'
+
+        // Log write errors
+        if (error.writeErrors) {
+          error.writeErrors.forEach((writeError) => {
+            results.errors.push({
+              row: usersToCreate[writeError.index]?.rowNumber || 'Unknown',
+              field: 'General',
+              message: writeError.errmsg || 'Database error'
+            });
           });
-        });
+        }
+      } else {
+        // Complete failure - fall back to individual inserts
+        logger.warn('insertMany failed, falling back to individual inserts');
+
+        for (const { userData, password, rowNumber } of usersToCreate) {
+          try {
+            // Use insertOne to bypass middleware (password already hashed)
+            const result = await User.collection.insertOne(userData);
+            const userDoc = await User.findById(result.insertedId);
+
+            if (userDoc) {
+              createdUsers.push({ user: userDoc, password });
+              results.successful++;
+            } else {
+              results.failed++;
+              results.errors.push({
+                row: rowNumber,
+                field: 'General',
+                message: 'User created but not found'
+              });
+            }
+          } catch (saveError) {
+            results.failed++;
+            results.errors.push({
+              row: rowNumber,
+              field: 'General',
+              message: saveError.message || 'Failed to create user'
+            });
+            logger.errorLog(saveError, { context: 'Individual User Save', row: rowNumber });
+          }
+        }
       }
     }
 
@@ -361,15 +385,18 @@ router.post('/users/bulk-upload', auth, authorize('college_admin'), upload.singl
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
 
-    logger.info('Bulk upload completed', { 
-      total: results.total, 
-      successful: results.successful, 
-      failed: results.failed 
+    const processingTime = Date.now() - startTime;
+    logger.info('Bulk upload completed', {
+      total: results.total,
+      successful: results.successful,
+      failed: results.failed,
+      processingTime: `${processingTime}ms`
     });
 
     res.json({
       message: 'Bulk upload completed',
-      results
+      results,
+      processingTime
     });
 
   } catch (error) {
