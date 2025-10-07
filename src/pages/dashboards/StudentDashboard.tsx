@@ -75,6 +75,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const [showDetailedReport, setShowDetailedReport] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
 
+  // Notify parent when entering/exiting test mode
+  useEffect(() => {
+    if (activeTest && testStartTime) {
+      window.dispatchEvent(new CustomEvent('testModeChanged', { detail: { isTestMode: true } }));
+      return () => {
+        window.dispatchEvent(new CustomEvent('testModeChanged', { detail: { isTestMode: false } }));
+      };
+    }
+  }, [activeTest, testStartTime]);
+
   useEffect(() => {
     if (activeTab === 'dashboard' || activeTab === 'profile') {
       loadDashboardData();

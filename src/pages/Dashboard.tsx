@@ -1,4 +1,4 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Layout/Navbar';
 import Sidebar from '../components/Layout/Sidebar';
@@ -27,6 +27,19 @@ const Dashboard: React.FC = () => {
   const { state } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showProfile, setShowProfile] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
+
+  // Listen for test mode changes
+  useEffect(() => {
+    const handleTestModeChange = (event: CustomEvent) => {
+      setIsTestMode(event.detail.isTestMode);
+    };
+
+    window.addEventListener('testModeChanged', handleTestModeChange as EventListener);
+    return () => {
+      window.removeEventListener('testModeChanged', handleTestModeChange as EventListener);
+    };
+  }, []);
 
   if (!state.user) {
     return (
@@ -120,6 +133,15 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // If in test mode, render without sidebar and navbar
+  if (isTestMode) {
+    return (
+      <div className="h-screen bg-gray-50">
+        {renderDashboardContent()}
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar
@@ -127,13 +149,13 @@ const Dashboard: React.FC = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
         <Navbar
           title={getDashboardTitle()}
           onProfileClick={() => setShowProfile(true)}
         />
-        
+
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
           {renderDashboardContent()}
         </main>
