@@ -126,7 +126,15 @@ const ExamManagement: React.FC<ExamManagementProps> = ({ userRole }) => {
   const handleCreateTest = async (testData: any) => {
     try {
       setFormLoading(true);
-      await apiService.createTest(testData);
+
+      // Convert datetime-local values to ISO strings with proper timezone
+      const formattedTestData = {
+        ...testData,
+        startDateTime: new Date(testData.startDateTime).toISOString(),
+        endDateTime: new Date(testData.endDateTime).toISOString()
+      };
+
+      await apiService.createTest(formattedTestData);
       setShowTestForm(false);
       loadTestCounts();
       if (selectedTestType && selectedSubject) {

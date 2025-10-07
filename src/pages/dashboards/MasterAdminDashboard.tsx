@@ -238,7 +238,14 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
       console.log('Questions count:', formData.questions.length);
       console.log('Expected questions:', formData.numberOfQuestions);
 
-      await apiService.createTest(formData);
+      // Convert datetime-local values to ISO strings with proper timezone
+      const testData = {
+        ...formData,
+        startDateTime: new Date(formData.startDateTime).toISOString(),
+        endDateTime: new Date(formData.endDateTime).toISOString()
+      };
+
+      await apiService.createTest(testData);
       setShowTestForm(false);
       loadTests();
     } catch (error) {

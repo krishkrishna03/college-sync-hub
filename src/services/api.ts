@@ -543,6 +543,10 @@ class ApiService {
     }
     return data;
   }
+
+  async getStudentReports() {
+    return this.request('/tests/student/reports');
+  }
 }
 
 export default new ApiService();
