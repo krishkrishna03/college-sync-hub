@@ -18,8 +18,7 @@ const collegeSchema = new mongoose.Schema({
   required: true,
   unique: true,
   lowercase: true,
-  trim: true,
-  match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address']
+  trim: true
 },
   address: {
     type: String,
