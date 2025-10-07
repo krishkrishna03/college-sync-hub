@@ -38,6 +38,16 @@ interface TestFormProps {
 }
 
 const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) => {
+  const formatDateTimeLocal = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [formData, setFormData] = useState<TestFormData>({
     testName: initialData?.testName || '',
     testDescription: initialData?.testDescription || '',
@@ -49,8 +59,8 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
     numberOfQuestions: initialData?.numberOfQuestions || 10,
     marksPerQuestion: initialData?.marksPerQuestion || 1,
     duration: initialData?.duration || 60,
-    startDateTime: initialData?.startDateTime ? new Date(initialData.startDateTime).toISOString().slice(0, 16) : '',
-    endDateTime: initialData?.endDateTime ? new Date(initialData.endDateTime).toISOString().slice(0, 16) : '',
+    startDateTime: initialData?.startDateTime ? formatDateTimeLocal(initialData.startDateTime) : '',
+    endDateTime: initialData?.endDateTime ? formatDateTimeLocal(initialData.endDateTime) : '',
     questions: initialData?.questions || []
   });
 

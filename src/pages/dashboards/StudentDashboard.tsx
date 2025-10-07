@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, BookOpen, Building, User, GraduationCap, FileText, Clock, Play, CheckCircle, XCircle, TrendingUp, Award, Target } from 'lucide-react';
+import { Users, BookOpen, Building, FileText, Clock, Play, CheckCircle, XCircle, TrendingUp, Award, Target, Activity } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import StudentTestInterface from '../../components/Test/StudentTestInterface';
@@ -819,49 +819,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <h3 className="text-lg font-medium">Fellow Students</h3>
-        </div>
-        <div className="p-6">
-          <div className="grid gap-4">
-            {dashboardData.colleagues.map((colleague) => (
-              <div key={colleague._id} className="flex items-center p-4 border rounded-lg">
-                <div className="flex-shrink-0">
-                  <User className="h-8 w-8 text-gray-400" />
-                </div>
-                <div className="ml-4 flex-1">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900">{colleague.name}</h4>
-                      <p className="text-sm text-gray-500">{colleague.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Branch</p>
-                      <p className="text-sm text-gray-900">{colleague.branch}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Batch</p>
-                      <p className="text-sm text-gray-900">{colleague.batch}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Section</p>
-                      <p className="text-sm text-gray-900">{colleague.section}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {dashboardData.colleagues.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <GraduationCap className="mx-auto h-12 w-12 text-gray-300" />
-              <p className="mt-2">No other students in your college yet</p>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
