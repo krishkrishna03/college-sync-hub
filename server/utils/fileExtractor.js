@@ -1,13 +1,11 @@
-const fs = require('fs');
 const csv = require('csv-parser');
+const { Readable } = require('stream');
 
 class FileExtractor {
-  static async extractFromJSON(filePath) {
+  static async extractFromJSON(buffer) {
     try {
-      const fileContent = fs.readFileSync(filePath, 'utf-8');
+      const fileContent = buffer.toString('utf-8');
       const data = JSON.parse(fileContent);
-
-      fs.unlinkSync(filePath);
 
       if (!Array.isArray(data)) {
         throw new Error('JSON file must contain an array of questions');
@@ -41,19 +39,17 @@ class FileExtractor {
 
       return questions;
     } catch (error) {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
       throw error;
     }
   }
 
-  static async extractFromCSV(filePath) {
+  static async extractFromCSV(buffer) {
     try {
       const questions = [];
 
       await new Promise((resolve, reject) => {
-        fs.createReadStream(filePath)
+        const stream = Readable.from(buffer);
+        stream
           .pipe(csv())
           .on('data', (row) => {
             try {
@@ -89,17 +85,12 @@ class FileExtractor {
           });
       });
 
-      fs.unlinkSync(filePath);
-
       if (questions.length === 0) {
         throw new Error('No valid questions found in CSV file. Please check the format.');
       }
 
       return questions;
     } catch (error) {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
       throw error;
     }
   }

@@ -1,41 +1,32 @@
 const pdf = require('pdf-parse');
-const fs = require('fs');
 
 class PDFExtractor {
-  static async extractMCQs(filePath) {
+  static async extractMCQs(buffer) {
     try {
-      const dataBuffer = fs.readFileSync(filePath);
-      const data = await pdf(dataBuffer);
+      const data = await pdf(buffer);
 
       let text = data.text.replace(/([ABCD]\))/g, '\n$1)');
       console.log('PDF text extracted, length:', text.length);
       console.log('First 500 characters:', text.substring(0, 500));
-      
+
       // Parse MCQs from text using multiple parsing strategies
       let questions = [];
-      
+
       // Try different parsing approaches
       questions = this.parseMCQText(text);
-      
+
       if (questions.length === 0) {
         questions = this.parseAlternativeFormat(text);
       }
-      
+
       if (questions.length === 0) {
         questions = this.parseSimpleFormat(text);
       }
-      
+
       console.log('Extracted questions:', questions.length);
-      
-      // Clean up uploaded file
-      fs.unlinkSync(filePath);
-      
+
       return questions;
     } catch (error) {
-      // Clean up file on error
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
       console.error('PDF extraction error:', error);
       throw new Error('Failed to extract questions from PDF. Please ensure the PDF contains properly formatted MCQ questions with options A, B, C, D and correct answers.');
     }

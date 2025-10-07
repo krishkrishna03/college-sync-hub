@@ -2,7 +2,6 @@ const express = require('express');
 const multer = require('multer');
 const xlsx = require('xlsx');
 const path = require('path');
-const fs = require('fs');
 const User = require('../models/User');
 const College = require('../models/College');
 const PendingEmail = require('../models/PendingEmail');
@@ -14,23 +13,9 @@ const logger = require('../middleware/logger');
 
 const router = express.Router();
 
-// Configure multer for Excel uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'uploads/excel/';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// Configure multer for Excel uploads (memory storage)
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
@@ -189,19 +174,18 @@ router.post('/users/bulk-upload', auth, authorize('college_admin'), upload.singl
     }
 
     logger.info('Processing bulk upload', {
-      filename: req.file.filename,
+      filename: req.file.originalname,
       role,
       collegeId: req.user.collegeId
     });
 
-    // Read Excel file
-    const workbook = xlsx.readFile(req.file.path);
+    // Read Excel file from buffer
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = xlsx.utils.sheet_to_json(worksheet);
 
     if (data.length === 0) {
-      fs.unlinkSync(req.file.path); // Clean up file
       return res.status(400).json({ error: 'Excel file is empty' });
     }
 
@@ -382,9 +366,6 @@ router.post('/users/bulk-upload', auth, authorize('college_admin'), upload.singl
     // Send emails asynchronously
     sendBulkCredentialEmails(createdUsers, college.name);
 
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
-
     const processingTime = Date.now() - startTime;
     logger.info('Bulk upload completed', {
       total: results.total,
@@ -400,10 +381,6 @@ router.post('/users/bulk-upload', auth, authorize('college_admin'), upload.singl
     });
 
   } catch (error) {
-    // Clean up file on error
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
     logger.errorLog(error, { context: 'Bulk Upload' });
     res.status(500).json({ error: 'Server error during bulk upload' });
   }

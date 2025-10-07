@@ -14,18 +14,9 @@ const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
-// Configure multer for PDF uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-  }
-});
-
+// Configure multer for file uploads (memory storage)
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
@@ -39,7 +30,7 @@ const upload = multer({
 });
 
 const fileUpload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['application/json', 'text/csv', 'application/vnd.ms-excel'];
     if (allowedTypes.includes(file.mimetype) || file.originalname.endsWith('.csv')) {
@@ -143,6 +134,9 @@ router.post('/', auth, authorize('master_admin'), [
     }
 
     console.log('Creating test with validated data');
+    console.log('Start DateTime received:', startDateTime);
+    console.log('End DateTime received:', endDateTime);
+
     const test = new Test({
       testName,
       testDescription,
@@ -197,7 +191,7 @@ router.post('/extract-pdf', auth, authorize('master_admin'), upload.single('pdf'
 
     console.log('Processing PDF file:', req.file.originalname, 'Size:', req.file.size);
 
-    const questions = await PDFExtractor.extractMCQs(req.file.path);
+    const questions = await PDFExtractor.extractMCQs(req.file.buffer);
     
     if (questions.length === 0) {
       return res.status(400).json({ 
@@ -252,15 +246,14 @@ router.post('/extract-file', auth, authorize('master_admin'), fileUpload.single(
       return res.status(400).json({ error: 'File is required' });
     }
 
-    const filePath = req.file.path;
     const fileExtension = path.extname(req.file.originalname).toLowerCase();
 
     let questions = [];
 
     if (fileExtension === '.json') {
-      questions = await FileExtractor.extractFromJSON(filePath);
+      questions = await FileExtractor.extractFromJSON(req.file.buffer);
     } else if (fileExtension === '.csv') {
-      questions = await FileExtractor.extractFromCSV(filePath);
+      questions = await FileExtractor.extractFromCSV(req.file.buffer);
     } else {
       return res.status(400).json({ error: 'Unsupported file type' });
     }
@@ -915,51 +908,6 @@ router.delete('/:id', auth, authorize('master_admin'), async (req, res) => {
   }
 });
 
-// Extract questions from JSON/CSV
-router.post('/extract-file', auth, authorize('master_admin'), upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'File is required' });
-    }
-
-    const fileExtension = path.extname(req.file.originalname).toLowerCase();
-    let questions = [];
-
-    if (fileExtension === '.json') {
-      questions = await extractFromJSON(req.file.path);
-    } else if (fileExtension === '.csv') {
-      questions = await extractFromCSV(req.file.path);
-    } else {
-      return res.status(400).json({ error: 'Only JSON and CSV files are supported' });
-    }
-
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
-
-    if (questions.length === 0) {
-      return res.status(400).json({ 
-        error: 'No valid questions found in the file. Please check the format.' 
-      });
-    }
-
-    res.json({
-      message: `Successfully extracted ${questions.length} questions`,
-      questions: questions.map(q => ({
-        ...q,
-        marks: 1 // Default marks
-      }))
-    });
-
-  } catch (error) {
-    // Clean up file on error
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    console.error('File extraction error:', error);
-    res.status(500).json({ error: error.message || 'Failed to process file' });
-  }
-});
-
 // Get student test reports (Student)
 router.get('/student/reports', auth, authorize('student'), async (req, res) => {
   try {
@@ -1133,77 +1081,5 @@ router.get('/faculty/student-reports', auth, authorize('faculty', 'college_admin
     res.status(500).json({ error: 'Server error' });
   }
 });
-
-// Helper functions for file extraction
-async function extractFromJSON(filePath) {
-  try {
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    const data = JSON.parse(fileContent);
-
-    // Support both array of questions and object with questions array
-    const questions = Array.isArray(data) ? data : data.questions || [];
-
-    return questions.filter(q =>
-      q.questionText &&
-      q.options &&
-      q.options.A && q.options.B && q.options.C && q.options.D &&
-      q.correctAnswer &&
-      ['A', 'B', 'C', 'D'].includes(q.correctAnswer)
-    );
-  } catch (error) {
-    throw new Error('Invalid JSON format or structure');
-  }
-}
-
-async function extractFromCSV(filePath) {
-  try {
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    const lines = fileContent.split('\n').filter(line => line.trim());
-
-    if (lines.length < 2) {
-      throw new Error('CSV file must have at least a header and one data row');
-    }
-
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    const questions = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-
-      if (values.length !== headers.length) continue;
-
-      const question = {};
-      headers.forEach((header, index) => {
-        question[header] = values[index];
-      });
-
-      // Map CSV columns to expected format
-      const formattedQuestion = {
-        questionText: question['Question'] || question['questionText'],
-        options: {
-          A: question['Option A'] || question['A'],
-          B: question['Option B'] || question['B'],
-          C: question['Option C'] || question['C'],
-          D: question['Option D'] || question['D']
-        },
-        correctAnswer: question['Correct Answer'] || question['correctAnswer']
-      };
-
-      // Validate question
-      if (formattedQuestion.questionText &&
-          formattedQuestion.options.A &&
-          formattedQuestion.options.B &&
-          formattedQuestion.options.C &&
-          formattedQuestion.options.D &&
-          ['A', 'B', 'C', 'D'].includes(formattedQuestion.correctAnswer)) {
-        questions.push(formattedQuestion);
-      }
-    }
-
-    return questions;
-  } catch (error) {
-    throw new Error('Invalid CSV format or structure');
-  }
-}
 
 module.exports = router;
