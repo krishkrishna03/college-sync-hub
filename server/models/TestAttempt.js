@@ -84,9 +84,14 @@ unanswered: {
   default: 0,
   min: 0
 },
+  violations: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   status: {
     type: String,
-    enum: ['completed', 'timeout', 'submitted'],
+    enum: ['completed', 'timeout', 'submitted', 'auto-submitted-violations'],
     default: 'completed'
   },
   isActive: {

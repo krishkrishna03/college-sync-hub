@@ -669,10 +669,11 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
 router.post('/:id/submit', auth, authorize('student'), [
   body('answers').isArray({ min: 1 }),
   body('startTime').isISO8601(),
-  body('timeSpent').isInt({ min: 1 })
+  body('timeSpent').isInt({ min: 1 }),
+  body('violations').optional().isInt({ min: 0 })
 ], async (req, res) => {
   try {
-    const { answers, startTime, timeSpent } = req.body;
+    const { answers, startTime, timeSpent, violations = 0 } = req.body;
     const testId = req.params.id;
 
     // Verify test assignment
@@ -729,6 +730,12 @@ router.post('/:id/submit', auth, authorize('student'), [
       });
     }
 
+    // Determine status based on violations
+    let status = 'completed';
+    if (violations >= 3) {
+      status = 'auto-submitted-violations';
+    }
+
     // Create test attempt
     const testAttempt = new TestAttempt({
       testId,
@@ -739,7 +746,8 @@ router.post('/:id/submit', auth, authorize('student'), [
       timeSpent,
       answers: processedAnswers,
       totalMarks: test.totalMarks,
-      status: 'completed'
+      violations,
+      status
     });
 
     await testAttempt.save();

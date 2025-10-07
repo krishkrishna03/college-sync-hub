@@ -99,6 +99,10 @@ const testSchema = new mongoose.Schema({
   originalFileName: {
     type: String
   },
+  instructions: [{
+    type: String,
+    trim: true
+  }],
   isActive: {
     type: Boolean,
     default: true

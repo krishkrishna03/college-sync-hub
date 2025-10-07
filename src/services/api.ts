@@ -243,13 +243,14 @@ class ApiService {
     });
   }
 
-  async submitTest(testId: string, answers: any[], startTime: Date, timeSpent: number) {
+  async submitTest(testId: string, answers: any[], startTime: Date, timeSpent: number, violations?: number) {
     return this.request(`/tests/${testId}/submit`, {
       method: 'POST',
       body: JSON.stringify({
         answers,
         startTime: startTime.toISOString(),
-        timeSpent
+        timeSpent,
+        violations: violations || 0
       }),
     });
   }

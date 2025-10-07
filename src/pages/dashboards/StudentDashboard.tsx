@@ -3,6 +3,7 @@ import { Users, BookOpen, Building, User, GraduationCap, FileText, Clock, Play, 
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import StudentTestInterface from '../../components/Test/StudentTestInterface';
+import ProctoredTestInterface from '../../components/Test/ProctoredTestInterface';
 import TestResults from '../../components/Test/TestResults';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
@@ -165,14 +166,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     }
   };
 
-  const handleSubmitTest = async (answers: any[], timeSpent: number) => {
+  const handleSubmitTest = async (answers: any[], timeSpent: number, violations?: number) => {
     if (!activeTest || !testStartTime) return;
 
     try {
-      const response = await apiService.submitTest(activeTest._id, answers, testStartTime, timeSpent);
+      const response = await apiService.submitTest(activeTest._id, answers, testStartTime, timeSpent, violations);
       setActiveTest(null);
       setTestStartTime(null);
-      
+
       // Handle different test types
       if (response.testType === 'Practice' && response.instantFeedback) {
         // Show instant feedback for practice tests
@@ -184,7 +185,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         setTestResults(results);
         setShowResults(true);
       }
-      
+
       // Reload assigned tests
       loadAssignedTests();
     } catch (error) {
@@ -251,9 +252,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   // Show test interface if test is active
   if (activeTest && testStartTime) {
     return (
-      <StudentTestInterface
+      <ProctoredTestInterface
         test={activeTest}
-        startTime={testStartTime}
         onSubmit={handleSubmitTest}
         onExit={() => {
           setActiveTest(null);
