@@ -29,12 +29,14 @@ interface TestCardProps {
 
 const TestCard: React.FC<TestCardProps> = ({ test, onView, onAssign, onEdit, onDelete, onReport, showActions = true }) => {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: true
     });
   };
 

@@ -78,11 +78,32 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     if (activeTab === 'dashboard' || activeTab === 'profile') {
       loadDashboardData();
     } else if (activeTab === 'my-tests') {
-      loadAssignedTests(activeTestType, activeSubject);
+      // Check if there's a stored test type from sidebar
+      const storedTestType = sessionStorage.getItem('selectedTestType');
+      if (storedTestType && storedTestType !== activeTestType) {
+        setActiveTestType(storedTestType);
+        loadAssignedTests(storedTestType, activeSubject);
+        sessionStorage.removeItem('selectedTestType');
+      } else {
+        loadAssignedTests(activeTestType, activeSubject);
+      }
     } else if (activeTab === 'performance') {
       loadPerformanceData();
     }
   }, [activeTab, activeTestType, activeSubject]);
+
+  // Listen for test type changes from sidebar
+  useEffect(() => {
+    const handleTestTypeChange = (event: CustomEvent) => {
+      const { testType } = event.detail;
+      setActiveTestType(testType);
+    };
+
+    window.addEventListener('testTypeChanged', handleTestTypeChange as EventListener);
+    return () => {
+      window.removeEventListener('testTypeChanged', handleTestTypeChange as EventListener);
+    };
+  }, []);
 
   const loadDashboardData = async () => {
     try {
@@ -204,12 +225,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: true
     });
   };
 
@@ -683,12 +706,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
           <div className="p-6">
             <div className="space-y-4">
               {recentActivity.map((test) => {
-                const submittedDate = test.attempt?.submittedAt
-                  ? new Date(test.attempt.submittedAt)
+                const submittedDate = test.attempt?.createdAt
+                  ? new Date(test.attempt.createdAt)
                   : null;
-                const score = test.attempt?.score || 0;
+                const marksObtained = test.attempt?.marksObtained || 0;
                 const totalMarks = test.testId.totalMarks;
-                const percentage = totalMarks > 0 ? (score / totalMarks) * 100 : 0;
+                const percentage = test.attempt?.percentage || 0;
 
                 return (
                   <div
@@ -712,7 +735,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                         <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
                           <span>{test.testId.subject}</span>
                           <span>•</span>
-                          <span>{score}/{totalMarks} marks</span>
+                          <span>{marksObtained}/{totalMarks} marks</span>
                           <span>•</span>
                           <span className={`font-medium ${
                             percentage >= 75 ? 'text-green-600' :
@@ -783,10 +806,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                     {isCompleted && test.attempt && (
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900">
-                          {test.attempt.score}/{test.testId.totalMarks}
+                          {test.attempt.marksObtained}/{test.testId.totalMarks}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {((test.attempt.score / test.testId.totalMarks) * 100).toFixed(0)}%
+                          {test.attempt.percentage?.toFixed(0)}%
                         </p>
                       </div>
                     )}

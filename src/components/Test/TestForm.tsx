@@ -39,6 +39,8 @@ interface TestFormProps {
 
 const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) => {
   const formatDateTimeLocal = (dateString: string) => {
+    // Parse the date and format it for datetime-local input
+    // datetime-local expects format: YYYY-MM-DDTHH:MM in local timezone
     const date = new Date(dateString);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
