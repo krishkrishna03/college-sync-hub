@@ -17,6 +17,7 @@ import PlatformGrowth from '../../components/Dashboard/PlatformGrowth';
 import TestTabs from '../../components/Test/TestTabs';
 import ExportButton from '../../components/Dashboard/ExportButton';
 import GrowthChart from '../../components/Charts/GrowthChart';
+import TestCategoryDropdown from '../../components/Test/TestCategoryDropdown';
 
 interface College {
   id: string;
@@ -124,9 +125,10 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   const [tests, setTests] = useState<Test[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [activeTestType, setActiveTestType] = useState('all');
+  const [activeTestType, setActiveTestType] = useState('Assessment');
   const [activeSubject, setActiveSubject] = useState('all');
   const [testCounts, setTestCounts] = useState<any>(null);
+  const [dropdownCounts, setDropdownCounts] = useState<any>(null);
   const [showCollegeForm, setShowCollegeForm] = useState(false);
   const [showTestForm, setShowTestForm] = useState(false);
   const [showNotificationForm, setShowNotificationForm] = useState(false);
@@ -205,6 +207,15 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
         }
       };
       setTestCounts(counts);
+
+      // Calculate counts for dropdown
+      const dropdownCounts = {
+        assessment: allTests.filter((t: any) => t.testType === 'Assessment').length,
+        practice: allTests.filter((t: any) => t.testType === 'Practice').length,
+        mockTest: allTests.filter((t: any) => t.testType === 'Mock Test').length,
+        company: allTests.filter((t: any) => t.testType === 'Specific Company Test').length
+      };
+      setDropdownCounts(dropdownCounts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load tests');
     } finally {
@@ -552,13 +563,24 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">Test Management</h2>
-          <button
-            onClick={() => setShowTestForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus size={20} />
-            Create Test
-          </button>
+          <div className="flex items-center gap-3">
+            <TestCategoryDropdown
+              activeCategory={activeTestType}
+              onCategoryChange={(category) => {
+                setActiveTestType(category);
+                setActiveSubject('all');
+                loadTests(category, 'all');
+              }}
+              testCounts={dropdownCounts}
+            />
+            <button
+              onClick={() => setShowTestForm(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Create Test
+            </button>
+          </div>
         </div>
 
         <AdvancedTestGrid

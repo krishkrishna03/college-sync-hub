@@ -3,6 +3,7 @@ import { Clock, Calendar, FileText, Users, Play, CheckCircle, AlertCircle } from
 import apiService from '../../services/api';
 import CategorizedTestTabs from './CategorizedTestTabs';
 import LoadingSpinner from '../UI/LoadingSpinner';
+import TestCategoryDropdown from './TestCategoryDropdown';
 
 interface Test {
   _id: string;
@@ -27,6 +28,7 @@ interface Test {
 const FacultyTestsPage: React.FC = () => {
   const [assignedTests, setAssignedTests] = useState<Test[]>([]);
   const [testCounts, setTestCounts] = useState<any>(null);
+  const [dropdownCounts, setDropdownCounts] = useState<any>(null);
   const [activeTestType, setActiveTestType] = useState('Assessment');
   const [activeSubject, setActiveSubject] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -78,6 +80,15 @@ const FacultyTestsPage: React.FC = () => {
       });
 
       setTestCounts(counts);
+
+      // Calculate counts for dropdown
+      const dropdownCounts = {
+        assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
+        practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
+        mockTest: allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
+        company: allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
+      };
+      setDropdownCounts(dropdownCounts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load tests');
     } finally {
@@ -170,17 +181,16 @@ const FacultyTestsPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Tests</h2>
           <p className="text-gray-600 mt-1">View and manage assigned tests</p>
         </div>
+        <TestCategoryDropdown
+          activeCategory={activeTestType}
+          onCategoryChange={(category) => {
+            setActiveTestType(category);
+            setActiveSubject('all');
+            loadTests(category, 'all');
+          }}
+          testCounts={dropdownCounts}
+        />
       </div>
-
-      <CategorizedTestTabs
-        onFilterChange={(testType, subject) => {
-          setActiveTestType(testType);
-          setActiveSubject(subject);
-          loadTests(testType, subject);
-        }}
-        testCounts={testCounts}
-        loading={loading}
-      />
 
       <div className="grid gap-6">
         {assignedTests.map((test) => {

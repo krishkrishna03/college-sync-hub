@@ -11,6 +11,7 @@ import StudentReportsPage from '../../components/Test/StudentReportsPage';
 import TestTypeTable from '../../components/Test/TestTypeTable';
 import StudentPerformanceAnalytics from '../../components/Test/StudentPerformanceAnalytics';
 import DetailedTestReportModal from '../../components/Test/DetailedTestReportModal';
+import TestCategoryDropdown from '../../components/Test/TestCategoryDropdown';
 
 interface College {
   name: string;
@@ -60,6 +61,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [assignedTests, setAssignedTests] = useState<AssignedTest[]>([]);
   const [activeTestType, setActiveTestType] = useState('Assessment');
+  const [dropdownCounts, setDropdownCounts] = useState<any>(null);
   const [activeSubject, setActiveSubject] = useState('all');
   const [testCounts, setTestCounts] = useState<any>(null);
   const [activeTest, setActiveTest] = useState<any>(null);
@@ -170,6 +172,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
       });
 
       setTestCounts(counts);
+
+      // Calculate counts for dropdown
+      const dropdownCounts = {
+        assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
+        practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
+        mockTest: allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
+        company: allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
+      };
+      setDropdownCounts(dropdownCounts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
     } finally {
@@ -436,19 +447,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">My Tests</h2>
+          <TestCategoryDropdown
+            activeCategory={activeTestType}
+            onCategoryChange={(category) => {
+              setActiveTestType(category);
+              setActiveSubject('all');
+              loadAssignedTests(category, 'all');
+            }}
+            testCounts={dropdownCounts}
+          />
         </div>
 
         <TestTypeTable />
-
-        <CategorizedTestTabs
-          onFilterChange={(testType, subject) => {
-            setActiveTestType(testType);
-            setActiveSubject(subject);
-            loadAssignedTests(testType, subject);
-          }}
-          testCounts={testCounts}
-          loading={loading}
-        />
         <div className="grid gap-6">
           {assignedTests.map((test) => {
             const status = getTestStatus(test);

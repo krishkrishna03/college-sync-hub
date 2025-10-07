@@ -9,6 +9,7 @@ import NotificationsPage from '../../components/Notifications/NotificationsPage'
 import TestTabs from '../../components/Test/TestTabs';
 import BulkUploadForm from '../../components/Forms/BulkUploadForm';
 import CollegeTestReport from '../../components/Test/CollegeTestReport';
+import TestCategoryDropdown from '../../components/Test/TestCategoryDropdown';
 
 interface User {
   _id: string;
@@ -68,8 +69,9 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [faculty, setFaculty] = useState<User[]>([]);
   const [students, setStudents] = useState<User[]>([]);
   const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
-  const [activeTestType, setActiveTestType] = useState('all');
+  const [activeTestType, setActiveTestType] = useState('Assessment');
   const [activeSubject, setActiveSubject] = useState('all');
+  const [dropdownCounts, setDropdownCounts] = useState<any>(null);
   const [showUserForm, setShowUserForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showStudentAssignment, setShowStudentAssignment] = useState(false);
@@ -136,6 +138,16 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
         activeSubject === 'all' ? undefined : activeSubject
       );
       setAssignedTests(data);
+
+      // Calculate counts for dropdown
+      const allTests = await apiService.getAssignedTests();
+      const dropdownCounts = {
+        assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
+        practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
+        mockTest: allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
+        company: allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
+      };
+      setDropdownCounts(dropdownCounts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
     } finally {
@@ -338,14 +350,16 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">Assigned Tests</h2>
+          <TestCategoryDropdown
+            activeCategory={activeTestType}
+            onCategoryChange={(category) => {
+              setActiveTestType(category);
+              setActiveSubject('all');
+              loadAssignedTests();
+            }}
+            testCounts={dropdownCounts}
+          />
         </div>
-
-        <TestTabs
-          activeTestType={activeTestType}
-          activeSubject={activeSubject}
-          onTestTypeChange={setActiveTestType}
-          onSubjectChange={setActiveSubject}
-        />
 
         <div className="grid gap-6">
           {Array.isArray(assignedTests) && assignedTests.length > 0 ? assignedTests.map((assignment) => (
