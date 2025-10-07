@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Home,
   Users,
@@ -13,8 +13,10 @@ import {
   TrendingUp,
   Target,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Brain
 } from 'lucide-react';
+import apiService from '../../services/api';
 
 interface SidebarItem {
   id: string;
@@ -38,6 +40,47 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) => {
   const [testsDropdownOpen, setTestsDropdownOpen] = useState(false);
+  const [testCounts, setTestCounts] = useState<any>(null);
+
+  useEffect(() => {
+    loadTestCounts();
+  }, [userRole]);
+
+  const loadTestCounts = async () => {
+    try {
+      let counts = { assessment: 0, practice: 0, mockTest: 0, company: 0 };
+
+      if (userRole === 'master_admin') {
+        const allTests = await apiService.getTests();
+        counts = {
+          assessment: allTests.filter((t: any) => t.testType === 'Assessment').length,
+          practice: allTests.filter((t: any) => t.testType === 'Practice').length,
+          mockTest: allTests.filter((t: any) => t.testType === 'Mock Test').length,
+          company: allTests.filter((t: any) => t.testType === 'Specific Company Test').length
+        };
+      } else if (userRole === 'student') {
+        const allTests = await apiService.getStudentAssignedTests();
+        counts = {
+          assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
+          practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
+          mockTest: allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
+          company: allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
+        };
+      } else if (userRole === 'college_admin') {
+        const allTests = await apiService.getAssignedTests();
+        counts = {
+          assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
+          practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
+          mockTest: allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
+          company: allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
+        };
+      }
+
+      setTestCounts(counts);
+    } catch (error) {
+      console.error('Failed to load test counts:', error);
+    }
+  };
 
   const menuItems: SidebarItem[] = [
     {
@@ -56,12 +99,6 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       id: 'stats',
       label: 'Statistics',
       icon: <BarChart3 size={20} />,
-      roles: ['master_admin'],
-    },
-    {
-      id: 'tests',
-      label: 'Tests',
-      icon: <FileText size={20} />,
       roles: ['master_admin'],
     },
     {
@@ -117,6 +154,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       label: 'Tests',
       icon: <FileText size={20} />,
       roles: ['faculty'],
+      subItems: [
+        { id: 'assessment-tests-faculty', label: 'Assessment', testType: 'Assessment' },
+        { id: 'practice-tests-faculty', label: 'Practice', testType: 'Practice' },
+        { id: 'mock-tests-faculty', label: 'Mock Test', testType: 'Mock Test' },
+        { id: 'company-tests-faculty', label: 'Company Test', testType: 'Specific Company Test' }
+      ]
     },
     {
       id: 'test-reports',
@@ -136,10 +179,22 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       icon: <FileText size={20} />,
       roles: ['student'],
       subItems: [
-        { id: 'practice-tests', label: 'Practice Tests', testType: 'Practice' },
-        { id: 'assessment-tests', label: 'Assessment Tests', testType: 'Assessment' },
-        { id: 'mock-tests', label: 'Mock Tests', testType: 'Mock Test' },
-        { id: 'company-tests', label: 'Company Tests', testType: 'Specific Company Test' }
+        { id: 'assessment-tests', label: 'Assessment', testType: 'Assessment' },
+        { id: 'practice-tests', label: 'Practice', testType: 'Practice' },
+        { id: 'mock-tests', label: 'Mock Test', testType: 'Mock Test' },
+        { id: 'company-tests', label: 'Company Test', testType: 'Specific Company Test' }
+      ]
+    },
+    {
+      id: 'tests',
+      label: 'Tests',
+      icon: <FileText size={20} />,
+      roles: ['master_admin', 'college_admin'],
+      subItems: [
+        { id: 'assessment-tests-admin', label: 'Assessment', testType: 'Assessment' },
+        { id: 'practice-tests-admin', label: 'Practice', testType: 'Practice' },
+        { id: 'mock-tests-admin', label: 'Mock Test', testType: 'Mock Test' },
+        { id: 'company-tests-admin', label: 'Company Test', testType: 'Specific Company Test' }
       ]
     },
     {
@@ -160,21 +215,46 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
     !item.roles || item.roles.includes(userRole)
   );
 
-  const handleTestsClick = () => {
-    if (userRole === 'student') {
+  const handleTestsClick = (itemId: string) => {
+    const item = visibleItems.find(i => i.id === itemId);
+    if (item && item.subItems) {
       setTestsDropdownOpen(!testsDropdownOpen);
     } else {
-      onTabChange('my-tests');
+      onTabChange(itemId);
     }
   };
 
-  const handleSubItemClick = (testType: string) => {
-    // Navigate to my-tests tab with the specific test type filter
-    onTabChange('my-tests');
+  const handleSubItemClick = (testType: string, parentId: string) => {
+    // Navigate to appropriate tab based on role and parent
+    let targetTab = 'tests';
+
+    if (parentId === 'my-tests') {
+      targetTab = 'my-tests';
+    } else if (userRole === 'master_admin') {
+      targetTab = 'tests';
+    } else if (userRole === 'college_admin') {
+      targetTab = 'assigned-tests';
+    } else if (userRole === 'faculty') {
+      targetTab = 'tests';
+    }
+
+    onTabChange(targetTab);
     // Store the selected test type in sessionStorage for the dashboard to read
     sessionStorage.setItem('selectedTestType', testType);
     // Trigger a custom event that the dashboard can listen to
     window.dispatchEvent(new CustomEvent('testTypeChanged', { detail: { testType } }));
+    setTestsDropdownOpen(false);
+  };
+
+  const getTestCount = (testType: string) => {
+    if (!testCounts) return 0;
+    const typeMap: { [key: string]: keyof typeof testCounts } = {
+      'Assessment': 'assessment',
+      'Practice': 'practice',
+      'Mock Test': 'mockTest',
+      'Specific Company Test': 'company'
+    };
+    return testCounts[typeMap[testType]] || 0;
   };
 
   return (
@@ -189,12 +269,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
       <nav className="space-y-2">
         {visibleItems.map((item) => (
           <div key={item.id}>
-            {item.id === 'my-tests' && userRole === 'student' ? (
+            {item.subItems ? (
               <>
                 <button
-                  onClick={handleTestsClick}
+                  onClick={() => handleTestsClick(item.id)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors ${
-                    activeTab === 'my-tests'
+                    activeTab === item.id || (item.id === 'tests' && (activeTab === 'tests' || activeTab === 'assigned-tests'))
                       ? 'bg-blue-600 text-white'
                       : 'text-gray-300 hover:text-white hover:bg-gray-800'
                   }`}
@@ -203,20 +283,30 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
                     {item.icon}
                     {item.label}
                   </div>
-                  {testsDropdownOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  {testsDropdownOpen && (activeTab === item.id || (item.id === 'tests' && (activeTab === 'tests' || activeTab === 'assigned-tests'))) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </button>
-                {testsDropdownOpen && item.subItems && (
+                {testsDropdownOpen && (activeTab === item.id || (item.id === 'tests' && (activeTab === 'tests' || activeTab === 'assigned-tests'))) && item.subItems && (
                   <div className="ml-4 mt-1 space-y-1">
-                    {item.subItems.map((subItem) => (
-                      <button
-                        key={subItem.id}
-                        onClick={() => handleSubItemClick(subItem.testType || '')}
-                        className="w-full flex items-center gap-2 px-4 py-2 rounded-lg text-left text-sm transition-colors text-gray-400 hover:text-white hover:bg-gray-800"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-gray-600"></div>
-                        {subItem.label}
-                      </button>
-                    ))}
+                    {item.subItems.map((subItem) => {
+                      const count = getTestCount(subItem.testType || '');
+                      return (
+                        <button
+                          key={subItem.id}
+                          onClick={() => handleSubItemClick(subItem.testType || '', item.id)}
+                          className="w-full flex items-center justify-between px-4 py-2 rounded-lg text-left text-sm transition-colors text-gray-400 hover:text-white hover:bg-gray-800"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-gray-600"></div>
+                            {subItem.label}
+                          </div>
+                          {testCounts && (
+                            <span className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs font-bold rounded-full">
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </>
