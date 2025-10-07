@@ -8,7 +8,6 @@ import TestResults from '../../components/Test/TestResults';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
 import StudentReportsPage from '../../components/Test/StudentReportsPage';
-import TestTypeTable from '../../components/Test/TestTypeTable';
 import StudentPerformanceAnalytics from '../../components/Test/StudentPerformanceAnalytics';
 import DetailedTestReportModal from '../../components/Test/DetailedTestReportModal';
 import TestCategoryDropdown from '../../components/Test/TestCategoryDropdown';
@@ -458,7 +457,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
           />
         </div>
 
-        <TestTypeTable />
+    
         <div className="grid gap-6">
           {assignedTests.map((test) => {
             const status = getTestStatus(test);
