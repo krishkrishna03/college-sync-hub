@@ -9,7 +9,6 @@ import NotificationsPage from '../../components/Notifications/NotificationsPage'
 import TestTabs from '../../components/Test/TestTabs';
 import BulkUploadForm from '../../components/Forms/BulkUploadForm';
 import CollegeTestReport from '../../components/Test/CollegeTestReport';
-import TestCategoryDropdown from '../../components/Test/TestCategoryDropdown';
 
 interface User {
   _id: string;
@@ -353,15 +352,6 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">Assigned Tests</h2>
-          <TestCategoryDropdown
-            activeCategory={activeTestType}
-            onCategoryChange={(category) => {
-              setActiveTestType(category);
-              setActiveSubject('all');
-              loadAssignedTests();
-            }}
-            testCounts={dropdownCounts}
-          />
         </div>
 
         <div className="grid gap-6">

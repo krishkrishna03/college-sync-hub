@@ -10,7 +10,6 @@ import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
 import StudentReportsPage from '../../components/Test/StudentReportsPage';
 import StudentPerformanceAnalytics from '../../components/Test/StudentPerformanceAnalytics';
 import DetailedTestReportModal from '../../components/Test/DetailedTestReportModal';
-import TestCategoryDropdown from '../../components/Test/TestCategoryDropdown';
 
 interface College {
   name: string;
@@ -456,15 +455,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">My Tests</h2>
-          <TestCategoryDropdown
-            activeCategory={activeTestType}
-            onCategoryChange={(category) => {
-              setActiveTestType(category);
-              setActiveSubject('all');
-              loadAssignedTests(category, 'all');
-            }}
-            testCounts={dropdownCounts}
-          />
         </div>
 
     

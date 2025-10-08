@@ -3,7 +3,6 @@ import { Clock, Calendar, FileText, Users, Play, CheckCircle, AlertCircle } from
 import apiService from '../../services/api';
 import CategorizedTestTabs from './CategorizedTestTabs';
 import LoadingSpinner from '../UI/LoadingSpinner';
-import TestCategoryDropdown from './TestCategoryDropdown';
 
 interface Test {
   _id: string;
@@ -181,15 +180,6 @@ const FacultyTestsPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Tests</h2>
           <p className="text-gray-600 mt-1">View and manage assigned tests</p>
         </div>
-        <TestCategoryDropdown
-          activeCategory={activeTestType}
-          onCategoryChange={(category) => {
-            setActiveTestType(category);
-            setActiveSubject('all');
-            loadTests(category, 'all');
-          }}
-          testCounts={dropdownCounts}
-        />
       </div>
 
       <div className="grid gap-6">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle } from 'lucide-react';
+import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, CreditCard as Edit2 } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import apiService from '../../services/api';
 
@@ -77,6 +77,8 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
   const [showPreview, setShowPreview] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
   const testTypes = ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'];
@@ -205,6 +207,44 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
       ...prev,
       questions: prev.questions.filter((_, i) => i !== index)
     }));
+    if (editingQuestionIndex === index) {
+      setEditingQuestionIndex(null);
+      setEditingQuestion(null);
+    }
+  };
+
+  const startEditQuestion = (index: number) => {
+    setEditingQuestionIndex(index);
+    setEditingQuestion({ ...formData.questions[index] });
+    setShowQuestionForm(false);
+  };
+
+  const saveEditedQuestion = () => {
+    if (!editingQuestion || editingQuestionIndex === null) return;
+
+    if (!editingQuestion.questionText.trim() ||
+        !editingQuestion.options.A.trim() ||
+        !editingQuestion.options.B.trim() ||
+        !editingQuestion.options.C.trim() ||
+        !editingQuestion.options.D.trim()) {
+      alert('Please fill all question fields correctly');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      questions: prev.questions.map((q, i) =>
+        i === editingQuestionIndex ? editingQuestion : q
+      )
+    }));
+
+    setEditingQuestionIndex(null);
+    setEditingQuestion(null);
+  };
+
+  const cancelEditQuestion = () => {
+    setEditingQuestionIndex(null);
+    setEditingQuestion(null);
   };
 
   const handlePDFUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -764,6 +804,84 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
 
         {errors.questions && <p className="mb-4 text-sm text-red-600">{errors.questions}</p>}
 
+        {/* Edit Question Form */}
+        {editingQuestionIndex !== null && editingQuestion && (
+          <div className="mb-6 p-4 border-2 border-blue-500 rounded-lg bg-blue-50">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-medium text-blue-900">Edit Question {editingQuestionIndex + 1}</h4>
+              <button
+                type="button"
+                onClick={cancelEditQuestion}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Question Text</label>
+                <textarea
+                  value={editingQuestion.questionText}
+                  onChange={(e) => setEditingQuestion(prev => prev ? ({ ...prev, questionText: e.target.value }) : null)}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your question here..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['A', 'B', 'C', 'D'].map((option) => (
+                  <div key={option}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Option {option}</label>
+                    <input
+                      type="text"
+                      value={editingQuestion.options[option as keyof typeof editingQuestion.options]}
+                      onChange={(e) => setEditingQuestion(prev => prev ? ({
+                        ...prev,
+                        options: { ...prev.options, [option]: e.target.value }
+                      }) : null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder={`Enter option ${option}`}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answer</label>
+                <select
+                  value={editingQuestion.correctAnswer}
+                  onChange={(e) => setEditingQuestion(prev => prev ? ({ ...prev, correctAnswer: e.target.value as any }) : null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={cancelEditQuestion}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEditedQuestion}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Manual Question Form */}
         {showQuestionForm && (
           <div className="mb-6 p-4 border rounded-lg bg-gray-50">
@@ -836,7 +954,9 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
         {/* Questions List */}
         <div className="space-y-3">
           {formData.questions.map((question, index) => (
-            <div key={index} className="p-4 border rounded-lg">
+            <div key={index} className={`p-4 border rounded-lg ${
+              editingQuestionIndex === index ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+            }`}>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h4 className="font-medium mb-2">{index + 1}. {question.questionText}</h4>
@@ -856,13 +976,24 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
                     Correct: {question.correctAnswer} | Marks: {question.marks}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeQuestion(index)}
-                  className="ml-4 p-1 text-red-600 hover:bg-red-50 rounded"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="ml-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startEditQuestion(index)}
+                    className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                    title="Edit Question"
+                  >
+                    <CreditCard as Edit2 size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeQuestion(index)}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    title="Delete Question"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
