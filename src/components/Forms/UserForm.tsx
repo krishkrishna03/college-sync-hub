@@ -73,24 +73,29 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmit, loading, defaultRole = 's
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     try {
       await onSubmit(formData);
-      setFormData({
-        name: '',
-        email: '',
-        role: defaultRole,
-        idNumber: '',
-        branch: '',
-        batch: '',
-        section: '',
-        phoneNumber: '',
-      });
-      setErrors({});
+      // Only reset form if it's not an edit (no initialData)
+      if (!initialData) {
+        setFormData({
+          name: '',
+          email: '',
+          role: defaultRole,
+          idNumber: '',
+          branch: '',
+          batch: '',
+          section: '',
+          phoneNumber: '',
+        });
+        setErrors({});
+      }
     } catch (error) {
       console.error('Form submission error:', error);
+      // Re-throw to let parent handle the error display
+      throw error;
     }
   };
 

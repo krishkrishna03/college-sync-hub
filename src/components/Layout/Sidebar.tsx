@@ -39,12 +39,20 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) => {
-  const [testsDropdownOpen, setTestsDropdownOpen] = useState(false);
+  const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
   const [testCounts, setTestCounts] = useState<any>(null);
 
   useEffect(() => {
     loadTestCounts();
   }, [userRole]);
+
+  // Auto-open the dropdown when navigating to a test-related tab
+  useEffect(() => {
+    if (activeTab === 'my-tests' || activeTab === 'tests' || activeTab === 'assigned-tests') {
+      const dropdownId = userRole === 'student' ? 'my-tests' : 'tests';
+      setOpenDropdowns(prev => new Set(prev).add(dropdownId));
+    }
+  }, [activeTab, userRole]);
 
   const loadTestCounts = async () => {
     try {
@@ -218,7 +226,15 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
   const handleTestsClick = (itemId: string) => {
     const item = visibleItems.find(i => i.id === itemId);
     if (item && item.subItems) {
-      setTestsDropdownOpen(!testsDropdownOpen);
+      setOpenDropdowns(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(itemId)) {
+          newSet.delete(itemId);
+        } else {
+          newSet.add(itemId);
+        }
+        return newSet;
+      });
     } else {
       onTabChange(itemId);
     }
@@ -243,7 +259,6 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
     sessionStorage.setItem('selectedTestType', testType);
     // Trigger a custom event that the dashboard can listen to
     window.dispatchEvent(new CustomEvent('testTypeChanged', { detail: { testType } }));
-    setTestsDropdownOpen(false);
   };
 
   const getTestCount = (testType: string) => {
@@ -274,7 +289,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
                 <button
                   onClick={() => handleTestsClick(item.id)}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors ${
-                    activeTab === item.id || (item.id === 'tests' && (activeTab === 'tests' || activeTab === 'assigned-tests'))
+                    activeTab === item.id || (item.id === 'tests' && (activeTab === 'tests' || activeTab === 'assigned-tests')) || (item.id === 'my-tests' && activeTab === 'my-tests')
                       ? 'bg-blue-600 text-white'
                       : 'text-gray-300 hover:text-white hover:bg-gray-800'
                   }`}
@@ -283,9 +298,9 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
                     {item.icon}
                     {item.label}
                   </div>
-                  {testsDropdownOpen && (activeTab === item.id || (item.id === 'tests' && (activeTab === 'tests' || activeTab === 'assigned-tests'))) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  {openDropdowns.has(item.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                 </button>
-                {testsDropdownOpen && (activeTab === item.id || (item.id === 'tests' && (activeTab === 'tests' || activeTab === 'assigned-tests'))) && item.subItems && (
+                {openDropdowns.has(item.id) && item.subItems && (
                   <div className="ml-4 mt-1 space-y-1">
                     {item.subItems.map((subItem) => {
                       const count = getTestCount(subItem.testType || '');

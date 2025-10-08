@@ -159,15 +159,17 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     try {
       setFormLoading(true);
       await apiService.createUser(userData);
-      setShowUserForm(false);
-      
+
       // Reload data
-      loadDashboardData();
+      await loadDashboardData();
       if (userData.role === 'faculty') {
-        loadFaculty();
+        await loadFaculty();
       } else {
-        loadStudents();
+        await loadStudents();
       }
+
+      // Close modal after successful creation and data reload
+      setShowUserForm(false);
     } catch (error) {
       throw error;
     } finally {
@@ -181,13 +183,14 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       const result = await apiService.bulkUploadUsers(file, role);
 
       // Reload data
-      loadDashboardData();
+      await loadDashboardData();
       if (role === 'faculty') {
-        loadFaculty();
+        await loadFaculty();
       } else {
-        loadStudents();
+        await loadStudents();
       }
 
+      // Modal close is handled by BulkUploadForm after showing results
       return result;
     } catch (error) {
       throw error;
