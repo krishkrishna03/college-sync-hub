@@ -403,24 +403,29 @@ router.get('/tests/:testId/report', auth, authorize('master_admin'), async (req,
     const totalStudentsAssigned = studentIds.length;
     const totalStudentsCompleted = attempts.length;
     const completionRate = totalStudentsAssigned > 0
-      ? (totalStudentsCompleted / totalStudentsAssigned * 100).toFixed(2)
+      ? (totalStudentsCompleted / totalStudentsAssigned * 100)
       : 0;
 
     const scores = attempts.map(a => a.marksObtained);
-    const averageScore = scores.length > 0
-      ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)
+    const totalMarksArray = attempts.map(a => test.totalMarks);
+
+    // Calculate average score as percentage
+    const percentages = attempts.map(a => (a.marksObtained / test.totalMarks) * 100);
+    const averageScore = percentages.length > 0
+      ? (percentages.reduce((a, b) => a + b, 0) / percentages.length)
       : 0;
+
     const highestScore = scores.length > 0 ? Math.max(...scores) : 0;
     const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
 
     const passPercentage = test.totalMarks > 0 ? (test.totalMarks * 0.4) : 0;
     const passedStudents = attempts.filter(a => a.marksObtained >= passPercentage).length;
     const passRate = totalStudentsCompleted > 0
-      ? (passedStudents / totalStudentsCompleted * 100).toFixed(2)
+      ? (passedStudents / totalStudentsCompleted * 100)
       : 0;
 
     // College-wise statistics
-    const collegeStats = await Promise.all(
+    const collegeResults = await Promise.all(
       collegeAssignments.map(async (assignment) => {
         const collegeStudentAssignments = studentAssignments.filter(
           sa => sa.collegeId.toString() === assignment.collegeId._id.toString()
@@ -434,63 +439,27 @@ router.get('/tests/:testId/report', auth, authorize('master_admin'), async (req,
           collegeStudentIds.some(id => id.toString() === a.studentId._id.toString())
         );
 
-        const collegeScores = collegeAttempts.map(a => a.marksObtained);
-        const collegeAvg = collegeScores.length > 0
-          ? (collegeScores.reduce((a, b) => a + b, 0) / collegeScores.length).toFixed(2)
+        const collegePercentages = collegeAttempts.map(a => (a.marksObtained / test.totalMarks) * 100);
+        const collegeAvg = collegePercentages.length > 0
+          ? (collegePercentages.reduce((a, b) => a + b, 0) / collegePercentages.length)
           : 0;
 
         return {
-          collegeId: assignment.collegeId._id,
           collegeName: assignment.collegeId.name,
           collegeCode: assignment.collegeId.code,
-          status: assignment.status,
-          studentsAssigned: collegeStudentIds.length,
-          studentsCompleted: collegeAttempts.length,
-          averageScore: parseFloat(collegeAvg),
-          acceptedAt: assignment.acceptedAt
+          assigned: collegeStudentIds.length,
+          attempted: collegeAttempts.length,
+          averageScore: collegeAvg
         };
       })
     );
 
-    // Top performers
-    const topPerformers = attempts
-      .sort((a, b) => b.marksObtained - a.marksObtained)
-      .slice(0, 10)
-      .map(a => ({
-        studentName: a.studentId.name,
-        studentEmail: a.studentId.email,
-        collegeName: a.collegeId?.name || 'N/A',
-        marksObtained: a.marksObtained,
-        percentage: a.percentage,
-        timeSpent: a.timeSpent
-      }));
-
     res.json({
-      test: {
-        _id: test._id,
-        testName: test.testName,
-        subject: test.subject,
-        testType: test.testType,
-        difficulty: test.difficulty,
-        totalMarks: test.totalMarks,
-        numberOfQuestions: test.numberOfQuestions,
-        duration: test.duration,
-        createdAt: test.createdAt
-      },
-      globalStatistics: {
-        totalCollegesAssigned,
-        totalCollegesAccepted,
-        totalStudentsAssigned,
-        totalStudentsCompleted,
-        completionRate: parseFloat(completionRate),
-        averageScore: parseFloat(averageScore),
-        highestScore,
-        lowestScore,
-        passRate: parseFloat(passRate),
-        passedStudents
-      },
-      collegeStats,
-      topPerformers
+      totalAssigned: totalStudentsAssigned,
+      totalAttempted: totalStudentsCompleted,
+      averageScore: averageScore,
+      completionRate: completionRate,
+      collegeResults: collegeResults
     });
 
   } catch (error) {
