@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, CreditCard as Edit2 } from 'lucide-react';
+import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, CreditCard as Edit2, CreditCard } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import apiService from '../../services/api';
 
