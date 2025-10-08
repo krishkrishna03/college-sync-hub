@@ -134,29 +134,29 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ activeTab }) => {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Welcome, {state.user?.name}!</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
             <div className="flex items-center">
-              <Building className="h-8 w-8 text-blue-600" />
+              <Building className="h-8 w-8 text-gray-700" />
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">College</p>
                 <p className="text-lg font-bold text-gray-900">{dashboardData.college.name}</p>
               </div>
             </div>
           </div>
-          
-          <div className="bg-green-50 p-4 rounded-lg">
+
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
             <div className="flex items-center">
-              <BookOpen className="h-8 w-8 text-green-600" />
+              <BookOpen className="h-8 w-8 text-gray-700" />
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Code</p>
                 <p className="text-lg font-bold text-gray-900">{dashboardData.college.code}</p>
               </div>
             </div>
           </div>
-          
-          <div className="bg-purple-50 p-4 rounded-lg">
+
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
             <div className="flex items-center">
-              <Users className="h-8 w-8 text-purple-600" />
+              <Users className="h-8 w-8 text-gray-700" />
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Fellow Faculty</p>
                 <p className="text-lg font-bold text-gray-900">{dashboardData.colleagues.length}</p>

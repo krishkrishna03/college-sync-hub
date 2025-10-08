@@ -495,19 +495,19 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="text-center p-2 bg-gray-50 border rounded">
                     <p className="text-xs text-gray-600">Subject</p>
                     <p className="font-semibold">{test.testId.subject}</p>
                   </div>
-                  <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="text-center p-2 bg-gray-50 border rounded">
                     <p className="text-xs text-gray-600">Questions</p>
                     <p className="font-semibold">{test.testId.numberOfQuestions}</p>
                   </div>
-                  <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="text-center p-2 bg-gray-50 border rounded">
                     <p className="text-xs text-gray-600">Duration</p>
                     <p className="font-semibold">{test.testId.duration} min</p>
                   </div>
-                  <div className="text-center p-2 bg-gray-50 rounded">
+                  <div className="text-center p-2 bg-gray-50 border rounded">
                     <p className="text-xs text-gray-600">Total Marks</p>
                     <p className="font-semibold">{test.testId.totalMarks}</p>
                   </div>
@@ -646,27 +646,27 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   // Default dashboard view
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">Welcome, {state.user?.name}!</h2>
-        <p className="text-blue-100">Track your tests and monitor your academic progress</p>
+      <div className="bg-white rounded-lg shadow border p-6">
+        <h2 className="text-2xl font-bold mb-2 text-gray-900">Welcome, {state.user?.name}!</h2>
+        <p className="text-gray-600">Track your tests and monitor your academic progress</p>
       </div>
 
       {/* Test Summary Statistics */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Test Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-lg shadow border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+          <div className="bg-white p-5 rounded-lg shadow border hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Tests</p>
                 <p className="text-3xl font-bold text-gray-900 mt-1">{totalTests}</p>
                 <p className="text-xs text-gray-500 mt-1">All assigned tests</p>
               </div>
-              <FileText className="h-10 w-10 text-blue-600" />
+              <FileText className="h-10 w-10 text-gray-700" />
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-lg shadow border-l-4 border-green-500 hover:shadow-lg transition-shadow">
+          <div className="bg-white p-5 rounded-lg shadow border hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Completed</p>
@@ -675,29 +675,29 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                   {totalTests > 0 ? `${((completedTests / totalTests) * 100).toFixed(0)}% complete` : 'No tests yet'}
                 </p>
               </div>
-              <CheckCircle className="h-10 w-10 text-green-600" />
+              <CheckCircle className="h-10 w-10 text-gray-700" />
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-lg shadow border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
+          <div className="bg-white p-5 rounded-lg shadow border hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Pending</p>
                 <p className="text-3xl font-bold text-gray-900 mt-1">{pendingTests}</p>
                 <p className="text-xs text-gray-500 mt-1">Active tests to attempt</p>
               </div>
-              <Clock className="h-10 w-10 text-orange-600" />
+              <Clock className="h-10 w-10 text-gray-700" />
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-lg shadow border-l-4 border-purple-500 hover:shadow-lg transition-shadow">
+          <div className="bg-white p-5 rounded-lg shadow border hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Upcoming</p>
                 <p className="text-3xl font-bold text-gray-900 mt-1">{upcomingTests}</p>
                 <p className="text-xs text-gray-500 mt-1">Tests scheduled ahead</p>
               </div>
-              <Target className="h-10 w-10 text-purple-600" />
+              <Target className="h-10 w-10 text-gray-700" />
             </div>
           </div>
         </div>
@@ -728,16 +728,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-full ${
-                        percentage >= 75 ? 'bg-green-100' :
-                        percentage >= 50 ? 'bg-yellow-100' :
-                        'bg-red-100'
-                      }`}>
-                        <Award className={`h-5 w-5 ${
-                          percentage >= 75 ? 'text-green-600' :
-                          percentage >= 50 ? 'text-yellow-600' :
-                          'text-red-600'
-                        }`} />
+                      <div className="p-3 rounded-full bg-gray-100 border">
+                        <Award className="h-5 w-5 text-gray-700" />
                       </div>
                       <div>
                         <h4 className="font-medium text-gray-900">{test.testId.testName}</h4>
@@ -746,11 +738,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                           <span>•</span>
                           <span>{marksObtained}/{totalMarks} marks</span>
                           <span>•</span>
-                          <span className={`font-medium ${
-                            percentage >= 75 ? 'text-green-600' :
-                            percentage >= 50 ? 'text-yellow-600' :
-                            'text-red-600'
-                          }`}>
+                          <span className="font-medium text-gray-900">
                             {percentage.toFixed(1)}%
                           </span>
                         </div>
@@ -797,9 +785,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                     </div>
                     <div className="flex-shrink-0">
                       <div className={`w-3 h-3 rounded-full ${
-                        isCompleted ? 'bg-green-500' :
-                        status.text === 'Available' ? 'bg-blue-500' :
-                        status.text === 'Upcoming' ? 'bg-yellow-500' :
+                        isCompleted ? 'bg-gray-900' :
+                        status.text === 'Available' ? 'bg-gray-700' :
+                        status.text === 'Upcoming' ? 'bg-gray-500' :
                         'bg-gray-300'
                       }`} />
                     </div>

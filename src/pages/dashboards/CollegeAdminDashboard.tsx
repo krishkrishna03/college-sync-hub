@@ -393,19 +393,19 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="text-center p-2 bg-gray-50 rounded">
+                <div className="text-center p-2 bg-gray-50 border rounded">
                   <p className="text-xs text-gray-600">Subject</p>
                   <p className="font-semibold">{assignment.testId.subject}</p>
                 </div>
-                <div className="text-center p-2 bg-gray-50 rounded">
+                <div className="text-center p-2 bg-gray-50 border rounded">
                   <p className="text-xs text-gray-600">Questions</p>
                   <p className="font-semibold">{assignment.testId.numberOfQuestions}</p>
                 </div>
-                <div className="text-center p-2 bg-gray-50 rounded">
+                <div className="text-center p-2 bg-gray-50 border rounded">
                   <p className="text-xs text-gray-600">Duration</p>
                   <p className="font-semibold">{assignment.testId.duration} min</p>
                 </div>
-                <div className="text-center p-2 bg-gray-50 rounded">
+                <div className="text-center p-2 bg-gray-50 border rounded">
                   <p className="text-xs text-gray-600">Total Marks</p>
                   <p className="font-semibold">{assignment.testId.totalMarks}</p>
                 </div>
@@ -784,29 +784,29 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       {dashboardData && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className="bg-white p-6 rounded-lg shadow border">
               <div className="flex items-center">
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-8 w-8 text-gray-700" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Faculty</p>
                   <p className="text-2xl font-bold text-gray-900">{dashboardData.totalFaculty}</p>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow">
+
+            <div className="bg-white p-6 rounded-lg shadow border">
               <div className="flex items-center">
-                <GraduationCap className="h-8 w-8 text-green-600" />
+                <GraduationCap className="h-8 w-8 text-gray-700" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Students</p>
                   <p className="text-2xl font-bold text-gray-900">{dashboardData.totalStudents}</p>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow">
+
+            <div className="bg-white p-6 rounded-lg shadow border">
               <div className="flex items-center">
-                <CheckCircle className="h-8 w-8 text-purple-600" />
+                <CheckCircle className="h-8 w-8 text-gray-700" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Active Users</p>
                   <p className="text-2xl font-bold text-gray-900">{dashboardData.loginStats.hasLoggedIn}</p>
@@ -814,9 +814,9 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className="bg-white p-6 rounded-lg shadow border">
               <div className="flex items-center">
-                <Clock className="h-8 w-8 text-orange-600" />
+                <Clock className="h-8 w-8 text-gray-700" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Pending</p>
                   <p className="text-2xl font-bold text-gray-900">{dashboardData.loginStats.neverLoggedIn}</p>
@@ -841,14 +841,14 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => openUserForm('faculty')}
-                    className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                    className="bg-white border-2 border-gray-300 text-gray-700 p-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 flex items-center gap-2 text-sm font-medium"
                   >
                     <Plus size={16} />
                     Add Faculty
                   </button>
                   <button
                     onClick={() => openBulkUpload('faculty')}
-                    className="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+                    className="bg-white border-2 border-gray-300 text-gray-700 p-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 flex items-center gap-2 text-sm font-medium"
                   >
                     <Upload size={16} />
                     Bulk Faculty
@@ -857,14 +857,14 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => openUserForm('student')}
-                    className="bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
+                    className="bg-white border-2 border-gray-300 text-gray-700 p-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 flex items-center gap-2 text-sm font-medium"
                   >
                     <Plus size={16} />
                     Add Student
                   </button>
                   <button
                     onClick={() => openBulkUpload('student')}
-                    className="bg-orange-600 text-white p-3 rounded-lg hover:bg-orange-700 flex items-center gap-2 text-sm"
+                    className="bg-white border-2 border-gray-300 text-gray-700 p-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 flex items-center gap-2 text-sm font-medium"
                   >
                     <Upload size={16} />
                     Bulk Students

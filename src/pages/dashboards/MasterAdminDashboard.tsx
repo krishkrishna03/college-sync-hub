@@ -440,29 +440,29 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow">
+          <div className="bg-white p-6 rounded-lg shadow border">
             <div className="flex items-center">
-              <Building className="h-8 w-8 text-blue-600" />
+              <Building className="h-8 w-8 text-gray-700" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Colleges</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalColleges}</p>
               </div>
             </div>
           </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow">
+
+          <div className="bg-white p-6 rounded-lg shadow border">
             <div className="flex items-center">
-              <Users className="h-8 w-8 text-green-600" />
+              <Users className="h-8 w-8 text-gray-700" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Faculty</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalFaculty}</p>
               </div>
             </div>
           </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow">
+
+          <div className="bg-white p-6 rounded-lg shadow border">
             <div className="flex items-center">
-              <GraduationCap className="h-8 w-8 text-purple-600" />
+              <GraduationCap className="h-8 w-8 text-gray-700" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Students</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
@@ -779,12 +779,12 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
                   <p className="text-gray-600 text-sm mb-4">{college.address}</p>
 
                   <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="text-center p-3 bg-blue-50 rounded">
-                      <p className="text-2xl font-bold text-blue-600">{college.totalFaculty || 0}</p>
+                    <div className="text-center p-3 bg-gray-50 border rounded">
+                      <p className="text-2xl font-bold text-gray-900">{college.totalFaculty || 0}</p>
                       <p className="text-sm text-gray-600">Faculty</p>
                     </div>
-                    <div className="text-center p-3 bg-green-50 rounded">
-                      <p className="text-2xl font-bold text-green-600">{college.totalStudents || 0}</p>
+                    <div className="text-center p-3 bg-gray-50 border rounded">
+                      <p className="text-2xl font-bold text-gray-900">{college.totalStudents || 0}</p>
                       <p className="text-sm text-gray-600">Students</p>
                     </div>
                   </div>
@@ -961,20 +961,20 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
 
                     {/* Stats */}
                     <div className="grid grid-cols-4 gap-4">
-                      <div className="text-center p-3 bg-blue-50 rounded">
-                        <p className="text-2xl font-bold text-blue-600">{college.totalStudents}</p>
+                      <div className="text-center p-3 bg-gray-50 border rounded">
+                        <p className="text-2xl font-bold text-gray-900">{college.totalStudents}</p>
                         <p className="text-sm text-gray-600">Students</p>
                       </div>
-                      <div className="text-center p-3 bg-green-50 rounded">
-                        <p className="text-2xl font-bold text-green-600">{college.totalFaculty}</p>
+                      <div className="text-center p-3 bg-gray-50 border rounded">
+                        <p className="text-2xl font-bold text-gray-900">{college.totalFaculty}</p>
                         <p className="text-sm text-gray-600">Batches</p>
                       </div>
-                      <div className="text-center p-3 bg-purple-50 rounded">
-                        <p className="text-2xl font-bold text-purple-600">0</p>
+                      <div className="text-center p-3 bg-gray-50 border rounded">
+                        <p className="text-2xl font-bold text-gray-900">0</p>
                         <p className="text-sm text-gray-600">Tests</p>
                       </div>
-                      <div className="text-center p-3 bg-orange-50 rounded">
-                        <p className="text-2xl font-bold text-orange-600">0</p>
+                      <div className="text-center p-3 bg-gray-50 border rounded">
+                        <p className="text-2xl font-bold text-gray-900">0</p>
                         <p className="text-sm text-gray-600">Tests</p>
                       </div>
                     </div>
