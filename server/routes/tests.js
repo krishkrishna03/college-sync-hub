@@ -384,7 +384,7 @@ router.post('/:id/assign-college', auth, authorize('master_admin'), [
 router.get('/college/assigned', auth, authorize('college_admin', 'faculty'), async (req, res) => {
   try {
     const { testType, subject } = req.query;
-    
+
     const assignments = await TestAssignment.find({
       collegeId: req.user.collegeId,
       assignedTo: 'college',
@@ -394,23 +394,24 @@ router.get('/college/assigned', auth, authorize('college_admin', 'faculty'), asy
     .populate('assignedBy', 'name email')
     .sort({ createdAt: -1 });
 
-    // Filter by test type and subject if provided
-    let filteredAssignments = assignments;
-    
+    // Filter out assignments where testId is null (test was deleted)
+    let filteredAssignments = assignments.filter(assignment => assignment.testId !== null);
+
     if (testType && testType !== 'all') {
-      filteredAssignments = filteredAssignments.filter(assignment => 
-        assignment.testId.testType === testType
+      filteredAssignments = filteredAssignments.filter(assignment =>
+        assignment.testId && assignment.testId.testType === testType
       );
     }
-    
+
     if (subject && subject !== 'all') {
-      filteredAssignments = filteredAssignments.filter(assignment => 
-        assignment.testId.subject === subject
+      filteredAssignments = filteredAssignments.filter(assignment =>
+        assignment.testId && assignment.testId.subject === subject
       );
     }
-    
+
     res.json(filteredAssignments);
   } catch (error) {
+    console.error('Get assigned tests error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

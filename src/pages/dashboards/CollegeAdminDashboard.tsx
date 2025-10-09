@@ -141,10 +141,10 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       // Calculate counts for dropdown
       const allTests = await apiService.getAssignedTests();
       const dropdownCounts = {
-        assessment: allTests.filter((t: any) => t.testId.testType === 'Assessment').length,
-        practice: allTests.filter((t: any) => t.testId.testType === 'Practice').length,
-        mockTest: allTests.filter((t: any) => t.testId.testType === 'Mock Test').length,
-        company: allTests.filter((t: any) => t.testId.testType === 'Specific Company Test').length
+        assessment: allTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment').length,
+        practice: allTests.filter((t: any) => t.testId && t.testId.testType === 'Practice').length,
+        mockTest: allTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test').length,
+        company: allTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test').length
       };
       setDropdownCounts(dropdownCounts);
     } catch (error) {
