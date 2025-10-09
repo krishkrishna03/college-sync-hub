@@ -129,12 +129,15 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
     }
   };
 
-  const loadAssignedTests = async () => {
+  const loadAssignedTests = async (testType?: string, subject?: string) => {
     try {
       setLoading(true);
+      const typeFilter = testType !== undefined ? testType : activeTestType;
+      const subjectFilter = subject !== undefined ? subject : activeSubject;
+
       const data = await apiService.getAssignedTests(
-        activeTestType === 'all' ? undefined : activeTestType,
-        activeSubject === 'all' ? undefined : activeSubject
+        typeFilter === 'all' ? undefined : typeFilter,
+        subjectFilter === 'all' ? undefined : subjectFilter
       );
       setAssignedTests(data);
 
@@ -197,10 +200,19 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       setFormLoading(false);
     }
   };
-  const handleTestAssignmentStatus = async (assignmentId: string, status: 'accepted' | 'rejected') => {
+  const handleTestAssignmentStatus = async (assignmentId: string, status: 'accepted' | 'rejected', testType?: string) => {
     try {
       await apiService.updateTestAssignmentStatus(assignmentId, status);
-      loadAssignedTests();
+
+      // If accepting a test, switch to that test type tab to show it immediately
+      if (status === 'accepted' && testType) {
+        setActiveTestType(testType);
+        setActiveSubject('all');
+        await loadAssignedTests(testType, 'all');
+      } else {
+        // Just reload with current filters
+        await loadAssignedTests();
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update test status');
     }
@@ -211,7 +223,8 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       await apiService.assignTestToStudents(assignmentId, filters);
       setShowStudentAssignment(false);
       setSelectedAssignment(null);
-      loadAssignedTests();
+      // Reload tests with current filters
+      await loadAssignedTests();
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to assign test to students');
     }
@@ -421,7 +434,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                   {assignment.status === 'pending' && (
                     <>
                       <button
-                        onClick={() => handleTestAssignmentStatus(assignment._id, 'accepted')}
+                        onClick={() => handleTestAssignmentStatus(assignment._id, 'accepted', assignment.testId.testType)}
                         className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 text-sm"
                       >
                         Accept

@@ -257,7 +257,11 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
 
       await apiService.createTest(testData);
       setShowTestForm(false);
-      loadTests();
+
+      // Switch to the newly created test's type tab and reload
+      setActiveTestType(formData.testType);
+      setActiveSubject('all');
+      await loadTests(formData.testType, 'all');
     } catch (error) {
       console.error('Test creation error:', error);
       console.error('Error details:', error instanceof Error ? error.message : String(error));
