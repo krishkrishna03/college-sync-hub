@@ -17,6 +17,7 @@ import PlatformGrowth from '../../components/Dashboard/PlatformGrowth';
 import TestTabs from '../../components/Test/TestTabs';
 import ExportButton from '../../components/Dashboard/ExportButton';
 import GrowthChart from '../../components/Charts/GrowthChart';
+import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
 
 interface College {
   id: string;
@@ -128,6 +129,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   const [activeSubject, setActiveSubject] = useState('all');
   const [testCounts, setTestCounts] = useState<any>(null);
   const [dropdownCounts, setDropdownCounts] = useState<any>(null);
+  const [categorizedCounts, setCategorizedCounts] = useState<any>(null);
   const [showCollegeForm, setShowCollegeForm] = useState(false);
   const [showTestForm, setShowTestForm] = useState(false);
   const [showNotificationForm, setShowNotificationForm] = useState(false);
@@ -149,6 +151,21 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
       loadTests(activeTestType, activeSubject);
     }
   }, [activeTab, activeTestType, activeSubject]);
+
+  useEffect(() => {
+    const handleTestTypeChange = (event: any) => {
+      const testType = event.detail?.testType;
+      if (testType) {
+        setActiveTestType(testType);
+        setActiveSubject('all');
+      }
+    };
+
+    window.addEventListener('testTypeChanged', handleTestTypeChange);
+    return () => {
+      window.removeEventListener('testTypeChanged', handleTestTypeChange);
+    };
+  }, []);
 
   const loadData = async () => {
     try {
@@ -184,7 +201,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
         subject === 'all' ? undefined : subject
       );
       setTests(testsData);
-      
+
       // Calculate test counts for tabs
       const allTests = await apiService.getTests();
       const counts = {
@@ -215,6 +232,43 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
         company: allTests.filter((t: any) => t.testType === 'Specific Company Test').length
       };
       setDropdownCounts(dropdownCounts);
+
+      // Calculate categorized counts for CategorizedTestTabs
+      const categorizedCounts = {
+        assessment: {
+          all: allTests.filter((t: any) => t.testType === 'Assessment').length,
+          Verbal: allTests.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Verbal').length,
+          Reasoning: allTests.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Reasoning').length,
+          Technical: allTests.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Technical').length,
+          Arithmetic: allTests.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Arithmetic').length,
+          Communication: allTests.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Communication').length
+        },
+        practice: {
+          all: allTests.filter((t: any) => t.testType === 'Practice').length,
+          Verbal: allTests.filter((t: any) => t.testType === 'Practice' && t.subject === 'Verbal').length,
+          Reasoning: allTests.filter((t: any) => t.testType === 'Practice' && t.subject === 'Reasoning').length,
+          Technical: allTests.filter((t: any) => t.testType === 'Practice' && t.subject === 'Technical').length,
+          Arithmetic: allTests.filter((t: any) => t.testType === 'Practice' && t.subject === 'Arithmetic').length,
+          Communication: allTests.filter((t: any) => t.testType === 'Practice' && t.subject === 'Communication').length
+        },
+        mockTest: {
+          all: allTests.filter((t: any) => t.testType === 'Mock Test').length,
+          Verbal: allTests.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Verbal').length,
+          Reasoning: allTests.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Reasoning').length,
+          Technical: allTests.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Technical').length,
+          Arithmetic: allTests.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Arithmetic').length,
+          Communication: allTests.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Communication').length
+        },
+        company: {
+          all: allTests.filter((t: any) => t.testType === 'Specific Company Test').length,
+          Verbal: allTests.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Verbal').length,
+          Reasoning: allTests.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Reasoning').length,
+          Technical: allTests.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Technical').length,
+          Arithmetic: allTests.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Arithmetic').length,
+          Communication: allTests.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Communication').length
+        }
+      };
+      setCategorizedCounts(categorizedCounts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load tests');
     } finally {
@@ -562,6 +616,11 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
   }
 
   if (activeTab === 'tests') {
+    const handleFilterChange = (testType: string, subject: string) => {
+      setActiveTestType(testType);
+      setActiveSubject(subject);
+    };
+
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -574,6 +633,12 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
             Create Test
           </button>
         </div>
+
+        <CategorizedTestTabs
+          onFilterChange={handleFilterChange}
+          testCounts={categorizedCounts}
+          loading={loading}
+        />
 
         <AdvancedTestGrid
           tests={tests}
