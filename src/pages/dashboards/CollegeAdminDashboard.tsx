@@ -9,6 +9,7 @@ import NotificationsPage from '../../components/Notifications/NotificationsPage'
 import TestTabs from '../../components/Test/TestTabs';
 import BulkUploadForm from '../../components/Forms/BulkUploadForm';
 import CollegeTestReport from '../../components/Test/CollegeTestReport';
+import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
 
 interface User {
   _id: string;
@@ -71,6 +72,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [activeTestType, setActiveTestType] = useState('Assessment');
   const [activeSubject, setActiveSubject] = useState('all');
   const [dropdownCounts, setDropdownCounts] = useState<any>(null);
+  const [categorizedCounts, setCategorizedCounts] = useState<any>(null);
   const [showUserForm, setShowUserForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showStudentAssignment, setShowStudentAssignment] = useState(false);
@@ -95,6 +97,21 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       loadAssignedTests();
     }
   }, [activeTab, activeTestType, activeSubject]);
+
+  useEffect(() => {
+    const handleTestTypeChange = (event: any) => {
+      const testType = event.detail?.testType;
+      if (testType) {
+        setActiveTestType(testType);
+        setActiveSubject('all');
+      }
+    };
+
+    window.addEventListener('testTypeChanged', handleTestTypeChange);
+    return () => {
+      window.removeEventListener('testTypeChanged', handleTestTypeChange);
+    };
+  }, []);
 
   const loadDashboardData = async () => {
     try {
@@ -150,6 +167,44 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
         company: allTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test').length
       };
       setDropdownCounts(dropdownCounts);
+
+      // Calculate categorized counts for CategorizedTestTabs
+      const acceptedTests = allTests.filter((t: any) => t.status === 'accepted');
+      const categorizedCounts = {
+        assessment: {
+          all: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment').length,
+          Verbal: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Verbal').length,
+          Reasoning: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Reasoning').length,
+          Technical: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Technical').length,
+          Arithmetic: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Arithmetic').length,
+          Communication: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Communication').length
+        },
+        practice: {
+          all: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice').length,
+          Verbal: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Verbal').length,
+          Reasoning: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Reasoning').length,
+          Technical: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Technical').length,
+          Arithmetic: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Arithmetic').length,
+          Communication: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Communication').length
+        },
+        mockTest: {
+          all: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test').length,
+          Verbal: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Verbal').length,
+          Reasoning: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Reasoning').length,
+          Technical: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Technical').length,
+          Arithmetic: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Arithmetic').length,
+          Communication: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Communication').length
+        },
+        company: {
+          all: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test').length,
+          Verbal: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Verbal').length,
+          Reasoning: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Reasoning').length,
+          Technical: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Technical').length,
+          Arithmetic: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Arithmetic').length,
+          Communication: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Communication').length
+        }
+      };
+      setCategorizedCounts(categorizedCounts);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
     } finally {
@@ -361,11 +416,22 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       );
     }
 
+    const handleFilterChange = (testType: string, subject: string) => {
+      setActiveTestType(testType);
+      setActiveSubject(subject);
+    };
+
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">Assigned Tests</h2>
         </div>
+
+        <CategorizedTestTabs
+          onFilterChange={handleFilterChange}
+          testCounts={categorizedCounts}
+          loading={loading}
+        />
 
         <div className="grid gap-6">
           {Array.isArray(assignedTests) && assignedTests.length > 0 ? assignedTests.map((assignment) => (
