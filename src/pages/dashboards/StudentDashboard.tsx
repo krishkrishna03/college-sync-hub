@@ -432,7 +432,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     return (
       <div className="text-center text-red-600 py-12">
         <p>{error}</p>
-        <button 
+        <button
           onClick={loadDashboardData}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
@@ -440,10 +440,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         </button>
       </div>
     );
-  }
-
-  if (!dashboardData) {
-    return <div>No data available</div>;
   }
 
   if (activeTab === 'reports') {
@@ -574,32 +570,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   }
 
   if (activeTab === 'profile') {
+    if (!dashboardData) {
+      return <div className="text-center py-12">Loading profile...</div>;
+    }
+
     return (
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Student Profile</h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Full Name</label>
               <p className="mt-1 text-lg text-gray-900">{state.user?.name}</p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
               <p className="mt-1 text-gray-900">{state.user?.email}</p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700">Role</label>
               <p className="mt-1 text-gray-900">Student</p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700">College</label>
               <p className="mt-1 text-gray-900">{dashboardData.college.name}</p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700">College Code</label>
               <p className="mt-1 text-gray-900">{dashboardData.college.code}</p>
@@ -621,6 +621,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         <StudentPerformanceAnalytics testResults={performanceData} />
       </div>
     );
+  }
+
+  // Default dashboard view needs dashboardData
+  if (!dashboardData) {
+    return <div className="text-center py-12">Loading dashboard...</div>;
   }
 
   // Calculate statistics
