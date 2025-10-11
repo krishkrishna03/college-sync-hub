@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertCircle, CheckCircle, Send } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Send, XCircle } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
 
 interface Question {

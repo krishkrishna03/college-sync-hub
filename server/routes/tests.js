@@ -627,24 +627,34 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
       return res.status(400).json({ error: 'Test has ended' });
     }
 
-    // Return test questions without correct answers
+    // Return test questions (include correctAnswer for Practice tests only)
     const testForStudent = {
       _id: test._id,
       testName: test.testName,
       testDescription: test.testDescription,
       subject: test.subject,
+      testType: test.testType,
       numberOfQuestions: test.numberOfQuestions,
       marksPerQuestion: test.marksPerQuestion,
       totalMarks: test.totalMarks,
       duration: test.duration,
       startDateTime: test.startDateTime,
       endDateTime: test.endDateTime,
-      questions: test.questions.map(q => ({
-        _id: q._id,
-        questionText: q.questionText,
-        options: q.options,
-        marks: q.marks
-      }))
+      questions: test.questions.map(q => {
+        const questionData = {
+          _id: q._id,
+          questionText: q.questionText,
+          options: q.options,
+          marks: q.marks
+        };
+
+        // Include correct answer for Practice tests
+        if (test.testType === 'Practice') {
+          questionData.correctAnswer = q.correctAnswer;
+        }
+
+        return questionData;
+      })
     };
 
     res.json({

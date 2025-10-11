@@ -619,6 +619,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     const handleFilterChange = (testType: string, subject: string) => {
       setActiveTestType(testType);
       setActiveSubject(subject);
+      loadTests(testType, subject);
     };
 
     return (
