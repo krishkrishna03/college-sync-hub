@@ -198,10 +198,19 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
 
   const handleStartTest = async (testId: string) => {
     try {
+      console.log('Starting test with ID:', testId);
       const response = await apiService.startTest(testId);
+      console.log('Test start response:', response);
+
+      if (!response.test || !response.startTime) {
+        throw new Error('Invalid response from server');
+      }
+
       setActiveTest(response.test);
       setTestStartTime(new Date(response.startTime));
+      console.log('Test state updated successfully');
     } catch (error) {
+      console.error('Failed to start test:', error);
       alert(error instanceof Error ? error.message : 'Failed to start test');
     }
   };
@@ -525,10 +534,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                       </button>
                     ) : isTestActive(test) ? (
                       <button
-                        onClick={() => handleStartTest(test.testId._id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleStartTest(test.testId._id);
+                        }}
                         className={`text-white py-2 px-4 rounded-lg flex items-center gap-2 text-sm font-medium ${
-                          test.testId.testType === 'Practice' 
-                            ? 'bg-green-600 hover:bg-green-700' 
+                          test.testId.testType === 'Practice'
+                            ? 'bg-green-600 hover:bg-green-700'
                             : test.testId.testType === 'Mock Test'
                             ? 'bg-orange-600 hover:bg-orange-700'
                             : test.testId.testType === 'Specific Company Test'
@@ -537,7 +551,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                         }`}
                       >
                         <Play size={16} />
-                        {test.testId.testType === 'Practice' ? 'Start Practice' : 
+                        {test.testId.testType === 'Practice' ? 'Start Practice' :
                          test.testId.testType === 'Mock Test' ? 'Start Mock Test' :
                          test.testId.testType === 'Specific Company Test' ? 'Start Company Test' :
                          'Start Test'}
