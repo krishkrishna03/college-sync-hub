@@ -86,6 +86,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   }, [activeTest, testStartTime]);
 
   useEffect(() => {
+    // Don't reload data when a test is active
+    if (activeTest && testStartTime) {
+      return;
+    }
+
     if (activeTab === 'dashboard' || activeTab === 'profile') {
       loadDashboardData();
     } else if (activeTab === 'my-tests') {
@@ -101,7 +106,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     } else if (activeTab === 'performance') {
       loadPerformanceData();
     }
-  }, [activeTab, activeTestType, activeSubject]);
+  }, [activeTab, activeTestType, activeSubject, activeTest, testStartTime]);
 
   // Listen for test type changes from sidebar
   useEffect(() => {
@@ -219,6 +224,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
 
       setActiveTest(response.test);
       setTestStartTime(new Date(response.startTime));
+      setStartingTest(false);
 
       console.log('Test state updated successfully');
     } catch (error) {
