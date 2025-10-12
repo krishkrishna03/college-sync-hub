@@ -73,6 +73,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const [performanceData, setPerformanceData] = useState<any[]>([]);
   const [showDetailedReport, setShowDetailedReport] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [startingTest, setStartingTest] = useState(false);
 
   // Notify parent when entering/exiting test mode
   useEffect(() => {
@@ -197,8 +198,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   };
 
   const handleStartTest = async (testId: string) => {
+    if (startingTest) {
+      console.log('Test start already in progress');
+      return;
+    }
+
     try {
+      setStartingTest(true);
       console.log('Starting test with ID:', testId);
+
       const response = await apiService.startTest(testId);
       console.log('Test start response:', response);
 
@@ -206,12 +214,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         throw new Error('Invalid response from server');
       }
 
+      console.log('Setting active test:', response.test);
+      console.log('Setting test start time:', response.startTime);
+
       setActiveTest(response.test);
       setTestStartTime(new Date(response.startTime));
+
       console.log('Test state updated successfully');
     } catch (error) {
       console.error('Failed to start test:', error);
       alert(error instanceof Error ? error.message : 'Failed to start test');
+      setStartingTest(false);
     }
   };
 
@@ -300,8 +313,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
     };
     return colors[difficulty as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
+
   // Show test interface if test is active
+  console.log('StudentDashboard render - activeTest:', activeTest?._id, 'testStartTime:', testStartTime);
+
   if (activeTest && testStartTime) {
+    console.log('Rendering ProctoredTestInterface');
     return (
       <ProctoredTestInterface
         test={activeTest}
@@ -540,7 +557,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                           e.stopPropagation();
                           handleStartTest(test.testId._id);
                         }}
-                        className={`text-white py-2 px-4 rounded-lg flex items-center gap-2 text-sm font-medium ${
+                        disabled={startingTest}
+                        className={`text-white py-2 px-4 rounded-lg flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
                           test.testId.testType === 'Practice'
                             ? 'bg-green-600 hover:bg-green-700'
                             : test.testId.testType === 'Mock Test'
@@ -550,11 +568,20 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
                             : 'bg-blue-600 hover:bg-blue-700'
                         }`}
                       >
-                        <Play size={16} />
-                        {test.testId.testType === 'Practice' ? 'Start Practice' :
-                         test.testId.testType === 'Mock Test' ? 'Start Mock Test' :
-                         test.testId.testType === 'Specific Company Test' ? 'Start Company Test' :
-                         'Start Test'}
+                        {startingTest ? (
+                          <>
+                            <LoadingSpinner size="sm" />
+                            Starting...
+                          </>
+                        ) : (
+                          <>
+                            <Play size={16} />
+                            {test.testId.testType === 'Practice' ? 'Start Practice' :
+                             test.testId.testType === 'Mock Test' ? 'Start Mock Test' :
+                             test.testId.testType === 'Specific Company Test' ? 'Start Company Test' :
+                             'Start Test'}
+                          </>
+                        )}
                       </button>
                     ) : (
                       <button
