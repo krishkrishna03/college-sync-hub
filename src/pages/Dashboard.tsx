@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Layout/Navbar';
 import Sidebar from '../components/Layout/Sidebar';
@@ -59,7 +59,7 @@ const Dashboard: React.FC = () => {
     return roleTitles[state.user.role];
   };
 
-  const renderDashboardContent = () => {
+  const dashboardContent = useMemo(() => {
     // Handle notifications tab for all roles
     if (activeTab === 'notifications') {
       return <NotificationsList />;
@@ -118,7 +118,7 @@ const Dashboard: React.FC = () => {
     if (activeTab === 'profile') {
       return <ProfilePage />;
     }
-    
+
     switch (state.user.role) {
       case 'master_admin':
         return <MasterAdminDashboard activeTab={activeTab} />;
@@ -131,13 +131,13 @@ const Dashboard: React.FC = () => {
       default:
         return <div>Unknown role</div>;
     }
-  };
+  }, [activeTab, state.user.role]);
 
   // If in test mode, render without sidebar and navbar
   if (isTestMode) {
     return (
       <div className="h-screen bg-gray-50">
-        {renderDashboardContent()}
+        {dashboardContent}
       </div>
     );
   }
@@ -157,7 +157,7 @@ const Dashboard: React.FC = () => {
         />
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
-          {renderDashboardContent()}
+          {dashboardContent}
         </main>
       </div>
 
