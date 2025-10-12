@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Layout/Navbar';
 import Sidebar from '../components/Layout/Sidebar';
@@ -28,10 +28,10 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showProfile, setShowProfile] = useState(false);
   const [isTestMode, setIsTestMode] = useState(false);
-
   // Listen for test mode changes
   useEffect(() => {
     const handleTestModeChange = (event: CustomEvent) => {
+      console.log('Dashboard received testModeChanged event:', event.detail);
       setIsTestMode(event.detail.isTestMode);
     };
 
@@ -59,39 +59,39 @@ const Dashboard: React.FC = () => {
     return roleTitles[state.user.role];
   };
 
-  const dashboardContent = useMemo(() => {
+  const renderDashboardContent = () => {
     // Handle notifications tab for all roles
     if (activeTab === 'notifications') {
-      return <NotificationsList />;
+      return <NotificationsList key="notifications" />;
     }
 
     // Handle notification analytics tab for master admin
     if (activeTab === 'notification-analytics') {
-      return <NotificationAnalytics />;
+      return <NotificationAnalytics key="notification-analytics" />;
     }
 
     // Handle exam management tab for all roles
     if (activeTab === 'exam-management') {
-      return <ExamManagement userRole={state.user.role} />;
+      return <ExamManagement key="exam-management" userRole={state.user.role} />;
     }
 
     // Handle student hierarchy tab for college admin
     if (activeTab === 'student-hierarchy') {
-      return <StudentHierarchy />;
+      return <StudentHierarchy key="student-hierarchy" />;
     }
 
     // Handle reports tab for all roles (student gets their own reports view)
     if (activeTab === 'reports') {
       if (state.user.role === 'student') {
-        return <StudentDashboard activeTab="reports" />;
+        return <StudentDashboard key="student-reports" activeTab="reports" />;
       }
-      return <ReportsPage userRole={state.user.role} />;
+      return <ReportsPage key="reports" userRole={state.user.role} />;
     }
 
     // Handle create notification tab for admins
     if (activeTab === 'create-notification') {
       return (
-        <div className="space-y-6">
+        <div key="create-notification" className="space-y-6">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -116,59 +116,56 @@ const Dashboard: React.FC = () => {
 
     // Handle profile tab for all roles
     if (activeTab === 'profile') {
-      return <ProfilePage />;
+      return <ProfilePage key="profile" />;
     }
 
     switch (state.user.role) {
       case 'master_admin':
-        return <MasterAdminDashboard activeTab={activeTab} />;
+        return <MasterAdminDashboard key="master-admin-dashboard" activeTab={activeTab} />;
       case 'college_admin':
-        return <CollegeAdminDashboard activeTab={activeTab} />;
+        return <CollegeAdminDashboard key="college-admin-dashboard" activeTab={activeTab} />;
       case 'faculty':
-        return <FacultyDashboard activeTab={activeTab} />;
+        return <FacultyDashboard key="faculty-dashboard" activeTab={activeTab} />;
       case 'student':
-        return <StudentDashboard activeTab={activeTab} />;
+        return <StudentDashboard key="student-dashboard" activeTab={activeTab} />;
       default:
         return <div>Unknown role</div>;
     }
-  }, [activeTab, state.user.role]);
-
-  // If in test mode, render without sidebar and navbar
-  if (isTestMode) {
-    return (
-      <div className="h-screen bg-gray-50">
-        {dashboardContent}
-      </div>
-    );
-  }
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar
-        userRole={state.user.role}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+      {!isTestMode && (
+        <Sidebar
+          userRole={state.user.role}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+      )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Navbar
-          title={getDashboardTitle()}
-          onProfileClick={() => setShowProfile(true)}
-        />
+        {!isTestMode && (
+          <Navbar
+            title={getDashboardTitle()}
+            onProfileClick={() => setShowProfile(true)}
+          />
+        )}
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
-          {dashboardContent}
+        <main className={`flex-1 overflow-x-hidden overflow-y-auto ${isTestMode ? '' : 'p-6'}`}>
+          {renderDashboardContent()}
         </main>
       </div>
 
-      <Modal
-        isOpen={showProfile}
-        onClose={() => setShowProfile(false)}
-        title="Profile"
-        size="md"
-      >
-        <ProfileModal onClose={() => setShowProfile(false)} />
-      </Modal>
+      {!isTestMode && (
+        <Modal
+          isOpen={showProfile}
+          onClose={() => setShowProfile(false)}
+          title="Profile"
+          size="md"
+        >
+          <ProfileModal onClose={() => setShowProfile(false)} />
+        </Modal>
+      )}
     </div>
   );
 };

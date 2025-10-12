@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users, BookOpen, Building, FileText, Clock, Play, CheckCircle, XCircle, TrendingUp, Award, Target, Activity } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
@@ -74,14 +74,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   const [showDetailedReport, setShowDetailedReport] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [startingTest, setStartingTest] = useState(false);
+  const testModeDispatchedRef = useRef(false);
 
   // Notify parent when entering/exiting test mode
   useEffect(() => {
-    if (activeTest && testStartTime) {
+    if (activeTest && testStartTime && !testModeDispatchedRef.current) {
+      console.log('Dispatching testModeChanged: true');
       window.dispatchEvent(new CustomEvent('testModeChanged', { detail: { isTestMode: true } }));
+      testModeDispatchedRef.current = true;
       return () => {
+        console.log('Cleanup: Dispatching testModeChanged: false');
         window.dispatchEvent(new CustomEvent('testModeChanged', { detail: { isTestMode: false } }));
+        testModeDispatchedRef.current = false;
       };
+    } else if (!activeTest || !testStartTime) {
+      if (testModeDispatchedRef.current) {
+        console.log('No active test: Dispatching testModeChanged: false');
+        window.dispatchEvent(new CustomEvent('testModeChanged', { detail: { isTestMode: false } }));
+        testModeDispatchedRef.current = false;
+      }
     }
   }, [activeTest, testStartTime]);
 
