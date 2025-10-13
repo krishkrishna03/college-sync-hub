@@ -9,6 +9,7 @@ interface College {
   code: string;
   email: string;
   isActive: boolean;
+  isAssigned?: boolean;
 }
 
 interface TestAssignmentModalProps {
@@ -37,8 +38,26 @@ const TestAssignmentModal: React.FC<TestAssignmentModalProps> = ({
   const loadColleges = async () => {
     try {
       setLoading(true);
-      const data = await apiService.getColleges();
-      setColleges(data.filter((college: College) => college.isActive));
+      const [allColleges, assignedData] = await Promise.all([
+        apiService.getColleges(),
+        apiService.getTestAssignedColleges(testId)
+      ]);
+
+      const assignedCollegeIds = new Set(assignedData.map((c: any) => c.collegeId?._id || c.collegeId));
+
+      const collegesWithStatus = allColleges
+        .filter((college: College) => college.isActive)
+        .map((college: College) => ({
+          ...college,
+          isAssigned: assignedCollegeIds.has(college.id)
+        }));
+
+      setColleges(collegesWithStatus);
+
+      const alreadyAssigned = collegesWithStatus
+        .filter(c => c.isAssigned)
+        .map(c => c.id);
+      setSelectedColleges(alreadyAssigned);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load colleges');
     } finally {
@@ -141,8 +160,15 @@ const TestAssignmentModal: React.FC<TestAssignmentModalProps> = ({
                   />
                   <div className="ml-3 flex-1">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">{college.name}</h4>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-medium text-gray-900">{college.name}</h4>
+                          {college.isAssigned && (
+                            <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
+                              Assigned
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500">{college.email}</p>
                       </div>
                       <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">

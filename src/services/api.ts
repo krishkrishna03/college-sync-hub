@@ -196,13 +196,26 @@ class ApiService {
     });
   }
 
+  async getTestAssignedColleges(testId: string) {
+    return this.request(`/tests/${testId}/assigned-colleges`);
+  }
+
   async getAssignedTests(testType?: string, subject?: string) {
     const params = new URLSearchParams();
     if (testType) params.append('testType', testType);
     if (subject) params.append('subject', subject);
-    
+
     const queryString = params.toString();
     return this.request(`/tests/college/assigned${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getAllTestsForCollege(testType?: string, subject?: string) {
+    const params = new URLSearchParams();
+    if (testType) params.append('testType', testType);
+    if (subject) params.append('subject', subject);
+
+    const queryString = params.toString();
+    return this.request(`/tests/college/all-tests${queryString ? `?${queryString}` : ''}`);
   }
 
   async updateTestAssignmentStatus(assignmentId: string, status: 'accepted' | 'rejected') {

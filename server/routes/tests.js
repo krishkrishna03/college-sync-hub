@@ -380,6 +380,77 @@ router.post('/:id/assign-college', auth, authorize('master_admin'), [
   }
 });
 
+// Get colleges assigned to a specific test (Master Admin)
+router.get('/:id/assigned-colleges', auth, authorize('master_admin'), async (req, res) => {
+  try {
+    const testId = req.params.id;
+
+    const assignments = await TestAssignment.find({
+      testId: testId,
+      assignedTo: 'college',
+      isActive: true
+    })
+    .populate('collegeId', 'name code email')
+    .select('collegeId status assignedAt');
+
+    res.json(assignments);
+  } catch (error) {
+    console.error('Get test assigned colleges error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get all tests with assignment status for college (College Admin and Faculty)
+router.get('/college/all-tests', auth, authorize('college_admin', 'faculty'), async (req, res) => {
+  try {
+    const { testType, subject } = req.query;
+
+    let query = {};
+    if (testType && testType !== 'all') {
+      query.testType = testType;
+    }
+    if (subject && subject !== 'all') {
+      query.subject = subject;
+    }
+
+    const allTests = await Test.find(query).sort({ createdAt: -1 });
+
+    const assignments = await TestAssignment.find({
+      collegeId: req.user.collegeId,
+      assignedTo: 'college',
+      isActive: true
+    }).select('testId status assignedAt assignedBy').populate('assignedBy', 'name email');
+
+    const assignmentMap = new Map();
+    assignments.forEach(assignment => {
+      if (assignment.testId) {
+        assignmentMap.set(assignment.testId.toString(), {
+          status: assignment.status,
+          assignedAt: assignment.assignedAt,
+          assignedBy: assignment.assignedBy,
+          assignmentId: assignment._id
+        });
+      }
+    });
+
+    const testsWithStatus = allTests.map(test => {
+      const assignment = assignmentMap.get(test._id.toString());
+      return {
+        ...test.toObject(),
+        assignmentStatus: assignment ? assignment.status : 'not_assigned',
+        assignedAt: assignment ? assignment.assignedAt : null,
+        assignedBy: assignment ? assignment.assignedBy : null,
+        assignmentId: assignment ? assignment.assignmentId : null
+      };
+    });
+
+    res.json(testsWithStatus);
+  } catch (error) {
+    console.error('Get all tests for college error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Get assigned tests for college (College Admin and Faculty)
 router.get('/college/assigned', auth, authorize('college_admin', 'faculty'), async (req, res) => {
   try {

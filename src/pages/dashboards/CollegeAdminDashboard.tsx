@@ -60,6 +60,27 @@ interface TestAssignment {
   assignedAt: string;
 }
 
+interface TestWithStatus {
+  _id: string;
+  testName: string;
+  testDescription: string;
+  subject: string;
+  testType?: string;
+  difficulty?: string;
+  numberOfQuestions: number;
+  totalMarks: number;
+  duration: number;
+  startDateTime: string;
+  endDateTime: string;
+  assignmentStatus: 'pending' | 'accepted' | 'rejected' | 'not_assigned';
+  assignedAt?: string;
+  assignedBy?: {
+    name: string;
+    email: string;
+  };
+  assignmentId?: string;
+}
+
 interface CollegeAdminDashboardProps {
   activeTab: string;
 }
@@ -69,6 +90,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [faculty, setFaculty] = useState<User[]>([]);
   const [students, setStudents] = useState<User[]>([]);
   const [assignedTests, setAssignedTests] = useState<TestAssignment[]>([]);
+  const [allTests, setAllTests] = useState<TestWithStatus[]>([]);
   const [activeTestType, setActiveTestType] = useState('Assessment');
   const [activeSubject, setActiveSubject] = useState('all');
   const [dropdownCounts, setDropdownCounts] = useState<any>(null);
@@ -78,6 +100,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
   const [showStudentAssignment, setShowStudentAssignment] = useState(false);
   const [showNotificationForm, setShowNotificationForm] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<TestAssignment | null>(null);
+  const [selectedTest, setSelectedTest] = useState<TestWithStatus | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
   const [defaultRole, setDefaultRole] = useState<'faculty' | 'student'>('student');
@@ -152,61 +175,60 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
       const typeFilter = testType !== undefined ? testType : activeTestType;
       const subjectFilter = subject !== undefined ? subject : activeSubject;
 
-      const data = await apiService.getAssignedTests(
+      const data = await apiService.getAllTestsForCollege(
         typeFilter === 'all' ? undefined : typeFilter,
         subjectFilter === 'all' ? undefined : subjectFilter
       );
-      setAssignedTests(data);
+      setAllTests(data);
 
       // Calculate counts for dropdown
-      const allTests = await apiService.getAssignedTests();
+      const allTestsData = await apiService.getAllTestsForCollege();
       const dropdownCounts = {
-        assessment: allTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment').length,
-        practice: allTests.filter((t: any) => t.testId && t.testId.testType === 'Practice').length,
-        mockTest: allTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test').length,
-        company: allTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test').length
+        assessment: allTestsData.filter((t: any) => t.testType === 'Assessment').length,
+        practice: allTestsData.filter((t: any) => t.testType === 'Practice').length,
+        mockTest: allTestsData.filter((t: any) => t.testType === 'Mock Test').length,
+        company: allTestsData.filter((t: any) => t.testType === 'Specific Company Test').length
       };
       setDropdownCounts(dropdownCounts);
 
       // Calculate categorized counts for CategorizedTestTabs
-      const acceptedTests = allTests.filter((t: any) => t.status === 'accepted');
       const categorizedCounts = {
         assessment: {
-          all: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment').length,
-          Verbal: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Verbal').length,
-          Reasoning: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Reasoning').length,
-          Technical: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Technical').length,
-          Arithmetic: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Arithmetic').length,
-          Communication: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Assessment' && t.testId.subject === 'Communication').length
+          all: allTestsData.filter((t: any) => t.testType === 'Assessment').length,
+          Verbal: allTestsData.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Verbal').length,
+          Reasoning: allTestsData.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Reasoning').length,
+          Technical: allTestsData.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Technical').length,
+          Arithmetic: allTestsData.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Arithmetic').length,
+          Communication: allTestsData.filter((t: any) => t.testType === 'Assessment' && t.subject === 'Communication').length
         },
         practice: {
-          all: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice').length,
-          Verbal: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Verbal').length,
-          Reasoning: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Reasoning').length,
-          Technical: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Technical').length,
-          Arithmetic: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Arithmetic').length,
-          Communication: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Practice' && t.testId.subject === 'Communication').length
+          all: allTestsData.filter((t: any) => t.testType === 'Practice').length,
+          Verbal: allTestsData.filter((t: any) => t.testType === 'Practice' && t.subject === 'Verbal').length,
+          Reasoning: allTestsData.filter((t: any) => t.testType === 'Practice' && t.subject === 'Reasoning').length,
+          Technical: allTestsData.filter((t: any) => t.testType === 'Practice' && t.subject === 'Technical').length,
+          Arithmetic: allTestsData.filter((t: any) => t.testType === 'Practice' && t.subject === 'Arithmetic').length,
+          Communication: allTestsData.filter((t: any) => t.testType === 'Practice' && t.subject === 'Communication').length
         },
         mockTest: {
-          all: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test').length,
-          Verbal: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Verbal').length,
-          Reasoning: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Reasoning').length,
-          Technical: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Technical').length,
-          Arithmetic: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Arithmetic').length,
-          Communication: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Mock Test' && t.testId.subject === 'Communication').length
+          all: allTestsData.filter((t: any) => t.testType === 'Mock Test').length,
+          Verbal: allTestsData.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Verbal').length,
+          Reasoning: allTestsData.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Reasoning').length,
+          Technical: allTestsData.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Technical').length,
+          Arithmetic: allTestsData.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Arithmetic').length,
+          Communication: allTestsData.filter((t: any) => t.testType === 'Mock Test' && t.subject === 'Communication').length
         },
         company: {
-          all: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test').length,
-          Verbal: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Verbal').length,
-          Reasoning: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Reasoning').length,
-          Technical: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Technical').length,
-          Arithmetic: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Arithmetic').length,
-          Communication: acceptedTests.filter((t: any) => t.testId && t.testId.testType === 'Specific Company Test' && t.testId.subject === 'Communication').length
+          all: allTestsData.filter((t: any) => t.testType === 'Specific Company Test').length,
+          Verbal: allTestsData.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Verbal').length,
+          Reasoning: allTestsData.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Reasoning').length,
+          Technical: allTestsData.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Technical').length,
+          Arithmetic: allTestsData.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Arithmetic').length,
+          Communication: allTestsData.filter((t: any) => t.testType === 'Specific Company Test' && t.subject === 'Communication').length
         }
       };
       setCategorizedCounts(categorizedCounts);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load assigned tests');
+      setError(error instanceof Error ? error.message : 'Failed to load tests');
     } finally {
       setLoading(false);
     }
@@ -434,90 +456,93 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
         />
 
         <div className="grid gap-6">
-          {Array.isArray(assignedTests) && assignedTests.length > 0 ? assignedTests.map((assignment) => (
-            <div key={assignment._id} className="bg-white rounded-lg shadow p-6">
+          {Array.isArray(allTests) && allTests.length > 0 ? allTests.map((test) => (
+            <div key={test._id} className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {assignment.testId.testName}
+                      {test.testName}
                     </h3>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      assignment.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                      assignment.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
+                      test.assignmentStatus === 'accepted' ? 'bg-green-100 text-green-800' :
+                      test.assignmentStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                      test.assignmentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
                     }`}>
-                      {assignment.status}
+                      {test.assignmentStatus === 'not_assigned' ? 'Not Assigned' : test.assignmentStatus}
                     </span>
-                    {assignment.testId.testType && (
+                    {test.testType && (
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {assignment.testId.testType}
+                        {test.testType}
                       </span>
                     )}
-                    {assignment.testId.difficulty && (
+                    {test.difficulty && (
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        assignment.testId.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
-                        assignment.testId.difficulty === 'Hard' ? 'bg-red-100 text-red-800' :
+                        test.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
+                        test.difficulty === 'Hard' ? 'bg-red-100 text-red-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {assignment.testId.difficulty}
+                        {test.difficulty}
                       </span>
                     )}
                   </div>
-                  <p className="text-gray-600 text-sm mb-2">{assignment.testId.testDescription}</p>
-                  <p className="text-sm text-gray-500">
-                    Assigned by: {assignment.assignedBy.name} on {formatDate(assignment.assignedAt)}
-                  </p>
+                  <p className="text-gray-600 text-sm mb-2">{test.testDescription}</p>
+                  {test.assignedBy && test.assignedAt && (
+                    <p className="text-sm text-gray-500">
+                      Assigned by: {test.assignedBy.name} on {formatDate(test.assignedAt)}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="text-center p-2 bg-gray-50 border rounded">
                   <p className="text-xs text-gray-600">Subject</p>
-                  <p className="font-semibold">{assignment.testId.subject}</p>
+                  <p className="font-semibold">{test.subject}</p>
                 </div>
                 <div className="text-center p-2 bg-gray-50 border rounded">
                   <p className="text-xs text-gray-600">Questions</p>
-                  <p className="font-semibold">{assignment.testId.numberOfQuestions}</p>
+                  <p className="font-semibold">{test.numberOfQuestions}</p>
                 </div>
                 <div className="text-center p-2 bg-gray-50 border rounded">
                   <p className="text-xs text-gray-600">Duration</p>
-                  <p className="font-semibold">{assignment.testId.duration} min</p>
+                  <p className="font-semibold">{test.duration} min</p>
                 </div>
                 <div className="text-center p-2 bg-gray-50 border rounded">
                   <p className="text-xs text-gray-600">Total Marks</p>
-                  <p className="font-semibold">{assignment.testId.totalMarks}</p>
+                  <p className="font-semibold">{test.totalMarks}</p>
                 </div>
               </div>
 
               <div className="border-t pt-4">
                 <div className="text-sm text-gray-600 mb-3">
-                  <p><strong>Start:</strong> {new Date(assignment.testId.startDateTime).toLocaleString()}</p>
-                  <p><strong>End:</strong> {new Date(assignment.testId.endDateTime).toLocaleString()}</p>
+                  <p><strong>Start:</strong> {new Date(test.startDateTime).toLocaleString()}</p>
+                  <p><strong>End:</strong> {new Date(test.endDateTime).toLocaleString()}</p>
                 </div>
 
                 <div className="flex gap-2">
-                  {assignment.status === 'pending' && (
+                  {test.assignmentStatus === 'pending' && test.assignmentId && (
                     <>
                       <button
-                        onClick={() => handleTestAssignmentStatus(assignment._id, 'accepted', assignment.testId.testType)}
+                        onClick={() => handleTestAssignmentStatus(test.assignmentId!, 'accepted', test.testType)}
                         className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 text-sm"
                       >
                         Accept
                       </button>
                       <button
-                        onClick={() => handleTestAssignmentStatus(assignment._id, 'rejected')}
+                        onClick={() => handleTestAssignmentStatus(test.assignmentId!, 'rejected')}
                         className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 text-sm"
                       >
                         Reject
                       </button>
                     </>
                   )}
-                  {assignment.status === 'accepted' && (
+                  {test.assignmentStatus === 'accepted' && (
                     <>
                       <button
                         onClick={() => {
-                          setSelectedAssignment(assignment);
+                          setSelectedTest(test);
                           setShowStudentAssignment(true);
                         }}
                         className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
@@ -527,7 +552,7 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                       </button>
                       <button
                         onClick={() => {
-                          setSelectedTestId(assignment.testId._id);
+                          setSelectedTestId(test._id);
                           setShowTestReport(true);
                         }}
                         className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
@@ -537,38 +562,41 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
                       </button>
                     </>
                   )}
+                  {test.assignmentStatus === 'not_assigned' && (
+                    <p className="text-sm text-gray-500 italic py-2">This test has not been assigned to your college yet</p>
+                  )}
                 </div>
               </div>
             </div>
           )) : null}
         </div>
 
-        {(!Array.isArray(assignedTests) || assignedTests.length === 0) && !loading && (
+        {(!Array.isArray(allTests) || allTests.length === 0) && !loading && (
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tests assigned yet</h3>
-            <p className="text-gray-600">Tests assigned by Master Admin will appear here</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No tests found</h3>
+            <p className="text-gray-600">Tests created by Master Admin will appear here</p>
           </div>
         )}
 
         {/* Student Assignment Modal */}
-        {selectedAssignment && (
+        {selectedTest && (
           <Modal
             isOpen={showStudentAssignment}
             onClose={() => {
               setShowStudentAssignment(false);
-              setSelectedAssignment(null);
+              setSelectedTest(null);
             }}
             title="Assign Test to Students"
             size="lg"
           >
             <StudentAssignmentForm
-              assignment={selectedAssignment}
+              test={selectedTest}
               students={students}
               onAssign={handleAssignToStudents}
               onClose={() => {
                 setShowStudentAssignment(false);
-                setSelectedAssignment(null);
+                setSelectedTest(null);
               }}
             />
           </Modal>
@@ -1021,14 +1049,14 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
 
 // Student Assignment Form Component
 interface StudentAssignmentFormProps {
-  assignment: TestAssignment;
+  test: TestWithStatus;
   students: User[];
   onAssign: (assignmentId: string, filters: any) => Promise<void>;
   onClose: () => void;
 }
 
 const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
-  assignment,
+  test,
   students,
   onAssign,
   onClose
@@ -1096,9 +1124,14 @@ const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
       return;
     }
 
+    if (!test.assignmentId) {
+      alert('Assignment ID not found');
+      return;
+    }
+
     try {
       setAssigning(true);
-      await onAssign(assignment._id, {
+      await onAssign(test.assignmentId, {
         branches: selectedBranch ? [selectedBranch] : [],
         batches: selectedBatch ? [selectedBatch] : [],
         sections: selectedSection ? [selectedSection] : [],
@@ -1137,7 +1170,7 @@ const StudentAssignmentForm: React.FC<StudentAssignmentFormProps> = ({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Assign Test: {assignment.testId.testName}
+          Assign Test: {test.testName}
         </h3>
         <p className="text-sm text-gray-600">
           Select filters and then choose specific students to assign the test
