@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertCircle, CheckCircle, Send, XCircle } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Send, XCircle, RefreshCw, Award } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
 
 interface Question {
@@ -11,6 +11,7 @@ interface Question {
     C: string;
     D: string;
   };
+  correctAnswer?: 'A' | 'B' | 'C' | 'D';
   marks: number;
 }
 
@@ -46,12 +47,17 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [showInstantFeedback, setShowInstantFeedback] = useState(false);
   const [currentFeedback, setCurrentFeedback] = useState<any>(null);
+  const [questionAttempts, setQuestionAttempts] = useState<{ [questionId: string]: number }>({});
+  const [isPracticeMode, setIsPracticeMode] = useState(test.testType === 'Practice');
 
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          handleAutoSubmit();
+          // Don't auto-submit practice tests
+          if (!isPracticeMode) {
+            handleAutoSubmit();
+          }
           return 0;
         }
         return prev - 1;
@@ -59,7 +65,7 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isPracticeMode]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -74,27 +80,56 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
-    
+
+    // Track attempts for practice mode
+    if (isPracticeMode) {
+      setQuestionAttempts(prev => ({
+        ...prev,
+        [questionId]: (prev[questionId] || 0) + 1
+      }));
+    }
+
     // For Practice tests, show instant feedback
-    if (test.testType === 'Practice') {
+    if (isPracticeMode) {
       const question = test.questions.find(q => q._id === questionId);
-      if (question) {
+      if (question && question.correctAnswer) {
         const isCorrect = question.correctAnswer === answer;
+        const attempts = (questionAttempts[questionId] || 0) + 1;
+
         setCurrentFeedback({
           questionId,
           selectedAnswer: answer,
           correctAnswer: question.correctAnswer,
           isCorrect,
-          explanation: `The correct answer is ${question.correctAnswer}: ${question.options[question.correctAnswer]}`
+          attempts,
+          explanation: isCorrect
+            ? `Excellent! You got it ${attempts === 1 ? 'on the first try' : `after ${attempts} attempt(s)`}!`
+            : `Not quite right. The correct answer is ${question.correctAnswer}. ${question.options[question.correctAnswer]}`,
+          detailedExplanation: generateExplanation(question, answer)
         });
         setShowInstantFeedback(true);
-        
-        // Auto-hide feedback after 3 seconds
-        setTimeout(() => {
-          setShowInstantFeedback(false);
-        }, 3000);
       }
     }
+  };
+
+  const generateExplanation = (question: Question, selectedAnswer: string) => {
+    if (!question.correctAnswer) return '';
+
+    const correctOption = question.options[question.correctAnswer];
+    const selectedOption = question.options[selectedAnswer as keyof typeof question.options];
+
+    return `You selected: ${selectedAnswer}) ${selectedOption}\n\nCorrect Answer: ${question.correctAnswer}) ${correctOption}`;
+  };
+
+  const handleRetryQuestion = () => {
+    const currentQ = test.questions[currentQuestion];
+    setAnswers(prev => {
+      const newAnswers = { ...prev };
+      delete newAnswers[currentQ._id];
+      return newAnswers;
+    });
+    setShowInstantFeedback(false);
+    setCurrentFeedback(null);
   };
 
   const getAnsweredCount = () => {
@@ -165,10 +200,17 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
             </div>
             
             <div className="flex items-center gap-4">
-              <div className={`flex items-center gap-2 ${getTimeColor()}`}>
-                <Clock size={20} />
-                <span className="font-mono text-lg font-bold">{formatTime(timeLeft)}</span>
-              </div>
+              {!isPracticeMode ? (
+                <div className={`flex items-center gap-2 ${getTimeColor()}`}>
+                  <Clock size={20} />
+                  <span className="font-mono text-lg font-bold">{formatTime(timeLeft)}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-blue-600">
+                  <Award size={20} />
+                  <span className="text-sm font-medium">Practice Mode</span>
+                </div>
+              )}
               
               <div className="text-sm text-gray-600">
                 {getAnsweredCount()}/{test.numberOfQuestions} answered
@@ -226,10 +268,18 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 </div>
               </div>
               
-              {test.testType === 'Practice' && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-blue-800 font-medium">Practice Mode</p>
-                  <p className="text-xs text-blue-600">Get instant feedback after each answer!</p>
+              {isPracticeMode && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="w-4 h-4 text-blue-600" />
+                    <p className="text-xs text-blue-800 font-bold">Practice Mode</p>
+                  </div>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• Instant feedback on answers</li>
+                    <li>• Retry wrong answers</li>
+                    <li>• Detailed explanations</li>
+                    <li>• No time pressure</li>
+                  </ul>
                 </div>
               )}
             </div>
@@ -288,29 +338,72 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
               </div>
 
               {/* Instant Feedback for Practice Tests */}
-              {test.testType === 'Practice' && showInstantFeedback && currentFeedback && (
-                <div className={`mb-6 p-4 rounded-lg border-l-4 ${
-                  currentFeedback.isCorrect 
-                    ? 'bg-green-50 border-green-400' 
-                    : 'bg-red-50 border-red-400'
+              {isPracticeMode && showInstantFeedback && currentFeedback && currentFeedback.questionId === currentQ._id && (
+                <div className={`mb-6 p-5 rounded-xl border-2 shadow-lg ${
+                  currentFeedback.isCorrect
+                    ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-400'
+                    : 'bg-gradient-to-br from-red-50 to-red-100 border-red-400'
                 }`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    {currentFeedback.isCorrect ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-600" />
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {currentFeedback.isCorrect ? (
+                        <div className="bg-green-500 rounded-full p-2">
+                          <CheckCircle className="w-6 h-6 text-white" />
+                        </div>
+                      ) : (
+                        <div className="bg-red-500 rounded-full p-2">
+                          <XCircle className="w-6 h-6 text-white" />
+                        </div>
+                      )}
+                      <div>
+                        <span className={`font-bold text-lg ${
+                          currentFeedback.isCorrect ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                          {currentFeedback.isCorrect ? 'Correct!' : 'Incorrect'}
+                        </span>
+                        {currentFeedback.attempts > 1 && (
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            Attempt {currentFeedback.attempts}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {!currentFeedback.isCorrect && (
+                      <button
+                        onClick={handleRetryQuestion}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white border-2 border-red-300 text-red-700 rounded-lg hover:bg-red-50 font-medium text-sm transition-colors"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Retry
+                      </button>
                     )}
-                    <span className={`font-medium ${
+                  </div>
+
+                  <div className={`mb-3 p-3 rounded-lg ${
+                    currentFeedback.isCorrect ? 'bg-white/70' : 'bg-white/70'
+                  }`}>
+                    <p className={`font-medium mb-1 ${
                       currentFeedback.isCorrect ? 'text-green-800' : 'text-red-800'
                     }`}>
-                      {currentFeedback.isCorrect ? 'Correct!' : 'Incorrect'}
-                    </span>
+                      {currentFeedback.explanation}
+                    </p>
                   </div>
-                  <p className={`text-sm ${
-                    currentFeedback.isCorrect ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {currentFeedback.explanation}
-                  </p>
+
+                  {currentFeedback.detailedExplanation && (
+                    <div className="mt-3 p-3 bg-white/90 rounded-lg border border-gray-200">
+                      <p className="text-sm font-medium text-gray-700 mb-1">Explanation:</p>
+                      <p className="text-sm text-gray-600 whitespace-pre-line">
+                        {currentFeedback.detailedExplanation}
+                      </p>
+                    </div>
+                  )}
+
+                  {currentFeedback.isCorrect && currentFeedback.attempts === 1 && (
+                    <div className="mt-3 flex items-center gap-2 p-2 bg-yellow-100 rounded-lg">
+                      <Award className="w-4 h-4 text-yellow-600" />
+                      <span className="text-xs font-medium text-yellow-800">Perfect! First try!</span>
+                    </div>
+                  )}
                 </div>
               )}
               {/* Navigation Buttons */}
@@ -370,6 +463,11 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 {test.testType && (
                   <p className="text-sm">
                     <strong>Test Type:</strong> {test.testType}
+                  </p>
+                )}
+                {isPracticeMode && (
+                  <p className="text-sm text-blue-600 font-medium">
+                    Note: This is a practice test with instant feedback and retry options.
                   </p>
                 )}
               </div>
