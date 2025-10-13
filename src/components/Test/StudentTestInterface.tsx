@@ -49,6 +49,8 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
   const [currentFeedback, setCurrentFeedback] = useState<any>(null);
   const [questionAttempts, setQuestionAttempts] = useState<{ [questionId: string]: number }>({});
   const [isPracticeMode, setIsPracticeMode] = useState(test.testType === 'Practice');
+  const [hasAnsweredCurrent, setHasAnsweredCurrent] = useState(false);
+  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -108,6 +110,8 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
           detailedExplanation: generateExplanation(question, answer)
         });
         setShowInstantFeedback(true);
+        setHasAnsweredCurrent(true);
+        setIsAnswerRevealed(true);
       }
     }
   };
@@ -130,6 +134,8 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
     });
     setShowInstantFeedback(false);
     setCurrentFeedback(null);
+    setHasAnsweredCurrent(false);
+    setIsAnswerRevealed(false);
   };
 
   const getAnsweredCount = () => {
@@ -179,9 +185,23 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
   };
 
   const handleNextQuestion = () => {
+    // In practice mode, must reveal answer before proceeding
+    if (isPracticeMode && !isAnswerRevealed && answers[currentQ._id]) {
+      alert('Please review the correct answer before proceeding to the next question.');
+      return;
+    }
+
     if (currentQuestion < test.numberOfQuestions - 1) {
       setCurrentQuestion(currentQuestion + 1);
       setShowInstantFeedback(false);
+      setHasAnsweredCurrent(false);
+      setIsAnswerRevealed(false);
+
+      // Check if the next question has already been answered
+      const nextQ = test.questions[currentQuestion + 1];
+      if (isPracticeMode && answers[nextQ._id]) {
+        setHasAnsweredCurrent(true);
+      }
     }
   };
   const currentQ = test.questions[currentQuestion];
@@ -239,7 +259,17 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 {test.questions.map((_, index) => (
                   <button
                     key={index}
-                    onClick={() => setCurrentQuestion(index)}
+                    onClick={() => {
+                      // In practice mode, check if current question needs answer review
+                      if (isPracticeMode && currentQuestion !== index && !isAnswerRevealed && answers[currentQ._id]) {
+                        alert('Please review the correct answer before navigating to another question.');
+                        return;
+                      }
+                      setCurrentQuestion(index);
+                      setShowInstantFeedback(false);
+                      setHasAnsweredCurrent(!!answers[test.questions[index]._id]);
+                      setIsAnswerRevealed(false);
+                    }}
                     className={`w-8 h-8 rounded text-sm font-medium ${
                       currentQuestion === index
                         ? 'bg-blue-600 text-white'
@@ -404,12 +434,43 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                       <span className="text-xs font-medium text-yellow-800">Perfect! First try!</span>
                     </div>
                   )}
+
+                  {/* Continue Button for Practice Mode */}
+                  {currentFeedback.isCorrect && (
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        onClick={() => {
+                          setIsAnswerRevealed(true);
+                          if (currentQuestion < test.numberOfQuestions - 1) {
+                            setTimeout(() => handleNextQuestion(), 300);
+                          }
+                        }}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+                      >
+                        {currentQuestion < test.numberOfQuestions - 1 ? 'Continue to Next' : 'Finish Practice'}
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {/* Navigation Buttons */}
               <div className="flex justify-between">
                 <button
-                  onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+                  onClick={() => {
+                    // In practice mode, check if current question needs answer review
+                    if (isPracticeMode && !isAnswerRevealed && answers[currentQ._id]) {
+                      alert('Please review the correct answer before navigating away.');
+                      return;
+                    }
+                    if (currentQuestion > 0) {
+                      const prevIndex = currentQuestion - 1;
+                      setCurrentQuestion(prevIndex);
+                      setShowInstantFeedback(false);
+                      setHasAnsweredCurrent(!!answers[test.questions[prevIndex]._id]);
+                      setIsAnswerRevealed(false);
+                    }
+                  }}
                   disabled={currentQuestion === 0}
                   className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -420,9 +481,11 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                   {currentQuestion < test.numberOfQuestions - 1 ? (
                     <button
                       onClick={handleNextQuestion}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      disabled={isPracticeMode && !isAnswerRevealed && answers[currentQ._id]}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={isPracticeMode && !isAnswerRevealed && answers[currentQ._id] ? 'Review the correct answer first' : ''}
                     >
-                      Next
+                      {isPracticeMode && !isAnswerRevealed && answers[currentQ._id] ? 'Review Answer First' : 'Next'}
                     </button>
                   ) : (
                     <button
