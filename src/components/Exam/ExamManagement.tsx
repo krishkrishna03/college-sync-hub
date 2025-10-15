@@ -476,7 +476,7 @@ const ExamManagement: React.FC<ExamManagementProps> = ({ userRole }) => {
         title="Create New Test"
         size="xl"
       >
-        <TestForm onSubmit={handleCreateTest} loading={formLoading} />
+        <TestFormWithSections onSubmit={handleCreateTest} loading={formLoading} />
       </Modal>
 
       <Modal
