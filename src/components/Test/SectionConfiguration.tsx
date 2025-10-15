@@ -287,8 +287,25 @@ const SectionConfiguration: React.FC<SectionConfigurationProps> = ({
       </div>
 
       {sections.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <p>No sections added yet. Click "Add Section" to create sections for your test.</p>
+        <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <Plus className="w-8 h-8 text-blue-600" />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">No Sections Created Yet</h4>
+              <p className="text-gray-600 mb-4">Click "Add Section" to create your first section</p>
+              <p className="text-sm text-gray-500">Each section can have its own name, duration, number of questions, and marks</p>
+            </div>
+            <button
+              type="button"
+              onClick={addSection}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
+            >
+              <Plus size={20} />
+              Create First Section
+            </button>
+          </div>
         </div>
       )}
     </div>

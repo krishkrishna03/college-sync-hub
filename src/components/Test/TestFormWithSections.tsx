@@ -126,6 +126,18 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     }));
   };
 
+  const handleTestTypeChange = (newTestType: any) => {
+    const requiresSections = ['Assessment', 'Mock Test', 'Specific Company Test'].includes(newTestType);
+    setFormData(prev => ({
+      ...prev,
+      testType: newTestType,
+      topics: [],
+      hasSections: requiresSections,
+      sections: requiresSections ? (prev.sections?.length ? prev.sections : []) : [],
+      questions: requiresSections ? [] : prev.questions
+    }));
+  };
+
   const handleSectionsChange = (sections: Section[]) => {
     setFormData(prev => ({
       ...prev,
@@ -319,13 +331,7 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
             <label className="block text-sm font-medium text-gray-700 mb-2">Test Type</label>
             <select
               value={formData.testType}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                testType: e.target.value as any,
-                topics: [],
-                hasSections: false,
-                sections: []
-              }))}
+              onChange={(e) => handleTestTypeChange(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               {testTypes.map(type => (
@@ -411,85 +417,18 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
       </div>
 
       {shouldShowSectionOption(formData.testType) && (
-        <div className="bg-white p-6 rounded-lg border">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-medium">Test Structure</h3>
-              <p className="text-sm text-gray-500">This test type supports multiple sections for comprehensive assessment</p>
-            </div>
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.hasSections}
-                onChange={(e) => handleSectionToggle(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-700">Enable Multiple Sections</span>
-            </label>
+        <div className="bg-white p-6 rounded-lg border border-blue-300 bg-blue-50">
+          <div className="mb-4">
+            <h3 className="text-lg font-medium text-blue-900">Multi-Section Test Configuration</h3>
+            <p className="text-sm text-blue-700">This test type requires multiple sections. Configure each section with its own duration, questions, and marks.</p>
           </div>
 
-          {formData.hasSections ? (
-            <>
-              <SectionConfiguration
-                sections={formData.sections || []}
-                onSectionsChange={handleSectionsChange}
-                onAddQuestions={handleAddQuestionsToSection}
-              />
-              {errors.sections && <p className="mt-2 text-sm text-red-600">{errors.sections}</p>}
-            </>
-          ) : (
-            <div>
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Tip:</strong> Enable multiple sections to create comprehensive tests with different topics, each having its own time limit and marking scheme.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Hash className="inline w-4 h-4 mr-1" />
-                    Number of Questions
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={formData.numberOfQuestions}
-                    onChange={(e) => setFormData(prev => ({ ...prev, numberOfQuestions: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                  {errors.numberOfQuestions && <p className="mt-1 text-sm text-red-600">{errors.numberOfQuestions}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Marks per Question</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={formData.marksPerQuestion}
-                    onChange={(e) => setFormData(prev => ({ ...prev, marksPerQuestion: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Clock className="inline w-4 h-4 mr-1" />
-                    Duration (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="300"
-                    value={formData.duration}
-                    onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          <SectionConfiguration
+            sections={formData.sections || []}
+            onSectionsChange={handleSectionsChange}
+            onAddQuestions={handleAddQuestionsToSection}
+          />
+          {errors.sections && <p className="mt-2 text-sm text-red-600">{errors.sections}</p>}
         </div>
       )}
 
