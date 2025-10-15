@@ -61,8 +61,9 @@ const testSchema = new mongoose.Schema({
   },
   subject: {
     type: String,
-    required: true,
-    enum: ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']
+    required: false,
+    enum: ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'],
+    default: null
   },
   testType: {
     type: String,

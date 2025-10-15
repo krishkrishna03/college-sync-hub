@@ -48,7 +48,7 @@ const fileUpload = multer({
 router.post('/', auth, authorize('master_admin'), [
   body('testName').trim().isLength({ min: 3 }).withMessage('Test name must be at least 3 characters'),
   body('testDescription').trim().isLength({ min: 10 }).withMessage('Test description must be at least 10 characters'),
-  body('subject').isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']).withMessage('Invalid subject'),
+  body('subject').optional().isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']).withMessage('Invalid subject'),
   body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test']).withMessage('Invalid test type'),
   body('topics').optional().isArray().withMessage('Topics must be an array'),
   body('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']).withMessage('Invalid difficulty'),

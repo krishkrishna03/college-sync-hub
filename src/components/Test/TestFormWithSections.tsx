@@ -131,6 +131,7 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     setFormData(prev => ({
       ...prev,
       testType: newTestType,
+      subject: newTestType === 'Practice' ? prev.subject : 'Technical',
       topics: [],
       hasSections: requiresSections,
       sections: requiresSections ? (prev.sections?.length ? prev.sections : []) : [],
@@ -315,19 +316,6 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-            <select
-              value={formData.subject}
-              onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value as any }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              {subjects.map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Test Type</label>
             <select
               value={formData.testType}
@@ -339,6 +327,21 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
               ))}
             </select>
           </div>
+
+          {formData.testType === 'Practice' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+              <select
+                value={formData.subject}
+                onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value as any }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                {subjects.map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {formData.testType === 'Specific Company Test' && (
             <div>
