@@ -3,7 +3,7 @@ import { FileText, BookOpen, GraduationCap, Calculator, MessageSquare, Brain, Bu
 import apiService from '../../services/api';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import Modal from '../UI/Modal';
-import TestForm from '../Test/TestForm';
+import TestFormWithSections from '../Test/TestFormWithSections';
 import TestAssignmentModal from '../Test/TestAssignmentModal';
 
 interface ExamManagementProps {
@@ -266,7 +266,7 @@ const ExamManagement: React.FC<ExamManagementProps> = ({ userRole }) => {
           title="Create New Test"
           size="xl"
         >
-          <TestForm onSubmit={handleCreateTest} loading={formLoading} />
+          <TestFormWithSections onSubmit={handleCreateTest} loading={formLoading} />
         </Modal>
       </div>
     );
@@ -489,8 +489,8 @@ const ExamManagement: React.FC<ExamManagementProps> = ({ userRole }) => {
         size="xl"
       >
         {selectedTest && (
-          <TestForm 
-            onSubmit={handleEditTest} 
+          <TestFormWithSections
+            onSubmit={handleEditTest}
             loading={formLoading}
             initialData={selectedTest}
           />

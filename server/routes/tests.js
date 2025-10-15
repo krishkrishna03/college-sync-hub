@@ -52,12 +52,14 @@ router.post('/', auth, authorize('master_admin'), [
   body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test']).withMessage('Invalid test type'),
   body('topics').optional().isArray().withMessage('Topics must be an array'),
   body('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']).withMessage('Invalid difficulty'),
-  body('numberOfQuestions').isInt({ min: 1, max: 100 }).withMessage('Number of questions must be between 1 and 100'),
-  body('marksPerQuestion').isInt({ min: 1, max: 10 }).withMessage('Marks per question must be between 1 and 10'),
-  body('duration').isInt({ min: 5, max: 300 }).withMessage('Duration must be between 5 and 300 minutes'),
+  body('hasSections').optional().isBoolean().withMessage('hasSections must be a boolean'),
+  body('sections').optional().isArray().withMessage('Sections must be an array'),
+  body('numberOfQuestions').optional().isInt({ min: 1, max: 100 }).withMessage('Number of questions must be between 1 and 100'),
+  body('marksPerQuestion').optional().isInt({ min: 1, max: 10 }).withMessage('Marks per question must be between 1 and 10'),
+  body('duration').optional().isInt({ min: 5, max: 300 }).withMessage('Duration must be between 5 and 300 minutes'),
   body('startDateTime').isISO8601().withMessage('Invalid start date format'),
   body('endDateTime').isISO8601().withMessage('Invalid end date format'),
-  body('questions').isArray({ min: 1 }).withMessage('At least one question is required')
+  body('questions').optional().isArray().withMessage('Questions must be an array')
 ], async (req, res) => {
   try {
     console.log('Received test creation request');
@@ -82,6 +84,8 @@ router.post('/', auth, authorize('master_admin'), [
       companyName,
       topics = [],
       difficulty = 'Medium',
+      hasSections = false,
+      sections = [],
       numberOfQuestions,
       marksPerQuestion,
       duration,
@@ -97,40 +101,92 @@ router.post('/', auth, authorize('master_admin'), [
       });
     }
 
-    // Validate questions
-    if (questions.length !== numberOfQuestions) {
-      console.log('Question count mismatch:', questions.length, 'vs', numberOfQuestions);
-      return res.status(400).json({ 
-        error: `Number of questions (${questions.length}) must match the specified count (${numberOfQuestions})` 
-      });
-    }
-
-    // Validate each question
-    for (let i = 0; i < questions.length; i++) {
-      const question = questions[i];
-      if (!question.questionText || !question.options || !question.correctAnswer) {
-        console.log('Question validation failed at index:', i, question);
-        return res.status(400).json({ 
-          error: `Question ${i + 1} is incomplete` 
-        });
-      }
-      
-      if (!question.options.A || !question.options.B || !question.options.C || !question.options.D) {
-        console.log('Question options validation failed at index:', i, question.options);
-        return res.status(400).json({ 
-          error: `Question ${i + 1} must have all four options (A, B, C, D)` 
-        });
-      }
-      
-      if (!['A', 'B', 'C', 'D'].includes(question.correctAnswer)) {
-        console.log('Correct answer validation failed at index:', i, question.correctAnswer);
-        return res.status(400).json({ 
-          error: `Question ${i + 1} must have a valid correct answer (A, B, C, or D)` 
+    // Validate based on test structure
+    if (hasSections) {
+      // Validate sections
+      if (!sections || sections.length === 0) {
+        return res.status(400).json({
+          error: 'At least one section is required when sections are enabled'
         });
       }
 
-      // Add marks to each question
-      question.marks = marksPerQuestion;
+      // Validate each section and its questions
+      for (let i = 0; i < sections.length; i++) {
+        const section = sections[i];
+
+        if (!section.sectionName || !section.sectionName.trim()) {
+          return res.status(400).json({
+            error: `Section ${i + 1} must have a name`
+          });
+        }
+
+        if (!section.questions || section.questions.length !== section.numberOfQuestions) {
+          return res.status(400).json({
+            error: `Section "${section.sectionName}" has ${section.questions?.length || 0} questions but expects ${section.numberOfQuestions}`
+          });
+        }
+
+        // Validate each question in the section
+        for (let j = 0; j < section.questions.length; j++) {
+          const question = section.questions[j];
+          if (!question.questionText || !question.options || !question.correctAnswer) {
+            return res.status(400).json({
+              error: `Question ${j + 1} in section "${section.sectionName}" is incomplete`
+            });
+          }
+
+          if (!question.options.A || !question.options.B || !question.options.C || !question.options.D) {
+            return res.status(400).json({
+              error: `Question ${j + 1} in section "${section.sectionName}" must have all four options`
+            });
+          }
+
+          if (!['A', 'B', 'C', 'D'].includes(question.correctAnswer)) {
+            return res.status(400).json({
+              error: `Question ${j + 1} in section "${section.sectionName}" must have a valid correct answer`
+            });
+          }
+
+          // Ensure marks are set
+          question.marks = section.marksPerQuestion;
+        }
+      }
+    } else {
+      // Validate non-sectioned test questions
+      if (!questions || questions.length !== numberOfQuestions) {
+        console.log('Question count mismatch:', questions?.length, 'vs', numberOfQuestions);
+        return res.status(400).json({
+          error: `Number of questions (${questions?.length || 0}) must match the specified count (${numberOfQuestions})`
+        });
+      }
+
+      // Validate each question
+      for (let i = 0; i < questions.length; i++) {
+        const question = questions[i];
+        if (!question.questionText || !question.options || !question.correctAnswer) {
+          console.log('Question validation failed at index:', i, question);
+          return res.status(400).json({
+            error: `Question ${i + 1} is incomplete`
+          });
+        }
+
+        if (!question.options.A || !question.options.B || !question.options.C || !question.options.D) {
+          console.log('Question options validation failed at index:', i, question.options);
+          return res.status(400).json({
+            error: `Question ${i + 1} must have all four options (A, B, C, D)`
+          });
+        }
+
+        if (!['A', 'B', 'C', 'D'].includes(question.correctAnswer)) {
+          console.log('Correct answer validation failed at index:', i, question.correctAnswer);
+          return res.status(400).json({
+            error: `Question ${i + 1} must have a valid correct answer (A, B, C, or D)`
+          });
+        }
+
+        // Add marks to each question
+        question.marks = marksPerQuestion;
+      }
     }
 
     console.log('Creating test with validated data');
@@ -145,12 +201,14 @@ router.post('/', auth, authorize('master_admin'), [
       companyName: companyName || null,
       topics,
       difficulty,
-      numberOfQuestions,
-      marksPerQuestion,
-      duration,
+      hasSections,
+      sections: hasSections ? sections : [],
+      numberOfQuestions: hasSections ? 0 : numberOfQuestions,
+      marksPerQuestion: hasSections ? 0 : marksPerQuestion,
+      duration: hasSections ? 0 : duration,
       startDateTime: new Date(startDateTime),
       endDateTime: new Date(endDateTime),
-      questions,
+      questions: hasSections ? [] : questions,
       createdBy: req.user._id
     });
 
@@ -705,13 +763,42 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
       testDescription: test.testDescription,
       subject: test.subject,
       testType: test.testType,
+      hasSections: test.hasSections,
       numberOfQuestions: test.numberOfQuestions,
       marksPerQuestion: test.marksPerQuestion,
       totalMarks: test.totalMarks,
       duration: test.duration,
       startDateTime: test.startDateTime,
-      endDateTime: test.endDateTime,
-      questions: test.questions.map(q => {
+      endDateTime: test.endDateTime
+    };
+
+    // Handle sectioned tests
+    if (test.hasSections && test.sections && test.sections.length > 0) {
+      testForStudent.sections = test.sections.map(section => ({
+        _id: section._id,
+        sectionName: section.sectionName,
+        sectionDuration: section.sectionDuration,
+        numberOfQuestions: section.numberOfQuestions,
+        marksPerQuestion: section.marksPerQuestion,
+        questions: section.questions.map(q => {
+          const questionData = {
+            _id: q._id,
+            questionText: q.questionText,
+            options: q.options,
+            marks: q.marks
+          };
+
+          // Include correct answer for Practice tests
+          if (test.testType === 'Practice') {
+            questionData.correctAnswer = q.correctAnswer;
+          }
+
+          return questionData;
+        })
+      }));
+    } else {
+      // Handle non-sectioned tests
+      testForStudent.questions = test.questions.map(q => {
         const questionData = {
           _id: q._id,
           questionText: q.questionText,
@@ -725,8 +812,8 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
         }
 
         return questionData;
-      })
-    };
+      });
+    }
 
     res.json({
       message: 'Test started successfully',
@@ -778,17 +865,22 @@ router.post('/:id/submit', auth, authorize('student'), [
       return res.status(404).json({ error: 'Test not found' });
     }
 
-    // Validate answers
-    if (answers.length !== test.numberOfQuestions) {
-      return res.status(400).json({ error: 'All questions must be answered' });
+    // Get all questions from test (handle both sectioned and non-sectioned)
+    let allQuestions = [];
+    if (test.hasSections && test.sections && test.sections.length > 0) {
+      test.sections.forEach(section => {
+        allQuestions = allQuestions.concat(section.questions);
+      });
+    } else {
+      allQuestions = test.questions;
     }
 
     // Calculate results
     const processedAnswers = [];
     for (let i = 0; i < answers.length; i++) {
       const answer = answers[i];
-      const question = test.questions.find(q => q._id.toString() === answer.questionId);
-      
+      const question = allQuestions.find(q => q._id.toString() === answer.questionId);
+
       if (!question) {
         return res.status(400).json({ error: `Invalid question ID: ${answer.questionId}` });
       }
