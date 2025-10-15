@@ -18,6 +18,7 @@ import TestTabs from '../../components/Test/TestTabs';
 import ExportButton from '../../components/Dashboard/ExportButton';
 import GrowthChart from '../../components/Charts/GrowthChart';
 import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
+import TestFormWithSections from '../../components/Test/TestFormWithSections';
 
 interface College {
   id: string;
@@ -660,7 +661,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
           title={editingTest ? "Edit Test" : "Create New Test"}
           size="xl"
         >
-          <TestForm
+          <TestFormWithSections
             onSubmit={editingTest ? async (data) => {
               await apiService.updateTest(editingTest._id, data);
               setShowTestForm(false);
@@ -1374,7 +1375,7 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
         title="Create New Test"
         size="xl"
       >
-        <TestForm onSubmit={handleCreateTest} loading={formLoading} />
+        <TestFormWithSections onSubmit={handleCreateTest} loading={formLoading} />
       </Modal>
 
       <Modal
