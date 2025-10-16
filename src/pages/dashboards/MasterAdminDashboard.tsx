@@ -295,13 +295,21 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
     }
   };
 
-  const handleCreateTest = async (formData: TestFormData) => {
+  const handleCreateTest = async (formData: any) => {
     try {
       setFormLoading(true);
 
       console.log('Creating test with data:', JSON.stringify(formData, null, 2));
-      console.log('Questions count:', formData.questions.length);
-      console.log('Expected questions:', formData.numberOfQuestions);
+
+      if (formData.hasSections) {
+        console.log('Sections count:', formData.sections?.length);
+        formData.sections?.forEach((section: any, idx: number) => {
+          console.log(`Section ${idx + 1} questions:`, section.questions.length);
+        });
+      } else {
+        console.log('Questions count:', formData.questions?.length);
+        console.log('Expected questions:', formData.numberOfQuestions);
+      }
 
       // Convert datetime-local values to ISO strings with proper timezone
       const testData = {
@@ -310,13 +318,17 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
         endDateTime: new Date(formData.endDateTime).toISOString()
       };
 
-      await apiService.createTest(testData);
+      const response = await apiService.createTest(testData);
+      console.log('Test created successfully:', response);
+
       setShowTestForm(false);
 
       // Switch to the newly created test's type tab and reload
       setActiveTestType(formData.testType);
       setActiveSubject('all');
       await loadTests(formData.testType, 'all');
+
+      alert('Test created successfully!');
     } catch (error) {
       console.error('Test creation error:', error);
       console.error('Error details:', error instanceof Error ? error.message : String(error));

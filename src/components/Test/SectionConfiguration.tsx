@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, XCircle, Save, Clock, Hash } from 'lucide-react';
+import { Plus, Trash2, Edit2, XCircle, Save, Clock, Hash, Upload } from 'lucide-react';
+import LoadingSpinner from '../UI/LoadingSpinner';
 
 interface Question {
   questionText: string;
@@ -25,12 +26,18 @@ interface SectionConfigurationProps {
   sections: Section[];
   onSectionsChange: (sections: Section[]) => void;
   onAddQuestions: (sectionIndex: number) => void;
+  onUploadFile: (sectionIndex: number, file: File) => void;
+  uploadingSectionIndex: number | null;
+  fileUploadLoading: boolean;
 }
 
 const SectionConfiguration: React.FC<SectionConfigurationProps> = ({
   sections,
   onSectionsChange,
-  onAddQuestions
+  onAddQuestions,
+  onUploadFile,
+  uploadingSectionIndex,
+  fileUploadLoading
 }) => {
   const [editingSectionIndex, setEditingSectionIndex] = useState<number | null>(null);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
@@ -241,18 +248,44 @@ const SectionConfiguration: React.FC<SectionConfigurationProps> = ({
                       Questions Added: {section.questions.length} / {section.numberOfQuestions}
                     </span>
                     {section.questions.length < section.numberOfQuestions && (
-                      <button
-                        type="button"
-                        onClick={() => onAddQuestions(index)}
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        + Add Questions
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onAddQuestions(index)}
+                          className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium flex items-center gap-1"
+                        >
+                          <Plus size={14} />
+                          Add Questions
+                        </button>
+                        <label className="text-sm px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 font-medium cursor-pointer flex items-center gap-1">
+                          <Upload size={14} />
+                          Upload JSON
+                          <input
+                            type="file"
+                            accept=".json,.csv"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                onUploadFile(index, file);
+                                e.target.value = '';
+                              }
+                            }}
+                            className="hidden"
+                            disabled={fileUploadLoading}
+                          />
+                        </label>
+                      </>
                     )}
                     {section.questions.length === section.numberOfQuestions && (
                       <span className="text-sm text-green-600 font-medium">✓ Complete</span>
                     )}
                   </div>
+                  {fileUploadLoading && uploadingSectionIndex === index && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span className="text-sm text-blue-700">Uploading and processing file...</span>
+                    </div>
+                  )}
                   {section.questions.length !== section.numberOfQuestions && (
                     <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
                       <div

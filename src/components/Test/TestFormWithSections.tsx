@@ -378,10 +378,27 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
 
     try {
       const payload = {
-        ...formData,
+        testName: formData.testName,
+        testDescription: formData.testDescription,
+        subject: formData.subject,
+        testType: formData.testType,
+        companyName: formData.companyName || null,
+        topics: formData.topics,
+        difficulty: formData.difficulty,
+        hasSections: formData.hasSections,
+        sections: formData.hasSections ? formData.sections : [],
+        numberOfQuestions: formData.hasSections ? 0 : formData.numberOfQuestions,
+        marksPerQuestion: formData.hasSections ? 0 : formData.marksPerQuestion,
+        duration: formData.hasSections ? 0 : formData.duration,
+        startDateTime: formData.startDateTime,
+        endDateTime: formData.endDateTime,
+        questions: formData.hasSections ? [] : formData.questions,
         sourceType: 'manual'
       };
+
+      console.log('Submitting test with payload:', payload);
       await onSubmit(payload);
+
       setFormData({
         testName: '',
         testDescription: '',
@@ -544,6 +561,9 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
             sections={formData.sections || []}
             onSectionsChange={handleSectionsChange}
             onAddQuestions={handleAddQuestionsToSection}
+            onUploadFile={handleFileUploadToSection}
+            uploadingSectionIndex={uploadingSectionIndex}
+            fileUploadLoading={fileUploadLoading}
           />
           {errors.sections && <p className="mt-2 text-sm text-red-600">{errors.sections}</p>}
         </div>
