@@ -95,6 +95,8 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
   const [errors, setErrors] = useState<any>({});
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [uploadingSectionIndex, setUploadingSectionIndex] = useState<number | null>(null);
+  const [fileUploadLoading, setFileUploadLoading] = useState(false);
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
   const testTypes = ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'];
@@ -149,6 +151,114 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
   const handleAddQuestionsToSection = (sectionIndex: number) => {
     setActiveSectionForQuestions(sectionIndex);
     setShowQuestionForm(true);
+  };
+
+  const handleFileUploadToSection = async (sectionIndex: number, file: File) => {
+    setFileUploadLoading(true);
+    setUploadingSectionIndex(sectionIndex);
+
+    try {
+      const response = await apiService.extractQuestionsFromFile(file);
+
+      if (response.questions && response.questions.length > 0) {
+        const section = formData.sections![sectionIndex];
+        const remainingSlots = section.numberOfQuestions - section.questions.length;
+
+        if (remainingSlots <= 0) {
+          alert(`Section "${section.sectionName}" already has maximum questions`);
+          setFileUploadLoading(false);
+          setUploadingSectionIndex(null);
+          return;
+        }
+
+        const questionsToAdd = response.questions.slice(0, remainingSlots).map((q: any) => ({
+          ...q,
+          marks: section.marksPerQuestion
+        }));
+
+        const updatedSections = [...formData.sections!];
+        updatedSections[sectionIndex] = {
+          ...section,
+          questions: [...section.questions, ...questionsToAdd]
+        };
+
+        setFormData(prev => ({
+          ...prev,
+          sections: updatedSections
+        }));
+
+        alert(`Successfully added ${questionsToAdd.length} questions to section "${section.sectionName}"`);
+      }
+    } catch (error: any) {
+      console.error('File upload error:', error);
+      alert(error.message || 'Failed to upload file');
+    } finally {
+      setFileUploadLoading(false);
+      setUploadingSectionIndex(null);
+    }
+  };
+
+  const handleEditQuestion = (sectionIndex: number | null, questionIndex: number) => {
+    let question: Question;
+
+    if (sectionIndex !== null) {
+      question = formData.sections![sectionIndex].questions[questionIndex];
+    } else {
+      question = formData.questions[questionIndex];
+    }
+
+    setEditingQuestion({ ...question });
+    setEditingQuestionIndex(questionIndex);
+    setActiveSectionForQuestions(sectionIndex);
+  };
+
+  const handleSaveEditedQuestion = () => {
+    if (!editingQuestion || editingQuestionIndex === null) return;
+
+    if (!validateEditedQuestion()) {
+      alert('Please fill all question fields correctly');
+      return;
+    }
+
+    if (activeSectionForQuestions !== null) {
+      const updatedSections = [...formData.sections!];
+      const section = updatedSections[activeSectionForQuestions];
+      section.questions[editingQuestionIndex] = { ...editingQuestion, marks: section.marksPerQuestion };
+
+      setFormData(prev => ({
+        ...prev,
+        sections: updatedSections
+      }));
+    } else {
+      const updatedQuestions = [...formData.questions];
+      updatedQuestions[editingQuestionIndex] = { ...editingQuestion, marks: formData.marksPerQuestion };
+
+      setFormData(prev => ({
+        ...prev,
+        questions: updatedQuestions
+      }));
+    }
+
+    setEditingQuestion(null);
+    setEditingQuestionIndex(null);
+    setActiveSectionForQuestions(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingQuestion(null);
+    setEditingQuestionIndex(null);
+    setActiveSectionForQuestions(null);
+  };
+
+  const validateEditedQuestion = (): boolean => {
+    if (!editingQuestion) return false;
+
+    return editingQuestion.questionText.trim() !== '' &&
+           editingQuestion.options.A.trim() !== '' &&
+           editingQuestion.options.B.trim() !== '' &&
+           editingQuestion.options.C.trim() !== '' &&
+           editingQuestion.options.D.trim() !== '' &&
+           ['A', 'B', 'C', 'D'].includes(editingQuestion.correctAnswer);
   };
 
   const addQuestion = () => {
@@ -267,7 +377,11 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     if (!validateForm()) return;
 
     try {
-      await onSubmit(formData);
+      const payload = {
+        ...formData,
+        sourceType: 'manual'
+      };
+      await onSubmit(payload);
       setFormData({
         testName: '',
         testDescription: '',
@@ -490,15 +604,67 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
             <h3 className="text-lg font-medium">
               Questions ({formData.questions.length}/{formData.numberOfQuestions})
             </h3>
-            <button
-              type="button"
-              onClick={() => setShowQuestionForm(!showQuestionForm)}
-              className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
-            >
-              <Plus size={14} />
-              Add Question
-            </button>
+            <div className="flex gap-2">
+              <label className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 cursor-pointer flex items-center gap-1">
+                <Upload size={14} />
+                Upload JSON/CSV
+                <input
+                  type="file"
+                  accept=".json,.csv"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setFileUploadLoading(true);
+                      try {
+                        const response = await apiService.extractQuestionsFromFile(file);
+                        if (response.questions && response.questions.length > 0) {
+                          const remainingSlots = formData.numberOfQuestions - formData.questions.length;
+                          if (remainingSlots <= 0) {
+                            alert('Test already has maximum questions');
+                            return;
+                          }
+                          const questionsToAdd = response.questions.slice(0, remainingSlots).map((q: any) => ({
+                            ...q,
+                            marks: formData.marksPerQuestion
+                          }));
+                          setFormData(prev => ({
+                            ...prev,
+                            questions: [...prev.questions, ...questionsToAdd]
+                          }));
+                          alert(`Successfully added ${questionsToAdd.length} questions`);
+                        }
+                      } catch (error: any) {
+                        console.error('File upload error:', error);
+                        alert(error.message || 'Failed to upload file');
+                      } finally {
+                        setFileUploadLoading(false);
+                        e.target.value = '';
+                      }
+                    }
+                  }}
+                  className="hidden"
+                  disabled={fileUploadLoading}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowQuestionForm(!showQuestionForm)}
+                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
+              >
+                <Plus size={14} />
+                Add Question
+              </button>
+            </div>
           </div>
+
+          {fileUploadLoading && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <LoadingSpinner size="sm" />
+                <span className="text-sm text-blue-700">Uploading and processing file...</span>
+              </div>
+            </div>
+          )}
 
           {showQuestionForm && (
             <div className="mb-6 p-4 border rounded-lg bg-gray-50">
@@ -587,16 +753,97 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
                       ))}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeQuestion(index)}
-                    className="ml-4 p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      type="button"
+                      onClick={() => handleEditQuestion(null, index)}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                      title="Edit question"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(index)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      title="Delete question"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {editingQuestion !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-medium mb-4">Edit Question</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Question Text</label>
+                <textarea
+                  value={editingQuestion.questionText}
+                  onChange={(e) => setEditingQuestion(prev => prev ? ({ ...prev, questionText: e.target.value }) : null)}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your question here..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['A', 'B', 'C', 'D'].map((option) => (
+                  <div key={option}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Option {option}</label>
+                    <input
+                      type="text"
+                      value={editingQuestion.options[option as keyof typeof editingQuestion.options]}
+                      onChange={(e) => setEditingQuestion(prev => prev ? ({
+                        ...prev,
+                        options: { ...prev.options, [option]: e.target.value }
+                      }) : null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder={`Enter option ${option}`}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answer</label>
+                <select
+                  value={editingQuestion.correctAnswer}
+                  onChange={(e) => setEditingQuestion(prev => prev ? ({ ...prev, correctAnswer: e.target.value as any }) : null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditedQuestion}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -607,17 +854,45 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
             <h3 className="text-lg font-medium">
               Add Questions to: {formData.sections![activeSectionForQuestions].sectionName}
             </h3>
-            <button
-              type="button"
-              onClick={() => {
-                setShowQuestionForm(false);
-                setActiveSectionForQuestions(null);
-              }}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <XCircle size={20} />
-            </button>
+            <div className="flex gap-2 items-center">
+              <label className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 cursor-pointer flex items-center gap-1">
+                <Upload size={14} />
+                Upload JSON/CSV
+                <input
+                  type="file"
+                  accept=".json,.csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleFileUploadToSection(activeSectionForQuestions, file);
+                      e.target.value = '';
+                    }
+                  }}
+                  className="hidden"
+                  disabled={fileUploadLoading}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQuestionForm(false);
+                  setActiveSectionForQuestions(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
           </div>
+
+          {fileUploadLoading && uploadingSectionIndex === activeSectionForQuestions && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <LoadingSpinner size="sm" />
+                <span className="text-sm text-blue-700">Uploading and processing file...</span>
+              </div>
+            </div>
+          )}
 
           <div className="mb-6 p-4 border rounded-lg bg-gray-50">
             <div className="space-y-4">
@@ -706,13 +981,24 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
                       ))}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeQuestion(index, activeSectionForQuestions)}
-                    className="ml-4 p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      type="button"
+                      onClick={() => handleEditQuestion(activeSectionForQuestions, index)}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                      title="Edit question"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(index, activeSectionForQuestions)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      title="Delete question"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
