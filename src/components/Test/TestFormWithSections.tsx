@@ -345,7 +345,7 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
            ['A', 'B', 'C', 'D'].includes(currentQuestion.correctAnswer);
   };
 
-  const validateForm = (): boolean => {
+  const validateForm = (): { isValid: boolean; errors: any } => {
     const newErrors: any = {};
 
     if (!formData.testName.trim()) newErrors.testName = 'Test name is required';
@@ -385,12 +385,33 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+
+    console.log('Form submitted with data:', {
+      hasSections: formData.hasSections,
+      sectionsCount: formData.sections?.length,
+      sections: formData.sections?.map(s => ({
+        name: s.sectionName,
+        questionsAdded: s.questions.length,
+        questionsRequired: s.numberOfQuestions
+      }))
+    });
+
+    const validation = validateForm();
+    if (!validation.isValid) {
+      console.log('Validation failed. Errors:', validation.errors);
+
+      // Show alert for the first error found
+      const firstError = Object.values(validation.errors)[0];
+      if (firstError) {
+        alert(`Validation Error: ${firstError}`);
+      }
+      return;
+    }
 
     try {
       const payload = {
