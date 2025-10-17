@@ -54,9 +54,27 @@ router.post('/', auth, authorize('master_admin'), [
   body('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']).withMessage('Invalid difficulty'),
   body('hasSections').optional().isBoolean().withMessage('hasSections must be a boolean'),
   body('sections').optional().isArray().withMessage('Sections must be an array'),
-  body('numberOfQuestions').optional().isInt({ min: 1, max: 100 }).withMessage('Number of questions must be between 1 and 100'),
-  body('marksPerQuestion').optional().isInt({ min: 1, max: 10 }).withMessage('Marks per question must be between 1 and 10'),
-  body('duration').optional().isInt({ min: 5, max: 300 }).withMessage('Duration must be between 5 and 300 minutes'),
+  body('numberOfQuestions').optional().custom((value, { req }) => {
+    if (req.body.hasSections) return true;
+    if (!value || value < 1 || value > 100) {
+      throw new Error('Number of questions must be between 1 and 100');
+    }
+    return true;
+  }),
+  body('marksPerQuestion').optional().custom((value, { req }) => {
+    if (req.body.hasSections) return true;
+    if (!value || value < 1 || value > 10) {
+      throw new Error('Marks per question must be between 1 and 10');
+    }
+    return true;
+  }),
+  body('duration').optional().custom((value, { req }) => {
+    if (req.body.hasSections) return true;
+    if (!value || value < 5 || value > 300) {
+      throw new Error('Duration must be between 5 and 300 minutes');
+    }
+    return true;
+  }),
   body('startDateTime').isISO8601().withMessage('Invalid start date format'),
   body('endDateTime').isISO8601().withMessage('Invalid end date format'),
   body('questions').optional().isArray().withMessage('Questions must be an array')
@@ -998,14 +1016,34 @@ router.get('/:id/results', auth, authorize('student'), async (req, res) => {
 router.put('/:id', auth, authorize('master_admin'), [
   body('testName').trim().isLength({ min: 3 }),
   body('testDescription').trim().isLength({ min: 10 }),
-  body('subject').isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']),
+  body('subject').optional().isIn(['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication']),
   body('testType').optional().isIn(['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test']),
-  body('numberOfQuestions').isInt({ min: 1, max: 100 }),
-  body('marksPerQuestion').isInt({ min: 1, max: 10 }),
-  body('duration').isInt({ min: 5, max: 300 }),
+  body('hasSections').optional().isBoolean().withMessage('hasSections must be a boolean'),
+  body('sections').optional().isArray().withMessage('Sections must be an array'),
+  body('numberOfQuestions').optional().custom((value, { req }) => {
+    if (req.body.hasSections) return true;
+    if (!value || value < 1 || value > 100) {
+      throw new Error('Number of questions must be between 1 and 100');
+    }
+    return true;
+  }),
+  body('marksPerQuestion').optional().custom((value, { req }) => {
+    if (req.body.hasSections) return true;
+    if (!value || value < 1 || value > 10) {
+      throw new Error('Marks per question must be between 1 and 10');
+    }
+    return true;
+  }),
+  body('duration').optional().custom((value, { req }) => {
+    if (req.body.hasSections) return true;
+    if (!value || value < 5 || value > 300) {
+      throw new Error('Duration must be between 5 and 300 minutes');
+    }
+    return true;
+  }),
   body('startDateTime').isISO8601(),
   body('endDateTime').isISO8601(),
-  body('questions').isArray({ min: 1 })
+  body('questions').optional().isArray()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -1016,17 +1054,43 @@ router.put('/:id', auth, authorize('master_admin'), [
     const testId = req.params.id;
     const updateData = req.body;
 
-    // Validate questions count
-    if (updateData.questions.length !== updateData.numberOfQuestions) {
-      return res.status(400).json({ 
-        error: `Number of questions (${updateData.questions.length}) must match the specified count (${updateData.numberOfQuestions})` 
+    // Validate based on test structure
+    if (updateData.hasSections) {
+      // Validate sections
+      if (!updateData.sections || updateData.sections.length === 0) {
+        return res.status(400).json({
+          error: 'At least one section is required when sections are enabled'
+        });
+      }
+
+      // Validate each section
+      for (let i = 0; i < updateData.sections.length; i++) {
+        const section = updateData.sections[i];
+
+        if (!section.questions || section.questions.length !== section.numberOfQuestions) {
+          return res.status(400).json({
+            error: `Section "${section.sectionName}" has ${section.questions?.length || 0} questions but expects ${section.numberOfQuestions}`
+          });
+        }
+
+        // Set marks for each question in section
+        section.questions.forEach(question => {
+          question.marks = section.marksPerQuestion;
+        });
+      }
+    } else {
+      // Validate non-sectioned test questions
+      if (!updateData.questions || updateData.questions.length !== updateData.numberOfQuestions) {
+        return res.status(400).json({
+          error: `Number of questions (${updateData.questions?.length || 0}) must match the specified count (${updateData.numberOfQuestions})`
+        });
+      }
+
+      // Add marks to each question
+      updateData.questions.forEach(question => {
+        question.marks = updateData.marksPerQuestion;
       });
     }
-
-    // Add marks to each question
-    updateData.questions.forEach(question => {
-      question.marks = updateData.marksPerQuestion;
-    });
 
     const test = await Test.findByIdAndUpdate(
       testId,
