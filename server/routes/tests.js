@@ -55,22 +55,22 @@ router.post('/', auth, authorize('master_admin'), [
   body('hasSections').optional().isBoolean().withMessage('hasSections must be a boolean'),
   body('sections').optional().isArray().withMessage('Sections must be an array'),
   body('numberOfQuestions').optional().custom((value, { req }) => {
-    if (req.body.hasSections) return true;
-    if (!value || value < 1 || value > 100) {
+    if (req.body.hasSections === true || req.body.hasSections === 'true') return true;
+    if (value === undefined || value === null || value < 1 || value > 100) {
       throw new Error('Number of questions must be between 1 and 100');
     }
     return true;
   }),
   body('marksPerQuestion').optional().custom((value, { req }) => {
-    if (req.body.hasSections) return true;
-    if (!value || value < 1 || value > 10) {
+    if (req.body.hasSections === true || req.body.hasSections === 'true') return true;
+    if (value === undefined || value === null || value < 1 || value > 10) {
       throw new Error('Marks per question must be between 1 and 10');
     }
     return true;
   }),
   body('duration').optional().custom((value, { req }) => {
-    if (req.body.hasSections) return true;
-    if (!value || value < 5 || value > 300) {
+    if (req.body.hasSections === true || req.body.hasSections === 'true') return true;
+    if (value === undefined || value === null || value < 5 || value > 300) {
       throw new Error('Duration must be between 5 and 300 minutes');
     }
     return true;
@@ -1021,22 +1021,22 @@ router.put('/:id', auth, authorize('master_admin'), [
   body('hasSections').optional().isBoolean().withMessage('hasSections must be a boolean'),
   body('sections').optional().isArray().withMessage('Sections must be an array'),
   body('numberOfQuestions').optional().custom((value, { req }) => {
-    if (req.body.hasSections) return true;
-    if (!value || value < 1 || value > 100) {
+    if (req.body.hasSections === true || req.body.hasSections === 'true') return true;
+    if (value === undefined || value === null || value < 1 || value > 100) {
       throw new Error('Number of questions must be between 1 and 100');
     }
     return true;
   }),
   body('marksPerQuestion').optional().custom((value, { req }) => {
-    if (req.body.hasSections) return true;
-    if (!value || value < 1 || value > 10) {
+    if (req.body.hasSections === true || req.body.hasSections === 'true') return true;
+    if (value === undefined || value === null || value < 1 || value > 10) {
       throw new Error('Marks per question must be between 1 and 10');
     }
     return true;
   }),
   body('duration').optional().custom((value, { req }) => {
-    if (req.body.hasSections) return true;
-    if (!value || value < 5 || value > 300) {
+    if (req.body.hasSections === true || req.body.hasSections === 'true') return true;
+    if (value === undefined || value === null || value < 5 || value > 300) {
       throw new Error('Duration must be between 5 and 300 minutes');
     }
     return true;
