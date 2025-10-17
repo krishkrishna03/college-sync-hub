@@ -634,7 +634,7 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
         </div>
       )}
 
-      {!formData.hasSections && (
+      {!formData.hasSections && !shouldShowSectionOption(formData.testType) && (
         <div className="bg-white p-6 rounded-lg border">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium">
