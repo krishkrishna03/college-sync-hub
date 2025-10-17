@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, Edit2 } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import SectionConfiguration from './SectionConfiguration';
+import QuestionPreviewModal from './QuestionPreviewModal';
 import apiService from '../../services/api';
 
 interface Question {
@@ -97,6 +98,7 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [uploadingSectionIndex, setUploadingSectionIndex] = useState<number | null>(null);
   const [fileUploadLoading, setFileUploadLoading] = useState(false);
+  const [showSectionQuestionsPreview, setShowSectionQuestionsPreview] = useState(false);
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
   const testTypes = ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'];
@@ -210,6 +212,20 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     setEditingQuestion({ ...question });
     setEditingQuestionIndex(questionIndex);
     setActiveSectionForQuestions(sectionIndex);
+  };
+
+  const handleEditQuestionFromPreview = (questionIndex: number, updatedQuestion: Question) => {
+    if (activeSectionForQuestions !== null) {
+      const updatedSections = [...formData.sections!];
+      updatedSections[activeSectionForQuestions].questions[questionIndex] = updatedQuestion;
+      setFormData(prev => ({ ...prev, sections: updatedSections }));
+    }
+  };
+
+  const handleDeleteQuestionFromPreview = (questionIndex: number) => {
+    if (activeSectionForQuestions !== null) {
+      removeQuestion(questionIndex, activeSectionForQuestions);
+    }
   };
 
   const handleSaveEditedQuestion = () => {
@@ -875,6 +891,16 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
               Add Questions to: {formData.sections![activeSectionForQuestions].sectionName}
             </h3>
             <div className="flex gap-2 items-center">
+              {formData.sections![activeSectionForQuestions].questions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowSectionQuestionsPreview(true)}
+                  className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 flex items-center gap-1"
+                >
+                  <Eye size={14} />
+                  Preview All ({formData.sections![activeSectionForQuestions].questions.length})
+                </button>
+              )}
               <label className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 cursor-pointer flex items-center gap-1">
                 <Upload size={14} />
                 Upload JSON/CSV
@@ -1036,6 +1062,17 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
           Create Test
         </button>
       </div>
+
+      {showSectionQuestionsPreview && activeSectionForQuestions !== null && (
+        <QuestionPreviewModal
+          isOpen={true}
+          onClose={() => setShowSectionQuestionsPreview(false)}
+          questions={formData.sections![activeSectionForQuestions].questions}
+          sectionName={formData.sections![activeSectionForQuestions].sectionName}
+          onEditQuestion={handleEditQuestionFromPreview}
+          onDeleteQuestion={handleDeleteQuestionFromPreview}
+        />
+      )}
     </form>
   );
 };

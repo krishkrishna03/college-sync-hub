@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, XCircle, Save, Clock, Hash, Upload } from 'lucide-react';
+import { Plus, Trash2, Edit2, XCircle, Save, Clock, Hash, Upload, Eye } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
+import QuestionPreviewModal from './QuestionPreviewModal';
 
 interface Question {
   questionText: string;
@@ -41,6 +42,7 @@ const SectionConfiguration: React.FC<SectionConfigurationProps> = ({
 }) => {
   const [editingSectionIndex, setEditingSectionIndex] = useState<number | null>(null);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
+  const [previewSectionIndex, setPreviewSectionIndex] = useState<number | null>(null);
 
   const addSection = () => {
     const newSection: Section = {
@@ -88,6 +90,18 @@ const SectionConfiguration: React.FC<SectionConfigurationProps> = ({
 
   const getTotalMarks = () => {
     return sections.reduce((sum, section) => sum + (section.numberOfQuestions * section.marksPerQuestion), 0);
+  };
+
+  const handleEditQuestion = (sectionIndex: number, questionIndex: number, updatedQuestion: Question) => {
+    const updatedSections = [...sections];
+    updatedSections[sectionIndex].questions[questionIndex] = updatedQuestion;
+    onSectionsChange(updatedSections);
+  };
+
+  const handleDeleteQuestion = (sectionIndex: number, questionIndex: number) => {
+    const updatedSections = [...sections];
+    updatedSections[sectionIndex].questions.splice(questionIndex, 1);
+    onSectionsChange(updatedSections);
   };
 
   return (
@@ -247,6 +261,16 @@ const SectionConfiguration: React.FC<SectionConfigurationProps> = ({
                     <span className="text-sm text-gray-600">
                       Questions Added: {section.questions.length} / {section.numberOfQuestions}
                     </span>
+                    {section.questions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSectionIndex(index)}
+                        className="text-sm px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 font-medium flex items-center gap-1"
+                      >
+                        <Eye size={14} />
+                        Preview Questions
+                      </button>
+                    )}
                     {section.questions.length < section.numberOfQuestions && (
                       <>
                         <button
@@ -340,6 +364,21 @@ const SectionConfiguration: React.FC<SectionConfigurationProps> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {previewSectionIndex !== null && (
+        <QuestionPreviewModal
+          isOpen={true}
+          onClose={() => setPreviewSectionIndex(null)}
+          questions={sections[previewSectionIndex].questions}
+          sectionName={sections[previewSectionIndex].sectionName}
+          onEditQuestion={(questionIndex, updatedQuestion) =>
+            handleEditQuestion(previewSectionIndex, questionIndex, updatedQuestion)
+          }
+          onDeleteQuestion={(questionIndex) =>
+            handleDeleteQuestion(previewSectionIndex, questionIndex)
+          }
+        />
       )}
     </div>
   );
