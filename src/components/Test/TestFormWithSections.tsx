@@ -64,11 +64,16 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     return ['Assessment', 'Mock Test', 'Specific Company Test'].includes(testType);
   };
 
+  const initialTestType = initialData?.testType || 'Assessment';
+  const initialHasSections = initialData?.hasSections !== undefined
+    ? initialData.hasSections
+    : shouldShowSectionOption(initialTestType);
+
   const [formData, setFormData] = useState<TestFormData>({
     testName: initialData?.testName || '',
     testDescription: initialData?.testDescription || '',
     subject: initialData?.subject || 'Technical',
-    testType: initialData?.testType || 'Assessment',
+    testType: initialTestType,
     companyName: initialData?.companyName || '',
     topics: initialData?.topics || [],
     difficulty: initialData?.difficulty || 'Medium',
@@ -78,7 +83,7 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     startDateTime: initialData?.startDateTime ? formatDateTimeLocal(initialData.startDateTime) : '',
     endDateTime: initialData?.endDateTime ? formatDateTimeLocal(initialData.endDateTime) : '',
     questions: initialData?.questions || [],
-    hasSections: initialData?.hasSections || false,
+    hasSections: initialHasSections,
     sections: initialData?.sections || []
   });
 
