@@ -86,21 +86,24 @@ const testSchema = new mongoose.Schema({
   },
   numberOfQuestions: {
     type: Number,
-    required: true,
-    min: 1
+    required: false,
+    min: 0,
+    default: 0
   },
   marksPerQuestion: {
     type: Number,
-    required: true,
-    min: 1
+    required: false,
+    min: 0,
+    default: 0
   },
   totalMarks: {
     type: Number
   },
   duration: {
     type: Number, // in minutes
-    required: true,
-    min: 1
+    required: false,
+    min: 0,
+    default: 0
   },
   startDateTime: {
     type: Date,
@@ -164,7 +167,17 @@ testSchema.pre('save', function(next) {
     this.duration = totalDuration;
     this.totalMarks = calculatedTotalMarks;
   } else {
-    // For non-sectioned tests
+    // For non-sectioned tests, validate required fields
+    if (!this.numberOfQuestions || this.numberOfQuestions < 1) {
+      return next(new Error('Number of questions must be at least 1 for non-sectioned tests'));
+    }
+    if (!this.marksPerQuestion || this.marksPerQuestion < 1) {
+      return next(new Error('Marks per question must be at least 1 for non-sectioned tests'));
+    }
+    if (!this.duration || this.duration < 1) {
+      return next(new Error('Duration must be at least 1 minute for non-sectioned tests'));
+    }
+
     if (this.questions.length !== this.numberOfQuestions) {
       return next(new Error(`Number of questions (${this.questions.length}) must match the specified count (${this.numberOfQuestions})`));
     }
