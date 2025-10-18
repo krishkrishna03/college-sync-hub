@@ -849,7 +849,7 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
 router.post('/:id/submit', auth, authorize('student'), [
   body('answers').isArray({ min: 1 }),
   body('startTime').isISO8601(),
-  body('timeSpent').isInt({ min: 1 }),
+  body('timeSpent').isInt({ min: 0 }),
   body('violations').optional().isInt({ min: 0 })
 ], async (req, res) => {
   try {

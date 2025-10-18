@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertCircle, CheckCircle, Send, XCircle, RefreshCw, Award } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Send, XCircle, RefreshCw, Award, Bookmark, Eraser } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
 
 interface Question {
@@ -41,6 +41,7 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
   onExit
 }) => {
   const [answers, setAnswers] = useState<{ [questionId: string]: string }>({});
+  const [markedForReview, setMarkedForReview] = useState<{ [questionId: string]: boolean }>({});
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(test.duration * 60); // in seconds
   const [submitting, setSubmitting] = useState(false);
@@ -142,6 +143,50 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
     return Object.keys(answers).length;
   };
 
+  const getMarkedForReviewCount = () => {
+    return Object.keys(markedForReview).filter(key => markedForReview[key]).length;
+  };
+
+  const handleClearResponse = () => {
+    const currentQ = test.questions[currentQuestion];
+    setAnswers(prev => {
+      const newAnswers = { ...prev };
+      delete newAnswers[currentQ._id];
+      return newAnswers;
+    });
+    setMarkedForReview(prev => {
+      const newMarked = { ...prev };
+      delete newMarked[currentQ._id];
+      return newMarked;
+    });
+    setShowInstantFeedback(false);
+    setCurrentFeedback(null);
+    setHasAnsweredCurrent(false);
+    setIsAnswerRevealed(false);
+  };
+
+  const handleMarkForReview = () => {
+    const currentQ = test.questions[currentQuestion];
+    setMarkedForReview(prev => ({
+      ...prev,
+      [currentQ._id]: !prev[currentQ._id]
+    }));
+  };
+
+  const handleSaveAndNext = () => {
+    if (currentQuestion < test.numberOfQuestions - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+      setShowInstantFeedback(false);
+      setHasAnsweredCurrent(false);
+      setIsAnswerRevealed(false);
+
+      const nextQ = test.questions[currentQuestion + 1];
+      if (isPracticeMode && answers[nextQ._id]) {
+        setHasAnsweredCurrent(true);
+      }
+    }
+  };
+
   const handleAutoSubmit = async () => {
     if (submitting) return;
     await handleSubmit(true);
@@ -207,7 +252,7 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
   const currentQ = test.questions[currentQuestion];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="fixed inset-0 bg-gray-50 overflow-hidden flex flex-col">
       {/* Header */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4">
@@ -249,8 +294,9 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full max-w-7xl mx-auto px-4 py-6">
+          <div className="h-full grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Question Navigation */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow p-4 sticky top-24">
@@ -270,9 +316,11 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                       setHasAnsweredCurrent(!!answers[test.questions[index]._id]);
                       setIsAnswerRevealed(false);
                     }}
-                    className={`w-8 h-8 rounded text-sm font-medium ${
+                    className={`w-8 h-8 rounded text-sm font-medium relative ${
                       currentQuestion === index
                         ? 'bg-blue-600 text-white'
+                        : markedForReview[test.questions[index]._id]
+                        ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-500'
                         : answers[test.questions[index]._id]
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -291,6 +339,10 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-gray-100 rounded"></div>
                   <span>Not Answered ({test.numberOfQuestions - getAnsweredCount()})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-500 rounded"></div>
+                  <span>Review ({getMarkedForReviewCount()})</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-blue-600 rounded"></div>
@@ -316,8 +368,8 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
           </div>
 
           {/* Question Content */}
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow p-6">
+          <div className="lg:col-span-3 overflow-y-auto">
+            <div className="bg-white rounded-lg shadow p-6 h-full flex flex-col">
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <h2 className="text-lg font-medium">
@@ -455,51 +507,75 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 </div>
               )}
               {/* Navigation Buttons */}
-              <div className="flex justify-between">
-                <button
-                  onClick={() => {
-                    // In practice mode, check if current question needs answer review
-                    if (isPracticeMode && !isAnswerRevealed && answers[currentQ._id]) {
-                      alert('Please review the correct answer before navigating away.');
-                      return;
-                    }
-                    if (currentQuestion > 0) {
-                      const prevIndex = currentQuestion - 1;
-                      setCurrentQuestion(prevIndex);
-                      setShowInstantFeedback(false);
-                      setHasAnsweredCurrent(!!answers[test.questions[prevIndex]._id]);
-                      setIsAnswerRevealed(false);
-                    }
-                  }}
-                  disabled={currentQuestion === 0}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                
-                <div className="flex gap-2">
-                  {currentQuestion < test.numberOfQuestions - 1 ? (
+              <div className="mt-auto pt-4 border-t">
+                <div className="flex justify-between items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (isPracticeMode && !isAnswerRevealed && answers[currentQ._id]) {
+                        alert('Please review the correct answer before navigating away.');
+                        return;
+                      }
+                      if (currentQuestion > 0) {
+                        const prevIndex = currentQuestion - 1;
+                        setCurrentQuestion(prevIndex);
+                        setShowInstantFeedback(false);
+                        setHasAnsweredCurrent(!!answers[test.questions[prevIndex]._id]);
+                        setIsAnswerRevealed(false);
+                      }
+                    }}
+                    disabled={currentQuestion === 0}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+
+                  <div className="flex gap-2">
                     <button
-                      onClick={handleNextQuestion}
-                      disabled={isPracticeMode && !isAnswerRevealed && answers[currentQ._id]}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={isPracticeMode && !isAnswerRevealed && answers[currentQ._id] ? 'Review the correct answer first' : ''}
+                      onClick={handleClearResponse}
+                      disabled={!answers[currentQ._id]}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      title="Clear your response for this question"
                     >
-                      {isPracticeMode && !isAnswerRevealed && answers[currentQ._id] ? 'Review Answer First' : 'Next'}
+                      <Eraser size={16} />
+                      Clear Response
                     </button>
-                  ) : (
+
                     <button
-                      onClick={() => setShowConfirmSubmit(true)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                      onClick={handleMarkForReview}
+                      className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                        markedForReview[currentQ._id]
+                          ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                          : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                      }`}
+                      title="Mark this question for later review"
                     >
-                      <Send size={16} />
-                      Submit Test
+                      <Bookmark size={16} />
+                      {markedForReview[currentQ._id] ? 'Marked for Review' : 'Mark for Review'}
                     </button>
-                  )}
+
+                    {currentQuestion < test.numberOfQuestions - 1 ? (
+                      <button
+                        onClick={handleSaveAndNext}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                      >
+                        Save & Next
+                        <CheckCircle size={16} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowConfirmSubmit(true)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                      >
+                        <Send size={16} />
+                        Submit Test
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
