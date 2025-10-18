@@ -86,6 +86,10 @@ const ProctoredTestInterface: React.FC<ProctoredTestInterfaceProps> = ({
   const instructions = test.instructions || DEFAULT_INSTRUCTIONS;
 
   useEffect(() => {
+    if (!test.questions || test.questions.length === 0) {
+      return;
+    }
+
     const initialStatus: { [key: string]: QuestionStatus } = {};
     test.questions.forEach((q) => {
       initialStatus[q._id] = {
