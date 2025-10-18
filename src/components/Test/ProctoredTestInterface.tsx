@@ -396,6 +396,14 @@ const ProctoredTestInterface: React.FC<ProctoredTestInterfaceProps> = ({
     );
   }
 
+  if (!test.questions || test.questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   const currentQ = test.questions[currentQuestion];
   const counts = getQuestionCounts();
   const currentStatus = questionStatus[currentQ?._id] || { answered: false, markedForReview: false, visited: true };
