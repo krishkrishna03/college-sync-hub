@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import StudentTestInterface from '../../components/Test/StudentTestInterface';
 import ProctoredTestInterface from '../../components/Test/ProctoredTestInterface';
+import SectionedTestInterface from '../../components/Test/SectionedTestInterface';
 import TestResults from '../../components/Test/TestResults';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
@@ -335,7 +336,24 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   console.log('StudentDashboard render - activeTest:', activeTest?._id, 'testStartTime:', testStartTime);
 
   if (activeTest && testStartTime) {
-    console.log('Rendering ProctoredTestInterface');
+    // Use SectionedTestInterface for sectioned tests, ProctoredTestInterface for others
+    const hasSections = activeTest.hasSections || (activeTest.sections && activeTest.sections.length > 0);
+
+    console.log('Rendering test interface - hasSections:', hasSections);
+
+    if (hasSections) {
+      return (
+        <SectionedTestInterface
+          test={activeTest}
+          onSubmit={handleSubmitTest}
+          onExit={() => {
+            setActiveTest(null);
+            setTestStartTime(null);
+          }}
+        />
+      );
+    }
+
     return (
       <ProctoredTestInterface
         test={activeTest}
