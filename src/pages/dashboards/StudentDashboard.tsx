@@ -11,6 +11,7 @@ import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
 import StudentReportsPage from '../../components/Test/StudentReportsPage';
 import StudentPerformanceAnalytics from '../../components/Test/StudentPerformanceAnalytics';
 import DetailedTestReportModal from '../../components/Test/DetailedTestReportModal';
+import ProfessionalTestInterface from '../../components/Test/ProfessionalTestInterface';
 
 interface College {
   name: string;
