@@ -336,27 +336,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
   console.log('StudentDashboard render - activeTest:', activeTest?._id, 'testStartTime:', testStartTime);
 
   if (activeTest && testStartTime) {
-    // Use SectionedTestInterface for sectioned tests, ProctoredTestInterface for others
-    const hasSections = activeTest.hasSections || (activeTest.sections && activeTest.sections.length > 0);
-
-    console.log('Rendering test interface - hasSections:', hasSections);
-
-    if (hasSections) {
-      return (
-        <SectionedTestInterface
-          test={activeTest}
-          onSubmit={handleSubmitTest}
-          onExit={() => {
-            setActiveTest(null);
-            setTestStartTime(null);
-          }}
-        />
-      );
-    }
+    console.log('Rendering professional test interface');
 
     return (
-      <ProctoredTestInterface
+      <ProfessionalTestInterface
         test={activeTest}
+        startTime={testStartTime}
         onSubmit={handleSubmitTest}
         onExit={() => {
           setActiveTest(null);
