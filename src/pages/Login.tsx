@@ -177,12 +177,17 @@ const Login: React.FC = () => {
       <div className="max-w-md w-full space-y-8 relative z-10">
         <div className="bg-white rounded-2xl shadow-2xl p-8 backdrop-blur-sm bg-opacity-95 transform transition-all hover:shadow-3xl">
           <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300 relative">
-              <BookOpen className="h-8 w-8 text-white animate-pulse" />
+            <div className="mx-auto h-40 w-40 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300 relative overflow-hidden bg-white">
+              <img
+                src="/logo.png"
+                alt="Company Logo"
+                className="h-full w-full object-contain p-2"
+              />
               <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-yellow-400 animate-bounce" />
             </div>
+
             <h2 className="mt-6 text-3xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              Academic Management
+              PlantechX
             </h2>
             <p className="mt-2 text-sm text-gray-600 font-medium">
               Welcome back! Sign in to continue
@@ -291,7 +296,7 @@ const Login: React.FC = () => {
             </div>
           </form>
 
-          
+
         </div>
 
         <p className="text-center text-xs text-gray-500">
