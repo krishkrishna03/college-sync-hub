@@ -68,6 +68,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/faculty', require('./routes/faculty'));
+app.use('/api/coding', require('./routes/coding'));
 
 // Root route
 app.get('/', (req, res) => {

@@ -14,7 +14,8 @@ import {
   Target,
   ChevronDown,
   ChevronRight,
-  Brain
+  Brain,
+  Code
 } from 'lucide-react';
 import apiService from '../../services/api';
 
@@ -204,6 +205,18 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole, activeTab, onTabChange }) =
         { id: 'mock-tests-admin', label: 'Mock Test', testType: 'Mock Test' },
         { id: 'company-tests-admin', label: 'Company Test', testType: 'Specific Company Test' }
       ]
+    },
+    {
+      id: 'coding-questions',
+      label: 'Coding Questions',
+      icon: <Code size={20} />,
+      roles: ['master_admin'],
+    },
+    {
+      id: 'practice-coding',
+      label: 'Practice Coding',
+      icon: <Code size={20} />,
+      roles: ['student'],
     },
     {
       id: 'performance',

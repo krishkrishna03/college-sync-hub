@@ -12,6 +12,7 @@ import StudentReportsPage from '../../components/Test/StudentReportsPage';
 import StudentPerformanceAnalytics from '../../components/Test/StudentPerformanceAnalytics';
 import DetailedTestReportModal from '../../components/Test/DetailedTestReportModal';
 import ProfessionalTestInterface from '../../components/Test/ProfessionalTestInterface';
+import PracticeCoding from '../../components/Coding/PracticeCoding';
 
 interface College {
   name: string;
@@ -683,6 +684,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ activeTab }) => {
         <StudentPerformanceAnalytics testResults={performanceData} />
       </div>
     );
+  }
+
+  // Practice Coding tab
+  if (activeTab === 'practice-coding') {
+    return <PracticeCoding />;
   }
 
   // Default dashboard view needs dashboardData

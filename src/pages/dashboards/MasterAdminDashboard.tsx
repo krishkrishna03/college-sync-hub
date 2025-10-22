@@ -19,6 +19,7 @@ import ExportButton from '../../components/Dashboard/ExportButton';
 import GrowthChart from '../../components/Charts/GrowthChart';
 import CategorizedTestTabs from '../../components/Test/CategorizedTestTabs';
 import TestFormWithSections from '../../components/Test/TestFormWithSections';
+import CodingQuestionsList from '../../components/Coding/CodingQuestionsList';
 
 interface College {
   id: string;
@@ -596,6 +597,10 @@ const MasterAdminDashboard: React.FC<MasterAdminDashboardProps> = ({ activeTab }
 
   if (activeTab === 'notifications') {
     return <NotificationsPage />;
+  }
+
+  if (activeTab === 'coding-questions') {
+    return <CodingQuestionsList />;
   }
 
   if (activeTab === 'notifications-old') {
