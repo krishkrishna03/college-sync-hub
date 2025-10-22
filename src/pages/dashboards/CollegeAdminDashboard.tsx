@@ -455,129 +455,155 @@ const CollegeAdminDashboard: React.FC<CollegeAdminDashboardProps> = ({ activeTab
           loading={loading}
         />
 
-        <div className="grid gap-6">
-          {Array.isArray(allTests) && allTests.length > 0 ? allTests.map((test) => (
-            <div key={test._id} className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {test.testName}
-                    </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      test.assignmentStatus === 'accepted' ? 'bg-green-100 text-green-800' :
-                      test.assignmentStatus === 'rejected' ? 'bg-red-100 text-red-800' :
-                      test.assignmentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {test.assignmentStatus === 'not_assigned' ? 'Not Assigned' : test.assignmentStatus}
-                    </span>
-                    {test.testType && (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {test.testType}
-                      </span>
-                    )}
-                    {test.difficulty && (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        test.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
-                        test.difficulty === 'Hard' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {test.difficulty}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-gray-600 text-sm mb-2">{test.testDescription}</p>
-                  {test.assignedBy && test.assignedAt && (
-                    <p className="text-sm text-gray-500">
-                      Assigned by: {test.assignedBy.name} on {formatDate(test.assignedAt)}
-                    </p>
-                  )}
-                </div>
-              </div>
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Test Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assigned Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Batch
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Branches
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Attempts
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {Array.isArray(allTests) && allTests.length > 0 ? allTests.map((test) => (
+                  <tr key={test._id}>
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            {test.testName}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            test.assignmentStatus === 'accepted' ? 'bg-green-100 text-green-800' :
+                            test.assignmentStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                            test.assignmentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {test.assignmentStatus === 'not_assigned' ? 'Not Assigned' : test.assignmentStatus}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {test.testType && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
+                              {test.testType}
+                            </span>
+                          )}
+                          {test.subject && (
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-800 rounded text-xs">
+                              {test.subject}
+                            </span>
+                          )}
+                          {test.difficulty && (
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              test.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
+                              test.difficulty === 'Hard' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {test.difficulty}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {test.assignedAt ? formatDate(test.assignedAt) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="text-xs text-gray-500">
+                        {test.testBatches ? test.testBatches.join(', ') : 'Not assigned'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="text-xs text-gray-500">
+                        {test.testBranches ? test.testBranches.join(', ') : 'Not assigned'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="text-xs">
+                        <span className="font-medium">{test.attemptCount || 0}</span>
+                        <span className="text-gray-500"> / {test.assignedStudentCount || 0}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="text-center p-2 bg-gray-50 border rounded">
-                  <p className="text-xs text-gray-600">Subject</p>
-                  <p className="font-semibold">{test.subject}</p>
-                </div>
-                <div className="text-center p-2 bg-gray-50 border rounded">
-                  <p className="text-xs text-gray-600">Questions</p>
-                  <p className="font-semibold">{test.numberOfQuestions}</p>
-                </div>
-                <div className="text-center p-2 bg-gray-50 border rounded">
-                  <p className="text-xs text-gray-600">Duration</p>
-                  <p className="font-semibold">{test.duration} min</p>
-                </div>
-                <div className="text-center p-2 bg-gray-50 border rounded">
-                  <p className="text-xs text-gray-600">Total Marks</p>
-                  <p className="font-semibold">{test.totalMarks}</p>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <div className="text-sm text-gray-600 mb-3">
-                  <p><strong>Start:</strong> {new Date(test.startDateTime).toLocaleString()}</p>
-                  <p><strong>End:</strong> {new Date(test.endDateTime).toLocaleString()}</p>
-                </div>
-
-                <div className="flex gap-2">
-                  {test.assignmentStatus === 'pending' && test.assignmentId && (
-                    <>
-                      <button
-                        onClick={() => handleTestAssignmentStatus(test.assignmentId!, 'accepted', test.testType)}
-                        className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 text-sm"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleTestAssignmentStatus(test.assignmentId!, 'rejected')}
-                        className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 text-sm"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-                  {test.assignmentStatus === 'accepted' && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setSelectedTest(test);
-                          setShowStudentAssignment(true);
-                        }}
-                        className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
-                      >
-                        <Send size={16} />
-                        Assign to Students
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedTestId(test._id);
-                          setShowTestReport(true);
-                        }}
-                        className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
-                      >
-                        <BarChart3 size={16} />
-                        Report
-                      </button>
-                    </>
-                  )}
-                  {test.assignmentStatus === 'not_assigned' && (
-                    <p className="text-sm text-gray-500 italic py-2">This test has not been assigned to your college yet</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )) : null}
-        </div>
-
-        {(!Array.isArray(allTests) || allTests.length === 0) && !loading && (
-          <div className="text-center py-12">
-            <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tests found</h3>
-            <p className="text-gray-600">Tests created by Master Admin will appear here</p>
+                      <div className="flex gap-2">
+                        {test.assignmentStatus === 'pending' && test.assignmentId && (
+                          <>
+                            <button
+                              onClick={() => handleTestAssignmentStatus(test.assignmentId!, 'accepted', test.testType)}
+                              className="bg-green-600 text-white py-1.5 px-3 rounded hover:bg-green-700 text-xs"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleTestAssignmentStatus(test.assignmentId!, 'rejected')}
+                              className="bg-red-600 text-white py-1.5 px-3 rounded hover:bg-red-700 text-xs"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {test.assignmentStatus === 'accepted' && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedTest(test);
+                                setShowStudentAssignment(true);
+                              }}
+                              className="bg-blue-600 text-white py-1.5 px-3 rounded hover:bg-blue-700 flex items-center gap-1 text-xs"
+                              title="Assign to Students"
+                            >
+                              <Send size={14} />
+                              Assign
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedTestId(test._id);
+                                setShowTestReport(true);
+                              }}
+                              className="bg-purple-600 text-white py-1.5 px-3 rounded hover:bg-purple-700 flex items-center gap-1 text-xs"
+                              title="View Report"
+                            >
+                              <Eye size={14} />
+                              Report
+                            </button>
+                          </>
+                        )}
+                        {test.assignmentStatus === 'not_assigned' && (
+                          <span className="text-xs text-gray-500 italic">Not assigned</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center">
+                      <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No tests found</h3>
+                      <p className="text-gray-600">Tests created by Master Admin will appear here</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
 
         {/* Student Assignment Modal */}
         {selectedTest && (

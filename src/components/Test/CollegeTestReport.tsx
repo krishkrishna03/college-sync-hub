@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Users, TrendingUp, Award, Clock, Download, ArrowLeft } from 'lucide-react';
+import { FileText, Users, TrendingUp, Award, Clock, Download, ArrowLeft, Filter } from 'lucide-react';
 import apiService from '../../services/api';
 import LoadingSpinner from '../UI/LoadingSpinner';
 
@@ -12,10 +12,34 @@ const CollegeTestReport: React.FC<CollegeTestReportProps> = ({ testId, onBack })
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterBranch, setFilterBranch] = useState<string>('all');
+  const [filterBatch, setFilterBatch] = useState<string>('all');
+  const [filterSection, setFilterSection] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  const [branches, setBranches] = useState<string[]>([]);
+  const [batches, setBatches] = useState<string[]>([]);
+  const [sections, setSections] = useState<string[]>([]);
 
   useEffect(() => {
     loadReport();
+    loadFilters();
   }, [testId]);
+
+  const loadFilters = async () => {
+    try {
+      const [branchesData, batchesData, sectionsData] = await Promise.all([
+        apiService.getBranches(),
+        apiService.getBatches(),
+        apiService.getSections()
+      ]);
+      setBranches(branchesData);
+      setBatches(batchesData);
+      setSections(sectionsData);
+    } catch (error) {
+      console.error('Failed to load filters:', error);
+    }
+  };
 
   const loadReport = async () => {
     try {
@@ -29,11 +53,19 @@ const CollegeTestReport: React.FC<CollegeTestReportProps> = ({ testId, onBack })
     }
   };
 
+  const filteredStudents = report?.students.filter((student: any) => {
+    if (filterBranch !== 'all' && student.branch !== filterBranch) return false;
+    if (filterBatch !== 'all' && student.batch !== filterBatch) return false;
+    if (filterSection !== 'all' && student.section !== filterSection) return false;
+    if (filterStatus !== 'all' && student.status !== filterStatus) return false;
+    return true;
+  }) || [];
+
   const downloadCSV = () => {
     if (!report) return;
 
     const headers = ['Student Name', 'ID Number', 'Branch', 'Batch', 'Section', 'Status', 'Marks Obtained', 'Total Marks', 'Percentage', 'Time Spent (min)'];
-    const rows = report.students.map((student: any) => [
+    const rows = filteredStudents.map((student: any) => [
       student.name,
       student.idNumber,
       student.branch,
@@ -58,6 +90,13 @@ const CollegeTestReport: React.FC<CollegeTestReportProps> = ({ testId, onBack })
     a.download = `${report.test.testName}_report.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const clearFilters = () => {
+    setFilterBranch('all');
+    setFilterBatch('all');
+    setFilterSection('all');
+    setFilterStatus('all');
   };
 
   if (loading) {
@@ -133,6 +172,83 @@ const CollegeTestReport: React.FC<CollegeTestReportProps> = ({ testId, onBack })
         </div>
       </div>
 
+      {/* Filters Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <Filter size={20} />
+            Filters
+          </h3>
+          <button
+            onClick={clearFilters}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            Clear All
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Branch
+            </label>
+            <select
+              value={filterBranch}
+              onChange={(e) => setFilterBranch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Branches</option>
+              {branches.map(branch => (
+                <option key={branch} value={branch}>{branch}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Batch
+            </label>
+            <select
+              value={filterBatch}
+              onChange={(e) => setFilterBatch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Batches</option>
+              {batches.map(batch => (
+                <option key={batch} value={batch}>{batch}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Section
+            </label>
+            <select
+              value={filterSection}
+              onChange={(e) => setFilterSection(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Sections</option>
+              {sections.map(section => (
+                <option key={section} value={section}>{section}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Status</option>
+              <option value="Completed">Completed</option>
+              <option value="Not Attempted">Not Attempted</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
@@ -184,7 +300,12 @@ const CollegeTestReport: React.FC<CollegeTestReportProps> = ({ testId, onBack })
 
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b">
-          <h3 className="text-lg font-medium">Student-wise Results</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Student-wise Results</h3>
+            <p className="text-sm text-gray-600">
+              Showing {filteredStudents.length} of {report.students.length} students
+            </p>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -211,7 +332,14 @@ const CollegeTestReport: React.FC<CollegeTestReportProps> = ({ testId, onBack })
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {report.students.map((student: any, index: number) => (
+              {filteredStudents.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    No students match the selected filters
+                  </td>
+                </tr>
+              ) : (
+                filteredStudents.map((student: any, index: number) => (
                 <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
@@ -252,7 +380,8 @@ const CollegeTestReport: React.FC<CollegeTestReportProps> = ({ testId, onBack })
                     {Math.round(student.timeSpent / 60)} min
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>

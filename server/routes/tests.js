@@ -497,6 +497,30 @@ router.get('/college/all-tests', auth, authorize('college_admin', 'faculty'), as
       isActive: true
     }).select('testId status assignedAt assignedBy').populate('assignedBy', 'name email');
 
+    // Get student assignments
+    const studentAssignments = await TestAssignment.find({
+      collegeId: req.user.collegeId,
+      assignedTo: 'students',
+      isActive: true
+    }).select('testId studentFilters');
+
+    // Get attempt counts
+    const TestAttempt = require('../models/TestAttempt');
+    const attemptCounts = await TestAttempt.aggregate([
+      {
+        $match: {
+          collegeId: req.user.collegeId,
+          isActive: true
+        }
+      },
+      {
+        $group: {
+          _id: '$testId',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
     const assignmentMap = new Map();
     assignments.forEach(assignment => {
       if (assignment.testId) {
@@ -509,14 +533,61 @@ router.get('/college/all-tests', auth, authorize('college_admin', 'faculty'), as
       }
     });
 
+    // Build student assignment info map
+    const studentAssignmentMap = new Map();
+    for (const sa of studentAssignments) {
+      const testIdStr = sa.testId.toString();
+      if (!studentAssignmentMap.has(testIdStr)) {
+        studentAssignmentMap.set(testIdStr, {
+          studentIds: new Set(),
+          branches: new Set(),
+          batches: new Set()
+        });
+      }
+
+      const data = studentAssignmentMap.get(testIdStr);
+      if (sa.studentFilters && sa.studentFilters.specificStudents) {
+        sa.studentFilters.specificStudents.forEach(sid => {
+          data.studentIds.add(sid.toString());
+        });
+      }
+    }
+
+    // Get student details for branches and batches
+    for (const [testId, data] of studentAssignmentMap.entries()) {
+      if (data.studentIds.size > 0) {
+        const students = await User.find({
+          _id: { $in: Array.from(data.studentIds) }
+        }).select('branch batch');
+
+        students.forEach(student => {
+          if (student.branch) data.branches.add(student.branch);
+          if (student.batch) data.batches.add(student.batch);
+        });
+      }
+    }
+
+    // Build attempt count map
+    const attemptCountMap = new Map();
+    attemptCounts.forEach(ac => {
+      attemptCountMap.set(ac._id.toString(), ac.count);
+    });
+
     const testsWithStatus = allTests.map(test => {
       const assignment = assignmentMap.get(test._id.toString());
+      const studentInfo = studentAssignmentMap.get(test._id.toString());
+      const attemptCount = attemptCountMap.get(test._id.toString()) || 0;
+
       return {
         ...test.toObject(),
         assignmentStatus: assignment ? assignment.status : 'not_assigned',
         assignedAt: assignment ? assignment.assignedAt : null,
         assignedBy: assignment ? assignment.assignedBy : null,
-        assignmentId: assignment ? assignment.assignmentId : null
+        assignmentId: assignment ? assignment.assignmentId : null,
+        assignedStudentCount: studentInfo ? studentInfo.studentIds.size : 0,
+        attemptCount: attemptCount,
+        testBranches: studentInfo ? Array.from(studentInfo.branches) : [],
+        testBatches: studentInfo ? Array.from(studentInfo.batches) : []
       };
     });
 
