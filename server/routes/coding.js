@@ -1,30 +1,35 @@
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const CodingQuestion = require('../models/CodingQuestion');
+const CodingTestCase = require('../models/CodingTestCase');
+const TestCodingSection = require('../models/TestCodingSection');
+const CodingSubmission = require('../models/CodingSubmission');
+const PracticeCodingProgress = require('../models/PracticeCodingProgress');
+const ivm = require('isolated-vm');
 
 router.get('/questions', authenticateToken, async (req, res) => {
   try {
-    const { data: questions, error } = await supabase
-      .from('coding_questions')
-      .select(`
-        id,
-        title,
-        difficulty,
-        tags,
-        created_at,
-        coding_test_cases(count)
-      `)
-      .order('created_at', { ascending: false });
+    const questions = await CodingQuestion.find()
+      .select('_id title difficulty tags created_at')
+      .sort({ created_at: -1 })
+      .lean();
 
-    if (error) throw error;
+    const questionsWithCounts = await Promise.all(
+      questions.map(async (q) => {
+        const testCasesCount = await CodingTestCase.countDocuments({ question_id: q._id });
+        return {
+          id: q._id,
+          title: q.title,
+          difficulty: q.difficulty,
+          tags: q.tags,
+          created_at: q.created_at,
+          test_cases_count: testCasesCount
+        };
+      })
+    );
 
-    const formattedQuestions = questions.map(q => ({
-      ...q,
-      test_cases_count: q.coding_test_cases?.[0]?.count || 0
-    }));
-
-    res.json(formattedQuestions);
+    res.json(questionsWithCounts);
   } catch (error) {
     console.error('Error fetching coding questions:', error);
     res.status(500).json({ error: 'Failed to fetch coding questions' });
@@ -35,25 +40,22 @@ router.get('/questions/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: question, error: questionError } = await supabase
-      .from('coding_questions')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const question = await CodingQuestion.findById(id).lean();
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
 
-    if (questionError) throw questionError;
-
-    const { data: testCases, error: testCasesError } = await supabase
-      .from('coding_test_cases')
-      .select('*')
-      .eq('question_id', id)
-      .order('is_sample', { ascending: false });
-
-    if (testCasesError) throw testCasesError;
+    const testCases = await CodingTestCase.find({ question_id: id })
+      .sort({ is_sample: -1 })
+      .lean();
 
     res.json({
+      id: question._id,
       ...question,
-      testCases
+      testCases: testCases.map(tc => ({
+        id: tc._id,
+        ...tc
+      }))
     });
   } catch (error) {
     console.error('Error fetching coding question:', error);
@@ -65,34 +67,29 @@ router.post('/questions', authenticateToken, async (req, res) => {
   try {
     const { testCases, ...questionData } = req.body;
 
-    const { data: question, error: questionError } = await supabase
-      .from('coding_questions')
-      .insert({
-        ...questionData,
-        created_by: req.user.id
-      })
-      .select()
-      .single();
+    const question = new CodingQuestion({
+      ...questionData,
+      created_by: req.user.id
+    });
 
-    if (questionError) throw questionError;
+    await question.save();
 
     if (testCases && testCases.length > 0) {
       const testCasesData = testCases.map(tc => ({
-        question_id: question.id,
+        question_id: question._id,
         input: tc.input,
         expected_output: tc.expected_output,
         is_sample: tc.is_sample,
         weight: tc.weight
       }));
 
-      const { error: testCasesError } = await supabase
-        .from('coding_test_cases')
-        .insert(testCasesData);
-
-      if (testCasesError) throw testCasesError;
+      await CodingTestCase.insertMany(testCasesData);
     }
 
-    res.json(question);
+    res.json({
+      id: question._id,
+      ...question.toObject()
+    });
   } catch (error) {
     console.error('Error creating coding question:', error);
     res.status(500).json({ error: 'Failed to create coding question' });
@@ -104,23 +101,21 @@ router.put('/questions/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { testCases, ...questionData } = req.body;
 
-    const { data: question, error: questionError } = await supabase
-      .from('coding_questions')
-      .update({
+    const question = await CodingQuestion.findByIdAndUpdate(
+      id,
+      {
         ...questionData,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
+        updated_at: new Date()
+      },
+      { new: true }
+    );
 
-    if (questionError) throw questionError;
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
 
     if (testCases) {
-      await supabase
-        .from('coding_test_cases')
-        .delete()
-        .eq('question_id', id);
+      await CodingTestCase.deleteMany({ question_id: id });
 
       if (testCases.length > 0) {
         const testCasesData = testCases.map(tc => ({
@@ -131,15 +126,14 @@ router.put('/questions/:id', authenticateToken, async (req, res) => {
           weight: tc.weight
         }));
 
-        const { error: testCasesError } = await supabase
-          .from('coding_test_cases')
-          .insert(testCasesData);
-
-        if (testCasesError) throw testCasesError;
+        await CodingTestCase.insertMany(testCasesData);
       }
     }
 
-    res.json(question);
+    res.json({
+      id: question._id,
+      ...question.toObject()
+    });
   } catch (error) {
     console.error('Error updating coding question:', error);
     res.status(500).json({ error: 'Failed to update coding question' });
@@ -150,12 +144,15 @@ router.delete('/questions/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { error } = await supabase
-      .from('coding_questions')
-      .delete()
-      .eq('id', id);
+    const question = await CodingQuestion.findByIdAndDelete(id);
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
 
-    if (error) throw error;
+    await CodingTestCase.deleteMany({ question_id: id });
+    await TestCodingSection.deleteMany({ question_id: id });
+    await CodingSubmission.deleteMany({ question_id: id });
+    await PracticeCodingProgress.deleteMany({ question_id: id });
 
     res.json({ message: 'Question deleted successfully' });
   } catch (error) {
@@ -168,13 +165,14 @@ router.post('/run', authenticateToken, async (req, res) => {
   try {
     const { questionId, code, language } = req.body;
 
-    const { data: testCases, error } = await supabase
-      .from('coding_test_cases')
-      .select('*')
-      .eq('question_id', questionId)
-      .eq('is_sample', true);
+    const testCases = await CodingTestCase.find({
+      question_id: questionId,
+      is_sample: true
+    }).lean();
 
-    if (error) throw error;
+    if (testCases.length === 0) {
+      return res.status(400).json({ error: 'No sample test cases found' });
+    }
 
     const results = await executeCode(code, language, testCases);
 
@@ -192,12 +190,11 @@ router.post('/submit', authenticateToken, async (req, res) => {
   try {
     const { questionId, testAttemptId, code, language, isPractice } = req.body;
 
-    const { data: testCases, error: testCasesError } = await supabase
-      .from('coding_test_cases')
-      .select('*')
-      .eq('question_id', questionId);
+    const testCases = await CodingTestCase.find({ question_id: questionId }).lean();
 
-    if (testCasesError) throw testCasesError;
+    if (testCases.length === 0) {
+      return res.status(400).json({ error: 'No test cases found for this question' });
+    }
 
     const results = await executeCode(code, language, testCases);
 
@@ -221,69 +218,60 @@ router.post('/submit', authenticateToken, async (req, res) => {
       status = 'time_limit_exceeded';
     }
 
-    const { data: submission, error: submissionError } = await supabase
-      .from('coding_submissions')
-      .insert({
-        student_id: req.user.id,
-        question_id: questionId,
-        test_attempt_id: testAttemptId || null,
-        language,
-        code,
-        status,
-        test_cases_passed: testCasesPassed,
-        total_test_cases: totalTestCases,
-        score,
-        execution_time: results.avgExecutionTime,
-        test_results: results.testResults
-      })
-      .select()
-      .single();
+    const submission = new CodingSubmission({
+      student_id: req.user.id,
+      question_id: questionId,
+      test_attempt_id: testAttemptId || null,
+      language,
+      code,
+      status,
+      test_cases_passed: testCasesPassed,
+      total_test_cases: totalTestCases,
+      score,
+      execution_time: results.avgExecutionTime,
+      test_results: results.testResults
+    });
 
-    if (submissionError) throw submissionError;
+    await submission.save();
 
     if (isPractice) {
       const progressStatus = status === 'accepted' ? 'solved' : 'attempted';
 
-      const { data: existing } = await supabase
-        .from('practice_coding_progress')
-        .select('*')
-        .eq('student_id', req.user.id)
-        .eq('question_id', questionId)
-        .single();
+      const existing = await PracticeCodingProgress.findOne({
+        student_id: req.user.id,
+        question_id: questionId
+      });
 
       if (existing) {
         const updates = {
           status: status === 'accepted' ? 'solved' : existing.status,
           best_score: Math.max(score, existing.best_score || 0),
           attempts: (existing.attempts || 0) + 1,
-          last_attempted_at: new Date().toISOString()
+          last_attempted_at: new Date()
         };
 
         if (status === 'accepted' && existing.status !== 'solved') {
-          updates.solved_at = new Date().toISOString();
+          updates.solved_at = new Date();
         }
 
-        await supabase
-          .from('practice_coding_progress')
-          .update(updates)
-          .eq('id', existing.id);
+        await PracticeCodingProgress.findByIdAndUpdate(existing._id, updates);
       } else {
-        await supabase
-          .from('practice_coding_progress')
-          .insert({
-            student_id: req.user.id,
-            question_id: questionId,
-            status: progressStatus,
-            best_score: score,
-            attempts: 1,
-            last_attempted_at: new Date().toISOString(),
-            solved_at: status === 'accepted' ? new Date().toISOString() : null
-          });
+        const progress = new PracticeCodingProgress({
+          student_id: req.user.id,
+          question_id: questionId,
+          status: progressStatus,
+          best_score: score,
+          attempts: 1,
+          last_attempted_at: new Date(),
+          solved_at: status === 'accepted' ? new Date() : null
+        });
+
+        await progress.save();
       }
     }
 
     res.json({
-      submissionId: submission.id,
+      submissionId: submission._id,
       status,
       testCasesPassed,
       totalTestCases,
@@ -302,25 +290,23 @@ router.post('/submit', authenticateToken, async (req, res) => {
 
 router.get('/practice/questions', authenticateToken, async (req, res) => {
   try {
-    const { data: questions, error: questionsError } = await supabase
-      .from('coding_questions')
-      .select('id, title, difficulty, tags');
+    const questions = await CodingQuestion.find()
+      .select('_id title difficulty tags')
+      .lean();
 
-    if (questionsError) throw questionsError;
+    const progress = await PracticeCodingProgress.find({
+      student_id: req.user.id
+    }).lean();
 
-    const { data: progress, error: progressError } = await supabase
-      .from('practice_coding_progress')
-      .select('*')
-      .eq('student_id', req.user.id);
-
-    if (progressError) throw progressError;
-
-    const progressMap = new Map(progress.map(p => [p.question_id, p]));
+    const progressMap = new Map(progress.map(p => [p.question_id.toString(), p]));
 
     const questionsWithProgress = questions.map(q => {
-      const prog = progressMap.get(q.id);
+      const prog = progressMap.get(q._id.toString());
       return {
-        ...q,
+        id: q._id,
+        title: q.title,
+        difficulty: q.difficulty,
+        tags: q.tags,
         status: prog?.status || 'not_attempted',
         best_score: prog?.best_score,
         attempts: prog?.attempts
@@ -343,6 +329,28 @@ router.get('/practice/questions', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching practice questions:', error);
     res.status(500).json({ error: 'Failed to fetch practice questions' });
+  }
+});
+
+router.get('/submissions/:questionId', authenticateToken, async (req, res) => {
+  try {
+    const { questionId } = req.params;
+
+    const submissions = await CodingSubmission.find({
+      student_id: req.user.id,
+      question_id: questionId
+    })
+      .sort({ submitted_at: -1 })
+      .limit(10)
+      .lean();
+
+    res.json(submissions.map(s => ({
+      id: s._id,
+      ...s
+    })));
+  } catch (error) {
+    console.error('Error fetching submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch submissions' });
   }
 });
 
@@ -404,34 +412,62 @@ async function executeCode(code, language, testCases) {
 }
 
 async function runCodeInSandbox(code, language, input) {
-  return new Promise((resolve, reject) => {
-    try {
-      let output = '';
+  return new Promise(async (resolve, reject) => {
+    const timeout = 5000;
 
+    try {
       if (language === 'javascript') {
-        const originalLog = console.log;
-        const logs = [];
-        console.log = (...args) => logs.push(args.join(' '));
+        const isolate = new ivm.Isolate({ memoryLimit: 128 });
+        const context = await isolate.createContext();
+
+        const jail = context.global;
+        await jail.set('global', jail.derefInto());
+        await jail.set('_input', input);
+
+        const outputLogs = [];
+        await jail.set('_consoleLog', new ivm.Reference(function(...args) {
+          outputLogs.push(args.join(' '));
+        }));
+
+        const wrappedCode = `
+          const input = _input;
+          const console = { log: (...args) => _consoleLog.applySync(undefined, args) };
+
+          ${code}
+
+          let result;
+          if (typeof solution === 'function') {
+            result = solution(input);
+          } else if (typeof main === 'function') {
+            result = main(input);
+          }
+
+          result !== undefined ? String(result) : '';
+        `;
 
         try {
-          const func = new Function('input', `
-            ${code}
-            return solution ? solution(input) : '';
-          `);
-          const result = func(input);
-          output = logs.length > 0 ? logs.join('\n') : String(result);
-        } finally {
-          console.log = originalLog;
+          const script = await isolate.compileScript(wrappedCode);
+          const result = await script.run(context, { timeout });
+
+          const output = outputLogs.length > 0 ? outputLogs.join('\n') : String(result);
+
+          isolate.dispose();
+          resolve(output);
+        } catch (error) {
+          isolate.dispose();
+          reject(new Error(`Runtime Error: ${error.message}`));
         }
       } else if (language === 'python') {
-        output = `Python execution not implemented in demo. Expected output based on input: ${input}`;
+        resolve(`Python execution requires additional setup. Input: ${input}`);
+      } else if (language === 'java') {
+        resolve(`Java execution requires additional setup. Input: ${input}`);
+      } else if (language === 'cpp') {
+        resolve(`C++ execution requires additional setup. Input: ${input}`);
       } else {
-        output = `${language} execution not implemented in demo.`;
+        reject(new Error(`Language ${language} is not supported`));
       }
-
-      resolve(output);
     } catch (error) {
-      reject(new Error(`Runtime Error: ${error.message}`));
+      reject(new Error(`Execution Error: ${error.message}`));
     }
   });
 }
