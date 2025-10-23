@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { auth: authenticateToken } = require('../middleware/auth');
 const CodingQuestion = require('../models/CodingQuestion');
 const CodingTestCase = require('../models/CodingTestCase');
 const TestCodingSection = require('../models/TestCodingSection');

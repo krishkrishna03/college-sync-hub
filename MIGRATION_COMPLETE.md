@@ -341,9 +341,19 @@ npm run dev
 ✅ Works like HackerRank
 ✅ Ready for production testing
 
+## Bug Fixes Applied
+
+**Issue:** Server was crashing with "Route.get() requires a callback function but got a [object Undefined]"
+
+**Root Cause:** The coding route was importing `authenticateToken` but the auth middleware exports `auth`.
+
+**Solution:** Updated the import to use destructuring with alias: `const { auth: authenticateToken } = require('../middleware/auth');`
+
+**Status:** Fixed and verified ✅
+
 ## Status: READY FOR TESTING
 
-The coding round feature is now fully migrated to MongoDB and ready for comprehensive testing. All code is in place, all dependencies are installed, and the project builds without errors.
+The coding round feature is now fully migrated to MongoDB and ready for comprehensive testing. All code is in place, all dependencies are installed, the project builds without errors, and the server starts successfully.
 
 ## Next Steps
 
