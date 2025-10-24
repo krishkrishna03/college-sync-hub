@@ -6,6 +6,7 @@ const TestAssignment = require('../models/TestAssignment');
 const TestAttempt = require('../models/TestAttempt');
 const College = require('../models/College');
 const User = require('../models/User');
+const CodingQuestion = require('../models/CodingQuestion');
 const { auth, authorize } = require('../middleware/auth');
 const emailService = require('../utils/emailService');
 const PDFExtractor = require('../utils/pdfExtractor');
@@ -109,7 +110,9 @@ router.post('/', auth, authorize('master_admin'), [
       duration,
       startDateTime,
       endDateTime,
-      questions
+      questions,
+      hasCodingSection = false,
+      codingQuestions = []
     } = req.body;
 
     // Validate companyName for Specific Company Test
@@ -117,6 +120,31 @@ router.post('/', auth, authorize('master_admin'), [
       return res.status(400).json({
         error: 'Company name is required for Specific Company tests'
       });
+    }
+
+    // Validate coding section if enabled
+    if (hasCodingSection) {
+      if (!codingQuestions || codingQuestions.length === 0) {
+        return res.status(400).json({
+          error: 'At least one coding question is required when coding section is enabled'
+        });
+      }
+
+      // Validate coding question IDs exist
+      for (const cq of codingQuestions) {
+        if (!cq.questionId) {
+          return res.status(400).json({
+            error: 'Each coding question must have a questionId'
+          });
+        }
+
+        const exists = await CodingQuestion.findById(cq.questionId);
+        if (!exists) {
+          return res.status(400).json({
+            error: `Coding question with ID ${cq.questionId} not found`
+          });
+        }
+      }
     }
 
     // Validate based on test structure
@@ -227,6 +255,12 @@ router.post('/', auth, authorize('master_admin'), [
       startDateTime: new Date(startDateTime),
       endDateTime: new Date(endDateTime),
       questions: hasSections ? [] : questions,
+      hasCodingSection,
+      codingQuestions: hasCodingSection ? codingQuestions.map(cq => ({
+        questionId: cq.questionId,
+        points: cq.points || 100,
+        timeLimit: cq.timeLimit || 3600
+      })) : [],
       createdBy: req.user._id
     });
 
@@ -368,6 +402,7 @@ router.get('/', auth, authorize('master_admin'), async (req, res) => {
     
     const tests = await Test.find(query)
       .populate('createdBy', 'name email')
+      .populate('codingQuestions.questionId')
       .sort({ createdAt: -1 });
 
     res.json(tests);
@@ -380,7 +415,8 @@ router.get('/', auth, authorize('master_admin'), async (req, res) => {
 router.get('/:id', auth, authorize('master_admin'), async (req, res) => {
   try {
     const test = await Test.findById(req.params.id)
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .populate('codingQuestions.questionId');
 
     if (!test) {
       return res.status(404).json({ error: 'Test not found' });
@@ -765,7 +801,12 @@ router.get('/student/assigned', auth, authorize('student'), async (req, res) => 
       status: 'accepted',
       isActive: true
     })
-    .populate('testId')
+    .populate({
+      path: 'testId',
+      populate: {
+        path: 'codingQuestions.questionId'
+      }
+    })
     .sort({ createdAt: -1 });
 
     // Check if student has already attempted each test
@@ -831,7 +872,7 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
       return res.status(400).json({ error: 'Test already attempted' });
     }
 
-    const test = await Test.findById(testId);
+    const test = await Test.findById(testId).populate('codingQuestions.questionId');
     if (!test) {
       return res.status(404).json({ error: 'Test not found' });
     }
@@ -858,7 +899,8 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
       totalMarks: test.totalMarks,
       duration: test.duration,
       startDateTime: test.startDateTime,
-      endDateTime: test.endDateTime
+      endDateTime: test.endDateTime,
+      hasCodingSection: test.hasCodingSection
     };
 
     // Handle sectioned tests
@@ -902,6 +944,28 @@ router.post('/:id/start', auth, authorize('student'), async (req, res) => {
 
         return questionData;
       });
+    }
+
+    // Add coding questions if enabled
+    if (test.hasCodingSection && test.codingQuestions && test.codingQuestions.length > 0) {
+      testForStudent.codingQuestions = test.codingQuestions.map(cq => ({
+        _id: cq.questionId._id,
+        title: cq.questionId.title,
+        description: cq.questionId.description,
+        difficulty: cq.questionId.difficulty,
+        constraints: cq.questionId.constraints,
+        input_format: cq.questionId.input_format,
+        output_format: cq.questionId.output_format,
+        time_limit: cq.questionId.time_limit,
+        memory_limit: cq.questionId.memory_limit,
+        supported_languages: cq.questionId.supported_languages,
+        sample_input: cq.questionId.sample_input,
+        sample_output: cq.questionId.sample_output,
+        explanation: cq.questionId.explanation,
+        tags: cq.questionId.tags,
+        points: cq.points,
+        timeLimit: cq.timeLimit
+      }));
     }
 
     res.json({

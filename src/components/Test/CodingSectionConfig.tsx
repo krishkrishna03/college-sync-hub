@@ -67,7 +67,7 @@ const CodingSectionConfig: React.FC<CodingSectionConfigProps> = ({
   };
 
   const addQuestion = (question: CodingQuestion) => {
-    onQuestionsChange([...selectedQuestions, { ...question, points: 100 }]);
+    onQuestionsChange([...selectedQuestions, { ...question, points: 100, timeLimit: 3600 }]);
   };
 
   const removeQuestion = (questionId: string) => {
@@ -77,6 +77,12 @@ const CodingSectionConfig: React.FC<CodingSectionConfigProps> = ({
   const updatePoints = (questionId: string, points: number) => {
     onQuestionsChange(
       selectedQuestions.map(q => q.id === questionId ? { ...q, points } : q)
+    );
+  };
+
+  const updateTimeLimit = (questionId: string, timeLimit: number) => {
+    onQuestionsChange(
+      selectedQuestions.map(q => q.id === questionId ? { ...q, timeLimit } : q)
     );
   };
 
@@ -128,15 +134,28 @@ const CodingSectionConfig: React.FC<CodingSectionConfigProps> = ({
                     ))}
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <label className="text-sm text-gray-600">Points:</label>
-                    <input
-                      type="number"
-                      value={question.points || 100}
-                      onChange={(e) => updatePoints(question.id, parseInt(e.target.value))}
-                      className="w-24 px-3 py-1 border rounded focus:ring-2 focus:ring-blue-500"
-                      min="1"
-                    />
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600">Points:</label>
+                      <input
+                        type="number"
+                        value={question.points || 100}
+                        onChange={(e) => updatePoints(question.id, parseInt(e.target.value))}
+                        className="w-24 px-3 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                        min="1"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600">Time Limit (sec):</label>
+                      <input
+                        type="number"
+                        value={question.timeLimit || 3600}
+                        onChange={(e) => updateTimeLimit(question.id, parseInt(e.target.value))}
+                        className="w-24 px-3 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                        min="60"
+                        step="60"
+                      />
+                    </div>
                   </div>
                 </div>
 

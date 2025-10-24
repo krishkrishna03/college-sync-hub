@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, CreditCard as Edit2, CreditCard } from 'lucide-react';
+import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, CreditCard as Edit2, CreditCard, Code } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
+import CodingSectionConfig from './CodingSectionConfig';
 import apiService from '../../services/api';
 
 interface Question {
@@ -13,6 +14,15 @@ interface Question {
   };
   correctAnswer: 'A' | 'B' | 'C' | 'D';
   marks: number;
+}
+
+interface CodingQuestion {
+  id: string;
+  title: string;
+  difficulty: string;
+  tags: string[];
+  points?: number;
+  timeLimit?: number;
 }
 
 interface TestFormData {
@@ -29,6 +39,8 @@ interface TestFormData {
   startDateTime: string;
   endDateTime: string;
   questions: Question[];
+  hasCodingSection?: boolean;
+  codingQuestions?: CodingQuestion[];
 }
 
 interface TestFormProps {
@@ -63,7 +75,9 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
     duration: initialData?.duration || 60,
     startDateTime: initialData?.startDateTime ? formatDateTimeLocal(initialData.startDateTime) : '',
     endDateTime: initialData?.endDateTime ? formatDateTimeLocal(initialData.endDateTime) : '',
-    questions: initialData?.questions || []
+    questions: initialData?.questions || [],
+    hasCodingSection: initialData?.hasCodingSection || false,
+    codingQuestions: initialData?.codingQuestions || []
   });
 
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
@@ -79,6 +93,7 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
   const [errors, setErrors] = useState<any>({});
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [showCodingConfig, setShowCodingConfig] = useState(false);
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
   const testTypes = ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'];
@@ -135,6 +150,12 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
       newErrors.questions = `You need exactly ${formData.numberOfQuestions} questions`;
     }
 
+    if (formData.hasCodingSection) {
+      if (!formData.codingQuestions || formData.codingQuestions.length === 0) {
+        newErrors.codingQuestions = 'At least one coding question is required when coding section is enabled';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -153,7 +174,15 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
     if (!validateForm()) return;
 
     try {
-      await onSubmit(formData);
+      const payload = {
+        ...formData,
+        codingQuestions: formData.hasCodingSection ? formData.codingQuestions?.map(q => ({
+          questionId: q.id,
+          points: q.points || 100,
+          timeLimit: q.timeLimit || 3600
+        })) : []
+      };
+      await onSubmit(payload);
       // Reset form
       setFormData({
         testName: '',
@@ -168,7 +197,9 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
         duration: 60,
         startDateTime: '',
         endDateTime: '',
-        questions: []
+        questions: [],
+        hasCodingSection: false,
+        codingQuestions: []
       });
       setErrors({});
     } catch (error) {
@@ -418,6 +449,12 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
     }
     if (formData.questions.length !== formData.numberOfQuestions) {
       newErrors.questions = `You need exactly ${formData.numberOfQuestions} questions`;
+    }
+
+    if (formData.hasCodingSection) {
+      if (!formData.codingQuestions || formData.codingQuestions.length === 0) {
+        newErrors.codingQuestions = 'At least one coding question is required when coding section is enabled';
+      }
     }
 
     return Object.keys(newErrors).length === 0;
@@ -751,8 +788,44 @@ const TestForm: React.FC<TestFormProps> = ({ onSubmit, loading, initialData }) =
             />
             {errors.endDateTime && <p className="mt-1 text-sm text-red-600">{errors.endDateTime}</p>}
           </div>
+
+          <div className="md:col-span-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.hasCodingSection}
+                onChange={(e) => setFormData(prev => ({ ...prev, hasCodingSection: e.target.checked }))}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Code className="w-4 h-4 text-blue-600" />
+                Include Coding Section
+              </span>
+            </label>
+            <p className="mt-1 text-xs text-gray-500 ml-6">
+              Add programming questions to this {formData.testType.toLowerCase()}
+            </p>
+          </div>
         </div>
       </div>
+
+      {formData.hasCodingSection && (
+        <div className="bg-white p-6 rounded-lg border border-green-300 bg-green-50">
+          <div className="mb-4">
+            <h3 className="text-lg font-medium text-green-900 flex items-center gap-2">
+              <Code className="w-5 h-5" />
+              Coding Section Configuration
+            </h3>
+            <p className="text-sm text-green-700">Select coding problems for this test. Students will solve these after completing MCQ questions.</p>
+          </div>
+
+          <CodingSectionConfig
+            selectedQuestions={formData.codingQuestions || []}
+            onQuestionsChange={(questions) => setFormData(prev => ({ ...prev, codingQuestions: questions }))}
+          />
+          {errors.codingQuestions && <p className="mt-2 text-sm text-red-600">{errors.codingQuestions}</p>}
+        </div>
+      )}
 
       {/* Questions Section */}
       <div className="bg-white p-6 rounded-lg border">

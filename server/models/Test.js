@@ -139,7 +139,25 @@ const testSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
-  }
+  },
+  hasCodingSection: {
+    type: Boolean,
+    default: false
+  },
+  codingQuestions: [{
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'CodingQuestion'
+    },
+    points: {
+      type: Number,
+      default: 100
+    },
+    timeLimit: {
+      type: Number,
+      default: 3600
+    }
+  }]
 }, {
   timestamps: true
 });

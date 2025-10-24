@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, Edit2 } from 'lucide-react';
+import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, Edit2, Code } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
 import SectionConfiguration from './SectionConfiguration';
 import QuestionPreviewModal from './QuestionPreviewModal';
+import CodingSectionConfig from './CodingSectionConfig';
 import apiService from '../../services/api';
 
 interface Question {
@@ -25,6 +26,15 @@ interface Section {
   questions: Question[];
 }
 
+interface CodingQuestion {
+  id: string;
+  title: string;
+  difficulty: string;
+  tags: string[];
+  points?: number;
+  timeLimit?: number;
+}
+
 interface TestFormData {
   testName: string;
   testDescription: string;
@@ -41,6 +51,8 @@ interface TestFormData {
   questions: Question[];
   hasSections?: boolean;
   sections?: Section[];
+  hasCodingSection?: boolean;
+  codingQuestions?: CodingQuestion[];
 }
 
 interface TestFormWithSectionsProps {
@@ -84,7 +96,9 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     endDateTime: initialData?.endDateTime ? formatDateTimeLocal(initialData.endDateTime) : '',
     questions: initialData?.questions || [],
     hasSections: initialHasSections,
-    sections: initialData?.sections || []
+    sections: initialData?.sections || [],
+    hasCodingSection: initialData?.hasCodingSection || false,
+    codingQuestions: initialData?.codingQuestions || []
   });
 
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
@@ -104,6 +118,7 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
   const [uploadingSectionIndex, setUploadingSectionIndex] = useState<number | null>(null);
   const [fileUploadLoading, setFileUploadLoading] = useState(false);
   const [showSectionQuestionsPreview, setShowSectionQuestionsPreview] = useState(false);
+  const [showCodingConfig, setShowCodingConfig] = useState(false);
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
   const testTypes = ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'];
@@ -368,6 +383,12 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
       newErrors.companyName = 'Company name is required for Specific Company tests';
     }
 
+    if (formData.hasCodingSection) {
+      if (!formData.codingQuestions || formData.codingQuestions.length === 0) {
+        newErrors.codingQuestions = 'At least one coding question is required when coding section is enabled';
+      }
+    }
+
     if (formData.hasSections) {
       if (!formData.sections || formData.sections.length === 0) {
         newErrors.sections = 'At least one section is required';
@@ -435,6 +456,12 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
         startDateTime: formData.startDateTime,
         endDateTime: formData.endDateTime,
         questions: formData.hasSections ? [] : formData.questions,
+        hasCodingSection: formData.hasCodingSection,
+        codingQuestions: formData.hasCodingSection ? formData.codingQuestions.map(q => ({
+          questionId: q.id,
+          points: q.points || 100,
+          timeLimit: q.timeLimit || 3600
+        })) : [],
         sourceType: 'manual'
       };
 
@@ -456,7 +483,9 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
         endDateTime: '',
         questions: [],
         hasSections: false,
-        sections: []
+        sections: [],
+        hasCodingSection: false,
+        codingQuestions: []
       });
       setErrors({});
     } catch (error) {
@@ -589,8 +618,44 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
             />
             {errors.endDateTime && <p className="mt-1 text-sm text-red-600">{errors.endDateTime}</p>}
           </div>
+
+          <div className="md:col-span-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.hasCodingSection}
+                onChange={(e) => setFormData(prev => ({ ...prev, hasCodingSection: e.target.checked }))}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Code className="w-4 h-4 text-blue-600" />
+                Include Coding Section
+              </span>
+            </label>
+            <p className="mt-1 text-xs text-gray-500 ml-6">
+              Add programming questions to this {formData.testType.toLowerCase()}
+            </p>
+          </div>
         </div>
       </div>
+
+      {formData.hasCodingSection && (
+        <div className="bg-white p-6 rounded-lg border border-green-300 bg-green-50">
+          <div className="mb-4">
+            <h3 className="text-lg font-medium text-green-900 flex items-center gap-2">
+              <Code className="w-5 h-5" />
+              Coding Section Configuration
+            </h3>
+            <p className="text-sm text-green-700">Select coding problems for this test. Students will solve these after completing MCQ sections.</p>
+          </div>
+
+          <CodingSectionConfig
+            selectedQuestions={formData.codingQuestions || []}
+            onQuestionsChange={(questions) => setFormData(prev => ({ ...prev, codingQuestions: questions }))}
+          />
+          {errors.codingQuestions && <p className="mt-2 text-sm text-red-600">{errors.codingQuestions}</p>}
+        </div>
+      )}
 
       {shouldShowSectionOption(formData.testType) && (
         <div className="bg-white p-6 rounded-lg border border-blue-300 bg-blue-50">
