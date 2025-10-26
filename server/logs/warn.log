@@ -1,0 +1,6 @@
+{"timestamp":"2025-10-24T03:22:17.366Z","level":"WARN","message":"Authentication failed - invalid token","error":"jwt expired","ip":"::1"}
+{"timestamp":"2025-10-24T03:22:17.376Z","level":"WARN","message":"Authentication failed - invalid token","error":"jwt expired","ip":"::1"}
+{"timestamp":"2025-10-24T03:49:57.918Z","level":"WARN","message":"Authentication failed - invalid token","error":"jwt expired","ip":"::1"}
+{"timestamp":"2025-10-24T03:49:57.937Z","level":"WARN","message":"Authentication failed - invalid token","error":"jwt expired","ip":"::1"}
+{"timestamp":"2025-10-24T03:50:44.447Z","level":"WARN","message":"Authentication failed - invalid token","error":"jwt expired","ip":"::1"}
+{"timestamp":"2025-10-24T03:50:44.456Z","level":"WARN","message":"Authentication failed - invalid token","error":"jwt expired","ip":"::1"}
