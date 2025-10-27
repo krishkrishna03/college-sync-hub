@@ -147,7 +147,8 @@ const testSchema = new mongoose.Schema({
   codingQuestions: [{
     questionId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'CodingQuestion'
+      ref: 'CodingQuestion',
+      required: true
     },
     points: {
       type: Number,
@@ -196,6 +197,11 @@ testSchema.pre('save', function(next) {
     this.numberOfQuestions = totalQuestionsInSections;
     this.duration = totalDuration;
     this.totalMarks = calculatedTotalMarks;
+
+    // If test has coding questions, mark hasCodingSection as true
+    if (this.codingQuestions && this.codingQuestions.length > 0) {
+      this.hasCodingSection = true;
+    }
   } else {
     // For non-sectioned tests
     if (this.hasCodingSection) {
@@ -220,8 +226,16 @@ testSchema.pre('save', function(next) {
       }
     }
 
-    // Calculate total marks
-    this.totalMarks = this.numberOfQuestions * this.marksPerQuestion;
+    // Calculate total marks including coding questions
+    let mcqMarks = this.numberOfQuestions * this.marksPerQuestion;
+    let codingMarks = 0;
+
+    if (this.codingQuestions && this.codingQuestions.length > 0) {
+      codingMarks = this.codingQuestions.reduce((sum, cq) => sum + (cq.points || 100), 0);
+      this.hasCodingSection = true;
+    }
+
+    this.totalMarks = mcqMarks + codingMarks;
   }
 
   // Validate start and end dates
