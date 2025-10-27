@@ -158,7 +158,8 @@ if __name__ == "__main__":
         questionId,
         testAttemptId,
         code,
-        language: selectedLanguage,
+        // normalize language casing to match backend expectations (e.g. 'javascript', 'python')
+        language: selectedLanguage.toLowerCase(),
         isPractice
       });
 
