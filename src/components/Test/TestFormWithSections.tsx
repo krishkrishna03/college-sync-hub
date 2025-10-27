@@ -631,44 +631,44 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
             {errors.endDateTime && <p className="mt-1 text-sm text-red-600">{errors.endDateTime}</p>}
           </div>
 
-          {formData.testType === 'Practice' && (
-            <div className="md:col-span-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.hasCodingSection}
-                  onChange={(e) => {
-                    const hasCoding = e.target.checked;
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      hasCodingSection: hasCoding,
-                      // Reset MCQ-related fields when enabling coding
-                      ...(hasCoding ? {
-                        numberOfQuestions: 0,
-                        marksPerQuestion: 0,
-                        duration: 0,
-                        questions: []
-                      } : {
-                        numberOfQuestions: 10,
-                        marksPerQuestion: 1,
-                        duration: 60
-                      })
-                    }));
-                  }}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Code className="w-4 h-4 text-blue-600" />
-                  Coding Questions Only
-                </span>
-              </label>
-              <p className="mt-1 text-xs text-gray-500 ml-6">
-                {formData.hasCodingSection 
-                  ? "This will be a coding-only practice test (MCQ section will be disabled)"
-                  : "Enable to create a coding-only practice test"}
-              </p>
-            </div>
-          )}
+          {/* Allow enabling coding section for all test types. For Practice tests we support coding-only mode (disable MCQs).
+              For other test types enabling coding adds a coding section alongside MCQs. */}
+          <div className="md:col-span-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.hasCodingSection}
+                onChange={(e) => {
+                  const hasCoding = e.target.checked;
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    hasCodingSection: hasCoding,
+                    // If enabling coding-only for Practice tests, reset MCQ fields
+                    ...(hasCoding && prev.testType === 'Practice' ? {
+                      numberOfQuestions: 0,
+                      marksPerQuestion: 0,
+                      duration: 0,
+                      questions: []
+                    } : {})
+                  }));
+                }}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Code className="w-4 h-4 text-blue-600" />
+                {formData.testType === 'Practice' ? 'Coding Questions Only' : 'Enable Coding Section'}
+              </span>
+            </label>
+            <p className="mt-1 text-xs text-gray-500 ml-6">
+              {formData.hasCodingSection
+                ? (formData.testType === 'Practice'
+                    ? 'This will be a coding-only practice test (MCQ section will be disabled)'
+                    : 'This test will include a coding section in addition to MCQs')
+                : (formData.testType === 'Practice'
+                    ? 'Enable to create a coding-only practice test'
+                    : 'Enable to add coding problems to this test')}
+            </p>
+          </div>
         </div>
       </div>
 
