@@ -3,6 +3,7 @@ import { BookOpen, Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles } from 'lucide-
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api';
 import Loader3D from '../components/UI/Loader3D';
+import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -38,20 +39,40 @@ const Login: React.FC = () => {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    dispatch({ type: 'LOGIN_START' });
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  dispatch({ type: 'LOGIN_START' });
 
-    try {
-      const response = await apiService.login(formData.email, formData.password);
+  try {
+    const response = await apiService.login(formData.email, formData.password) as any;
+
+    // Assuming response contains user info or token
+    if (response?.user) {
+      toast.success(`✅ You have successfully logged in as ${response.user.name || 'User'}`);
       dispatch({ type: 'LOGIN_SUCCESS', payload: response });
-    } catch (error) {
-      dispatch({
-        type: 'LOGIN_ERROR',
-        payload: error instanceof Error ? error.message : 'Login failed'
-      });
+    } else {
+      toast.error('⚠️ Account not found. Please sign up first.');
+      dispatch({ type: 'LOGIN_ERROR', payload: 'Account not found' });
     }
-  };
+
+  } catch (error: any) {
+    // Check error message for wrong credentials
+    const errMsg = error?.response?.data?.message || error.message || 'Login failed';
+
+    if (errMsg.toLowerCase().includes('password')) {
+      toast.error('❌ Incorrect password. Please try again.');
+    } else if (errMsg.toLowerCase().includes('email')) {
+      toast.error('📧 Invalid email address.');
+    } else {
+      toast.error(`⚠️ ${errMsg}`);
+    }
+
+    dispatch({
+      type: 'LOGIN_ERROR',
+      payload: errMsg,
+    });
+  }
+};
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
