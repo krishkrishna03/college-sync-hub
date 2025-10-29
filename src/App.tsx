@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { useAuth } from './contexts/AuthContext';
 import { LoadingProvider } from './contexts/LoadingContext';
 import Login from './pages/Login';
@@ -6,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import LoadingSpinner from './components/UI/LoadingSpinner';
 import GlobalLoader from './components/UI/GlobalLoader';
 import apiService from './services/api';
+import toast from 'react-hot-toast';
 
 function App() {
   const { state, dispatch } = useAuth();
@@ -17,23 +19,28 @@ function App() {
       
       if (token && userStr) {
         try {
-          // Set loading to false initially to prevent hydration issues
           dispatch({ type: 'LOGIN_START' });
-          // Verify token is still valid by fetching current user
+
           const currentUser = await apiService.getCurrentUser();
+
           dispatch({ 
             type: 'LOGIN_SUCCESS', 
             payload: { user: currentUser, token } 
           });
+
+          // ✅ Success toast when user is auto-logged-in
+          toast.success(`Welcome back, ${currentUser?.name || 'User'}!`);
+          
         } catch (error) {
           console.error('Token validation failed:', error);
-          // Clear invalid token
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           dispatch({ type: 'LOGOUT' });
+
+          // ⚠️ Token invalid — session expired
+          toast.error('Session expired. Please log in again.');
         }
       } else {
-        // No token found, user needs to login
         dispatch({ type: 'LOGOUT' });
       }
     };
@@ -41,7 +48,7 @@ function App() {
     initializeAuth();
   }, [dispatch]);
 
-  // Show loading spinner while checking authentication
+  // 🔄 Show loader while verifying authentication
   if (state.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -53,8 +60,10 @@ function App() {
     );
   }
 
-  // Show error if there's an authentication error
+  // ❌ Authentication error (invalid credentials, etc.)
   if (state.error && !state.user) {
+    toast.error(state.error);
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -79,6 +88,18 @@ function App() {
   return (
     <LoadingProvider>
       <div className="App min-h-screen bg-gray-50">
+        {/* ✅ Toast container */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: { borderRadius: '10px', fontWeight: 500 },
+            success: { style: { background: '#ecfdf5', color: '#065f46' } },
+            error: { style: { background: '#fef2f2', color: '#991b1b' } },
+          }}
+        />
+
+        {/* Main App */}
         {state.user ? <Dashboard /> : <Login />}
         <GlobalLoader />
       </div>
