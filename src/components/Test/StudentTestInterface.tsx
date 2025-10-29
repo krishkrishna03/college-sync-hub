@@ -5,11 +5,18 @@ import LoadingSpinner from '../UI/LoadingSpinner';
 interface Question {
   _id: string;
   questionText: string;
+  questionImageUrl?: string;
   options: {
     A: string;
     B: string;
     C: string;
     D: string;
+  };
+  optionImages?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
   };
   correctAnswer?: 'A' | 'B' | 'C' | 'D';
   marks: number;
@@ -391,6 +398,16 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                 <h3 className="text-lg text-gray-900 mb-4 leading-relaxed">
                   {currentQ.questionText}
                 </h3>
+                {currentQ.questionImageUrl && (
+                  <div className="mb-4">
+                    <img
+                      src={currentQ.questionImageUrl}
+                      alt="Question"
+                      className="max-w-full h-auto rounded-lg border shadow-sm"
+                      style={{ maxHeight: '400px' }}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   {Object.entries(currentQ.options).map(([key, value]) => (
@@ -413,6 +430,14 @@ const StudentTestInterface: React.FC<StudentTestInterfaceProps> = ({
                       <div className="flex-1">
                         <span className="font-medium text-gray-900">{key})</span>
                         <span className="ml-2 text-gray-700">{value}</span>
+                        {currentQ.optionImages?.[key as keyof typeof currentQ.optionImages] && (
+                          <img
+                            src={currentQ.optionImages[key as keyof typeof currentQ.optionImages]}
+                            alt={`Option ${key}`}
+                            className="mt-2 max-w-full h-auto rounded border"
+                            style={{ maxHeight: '200px' }}
+                          />
+                        )}
                       </div>
                     </label>
                   ))}

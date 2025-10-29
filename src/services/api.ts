@@ -591,6 +591,26 @@ class ApiService {
   async getStudentReports() {
     return this.request('/tests/student/reports');
   }
+
+  async uploadQuestionImage(file: File): Promise<{ imageUrl: string }> {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/tests/upload-image`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Image upload failed');
+    }
+    return data;
+  }
 }
 
 export default new ApiService();

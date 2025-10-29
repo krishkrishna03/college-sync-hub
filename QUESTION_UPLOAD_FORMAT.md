@@ -9,7 +9,9 @@ This guide explains how to upload questions for tests using JSON or CSV files.
 The JSON file must contain an array of question objects. Each question object must have:
 
 - `questionText` (string): The question text
+- `questionImageUrl` (string, optional): URL or base64 data URL for question image
 - `options` (object): An object containing four options (A, B, C, D)
+- `optionImages` (object, optional): An object containing image URLs for options (A, B, C, D)
 - `correctAnswer` (string): The correct answer (must be 'A', 'B', 'C', or 'D')
 
 ### Example JSON File
@@ -37,17 +39,29 @@ The JSON file must contain an array of question objects. Each question object mu
     "correctAnswer": "B"
   },
   {
-    "questionText": "What does HTML stand for?",
+    "questionText": "Identify the pattern in the following sequence:",
+    "questionImageUrl": "https://example.com/pattern.png",
     "options": {
-      "A": "Hyper Text Markup Language",
-      "B": "High Tech Modern Language",
-      "C": "Home Tool Markup Language",
-      "D": "Hyperlinks and Text Markup Language"
+      "A": "Pattern A",
+      "B": "Pattern B",
+      "C": "Pattern C",
+      "D": "Pattern D"
     },
-    "correctAnswer": "A"
+    "optionImages": {
+      "A": "https://example.com/option-a.png",
+      "B": "https://example.com/option-b.png",
+      "C": "https://example.com/option-c.png",
+      "D": "https://example.com/option-d.png"
+    },
+    "correctAnswer": "C"
   }
 ]
 ```
+
+**Note on Images**: You can use:
+- External URLs (e.g., `https://example.com/image.png`)
+- Base64 data URLs (e.g., `data:image/png;base64,iVBORw0KGg...`)
+- For base64 images, upload them via the test form UI first to get the data URL
 
 ## CSV Format
 

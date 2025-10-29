@@ -1498,4 +1498,43 @@ router.get('/faculty/student-reports', auth, authorize('faculty', 'college_admin
   }
 });
 
+// Configure multer for image uploads
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPEG, PNG, GIF, WebP) are allowed'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
+// Upload question image
+router.post('/upload-image', auth, authorize('master_admin', 'faculty'), imageUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    // Convert image to base64 data URL
+    const base64Image = req.file.buffer.toString('base64');
+    const mimeType = req.file.mimetype;
+    const imageUrl = `data:${mimeType};base64,${base64Image}`;
+
+    res.json({
+      success: true,
+      imageUrl,
+      message: 'Image uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Image upload error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
 module.exports = router;

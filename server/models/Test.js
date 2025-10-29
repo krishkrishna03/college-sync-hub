@@ -6,11 +6,22 @@ const questionSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  questionImageUrl: {
+    type: String,
+    trim: true,
+    default: null
+  },
   options: {
     A: { type: String, required: true, trim: true },
     B: { type: String, required: true, trim: true },
     C: { type: String, required: true, trim: true },
     D: { type: String, required: true, trim: true }
+  },
+  optionImages: {
+    A: { type: String, trim: true, default: null },
+    B: { type: String, trim: true, default: null },
+    C: { type: String, trim: true, default: null },
+    D: { type: String, trim: true, default: null }
   },
   correctAnswer: {
     type: String,
