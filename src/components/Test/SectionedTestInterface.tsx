@@ -58,6 +58,8 @@ const SectionedTestInterface: React.FC<SectionedTestInterfaceProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [showSectionSummary, setShowSectionSummary] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
 
   useEffect(() => {
     if (test.hasSections && test.sections) {
@@ -296,6 +298,35 @@ const SectionedTestInterface: React.FC<SectionedTestInterfaceProps> = ({
       </div>
     );
   }
+if (showExitConfirm) {
+  return (
+    <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+      <div className="max-w-md bg-white rounded-lg shadow-lg p-8 text-center">
+        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Exit Test?</h2>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to exit the test? Your progress will not be saved.
+        </p>
+
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => setShowExitConfirm(false)}
+            className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onExit}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+          >
+            <AlertCircle size={18} />
+            Exit Test
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -308,6 +339,15 @@ const SectionedTestInterface: React.FC<SectionedTestInterfaceProps> = ({
                 <p className="text-sm text-gray-600">{currentSection.sectionName}</p>
               )}
             </div>
+              {/* Exit Test Button */}
+  <button
+    onClick={() => setShowExitConfirm(true)}
+    className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition"
+  >
+    <AlertCircle size={18} />
+    Exit Test
+  </button>
+
             <div className="flex items-center gap-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Time Left</p>
