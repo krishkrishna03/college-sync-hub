@@ -56,7 +56,7 @@ const Dashboard: React.FC = () => {
       faculty: 'Faculty Dashboard',
       student: 'Student Dashboard',
     };
-    return roleTitles[state.user.role];
+    return roleTitles[state.user!.role];
   };
 
   const renderDashboardContent = () => {
@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
 
     // Handle exam management tab for all roles
     if (activeTab === 'exam-management') {
-      return <ExamManagement key="exam-management" userRole={state.user.role} />;
+      return <ExamManagement key="exam-management" userRole={state.user!.role} />;
     }
 
     // Handle student hierarchy tab for college admin
@@ -82,10 +82,10 @@ const Dashboard: React.FC = () => {
 
     // Handle reports tab for all roles (student gets their own reports view)
     if (activeTab === 'reports') {
-      if (state.user.role === 'student') {
+      if (state.user!.role === 'student') {
         return <StudentDashboard key="student-reports" activeTab="reports" />;
       }
-      return <ReportsPage key="reports" userRole={state.user.role} />;
+      return <ReportsPage key="reports" userRole={state.user!.role} />;
     }
 
     // Handle create notification tab for admins
@@ -119,7 +119,7 @@ const Dashboard: React.FC = () => {
       return <ProfilePage key="profile" />;
     }
 
-    switch (state.user.role) {
+    switch (state.user!.role) {
       case 'master_admin':
         return <MasterAdminDashboard key="master-admin-dashboard" activeTab={activeTab} />;
       case 'college_admin':
