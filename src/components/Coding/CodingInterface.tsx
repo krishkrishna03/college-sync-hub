@@ -63,7 +63,7 @@ const CodingInterface: React.FC<CodingInterfaceProps> = ({
       const response = await api.get<{ data: CodingQuestion }>(`/coding/questions/${questionId}`);
       const questionData = response.data;
       setQuestion(questionData);
-      
+
       // Set default code for Python
       setCode(`def solution(nums, target):
     # Write your code here
@@ -346,6 +346,20 @@ if __name__ == "__main__":
                 </button>
               </div>
             </div>
+            {submissionStatus && (
+              <div className="px-4 py-2 text-center text-sm">
+                <span
+                  className={`font-medium ${submissionStatus.toLowerCase() === 'accepted'
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                    }`}
+                >
+                  {submissionStatus.toLowerCase() === 'accepted'
+                    ? '✅ Accepted! Great job.'
+                    : `❌ Submission status: ${submissionStatus}`}
+                </span>
+              </div>
+            )}
 
             {showTestResults && (
               <div className="p-4 overflow-y-auto" style={{ maxHeight: '200px' }}>
