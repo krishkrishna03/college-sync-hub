@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Upload, Eye, Trash2, FileText, Clock, Calendar, Hash, XCircle, Edit2, Code } from 'lucide-react';
 import LoadingSpinner from '../UI/LoadingSpinner';
@@ -119,15 +120,12 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
 
   const [activeSectionForQuestions, setActiveSectionForQuestions] = useState<number | null>(null);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [uploadingSectionIndex, setUploadingSectionIndex] = useState<number | null>(null);
   const [fileUploadLoading, setFileUploadLoading] = useState(false);
   const [showSectionQuestionsPreview, setShowSectionQuestionsPreview] = useState(false);
-  const [showCodingConfig, setShowCodingConfig] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
@@ -196,14 +194,6 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
     }
   };
 
-  const handleSectionToggle = (enabled: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      hasSections: enabled,
-      sections: enabled ? (prev.sections?.length ? prev.sections : []) : [],
-      questions: enabled ? [] : prev.questions
-    }));
-  };
 
   const handleTestTypeChange = (newTestType: any) => {
     const requiresSections = ['Assessment', 'Mock Test', 'Specific Company Test'].includes(newTestType);
@@ -642,6 +632,24 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
               placeholder="Enter test description"
             />
             {errors.testDescription && <p className="mt-1 text-sm text-red-600">{errors.testDescription}</p>}
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Topics (based on selected subject)</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {(topicOptions[formData.subject] || []).map((topic) => (
+                  <label key={topic} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formData.topics.includes(topic)}
+                      onChange={(e) => handleTopicChange(topic, e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="text-gray-700">{topic}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">Choose relevant topics for the selected subject.</p>
+            </div>
           </div>
 
           <div>
