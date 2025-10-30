@@ -8,11 +8,18 @@ import apiService from '../../services/api';
 
 interface Question {
   questionText: string;
+  questionImageUrl?: string;
   options: {
     A: string;
     B: string;
     C: string;
     D: string;
+  };
+  optionImages?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
   };
   correctAnswer: 'A' | 'B' | 'C' | 'D';
   marks: number;
@@ -103,7 +110,9 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
 
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
     questionText: '',
+    questionImageUrl: '',
     options: { A: '', B: '', C: '', D: '' },
+    optionImages: { A: '', B: '', C: '', D: '' },
     correctAnswer: 'A',
     marks: 1
   });
@@ -119,6 +128,7 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
   const [fileUploadLoading, setFileUploadLoading] = useState(false);
   const [showSectionQuestionsPreview, setShowSectionQuestionsPreview] = useState(false);
   const [showCodingConfig, setShowCodingConfig] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const subjects = ['Verbal', 'Reasoning', 'Technical', 'Arithmetic', 'Communication'];
   const testTypes = ['Assessment', 'Practice', 'Assignment', 'Mock Test', 'Specific Company Test'];
@@ -139,6 +149,51 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
         ? [...prev.topics, topic]
         : prev.topics.filter(t => t !== topic)
     }));
+  };
+
+  const handleImageUpload = async (file: File, type: 'question' | 'option', optionKey?: string) => {
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const response = await apiService.uploadQuestionImage(file);
+
+      if (type === 'question') {
+        if (editingQuestion) {
+          setEditingQuestion(prev => prev ? ({ ...prev, questionImageUrl: response.imageUrl }) : null);
+        } else {
+          setCurrentQuestion(prev => ({ ...prev, questionImageUrl: response.imageUrl }));
+        }
+      } else if (type === 'option' && optionKey) {
+        if (editingQuestion) {
+          setEditingQuestion(prev => prev ? ({
+            ...prev,
+            optionImages: { ...prev.optionImages, [optionKey]: response.imageUrl }
+          }) : null);
+        } else {
+          setCurrentQuestion(prev => ({
+            ...prev,
+            optionImages: { ...prev.optionImages, [optionKey]: response.imageUrl }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSectionToggle = (enabled: boolean) => {
@@ -955,6 +1010,35 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Question Image (Optional)</label>
+                <div className="flex items-center gap-3">
+                  <label className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 cursor-pointer text-sm flex items-center gap-2">
+                    <Upload size={16} />
+                    {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'question')}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                  </label>
+                  {editingQuestion.questionImageUrl && (
+                    <div className="flex items-center gap-2">
+                      <img src={editingQuestion.questionImageUrl} alt="Question" className="h-16 w-16 object-cover rounded border" />
+                      <button
+                        type="button"
+                        onClick={() => setEditingQuestion(prev => prev ? ({ ...prev, questionImageUrl: '' }) : null)}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {['A', 'B', 'C', 'D'].map((option) => (
                   <div key={option}>
@@ -969,6 +1053,32 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       placeholder={`Enter option ${option}`}
                     />
+                    <label className="mt-1 px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 cursor-pointer inline-flex items-center gap-1">
+                      <Upload size={12} />
+                      Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'option', option)}
+                        className="hidden"
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                    {editingQuestion.optionImages?.[option as keyof typeof editingQuestion.optionImages] && (
+                      <div className="mt-1 flex items-center gap-2">
+                        <img src={editingQuestion.optionImages[option as keyof typeof editingQuestion.optionImages]} alt={`Option ${option}`} className="h-12 w-12 object-cover rounded border" />
+                        <button
+                          type="button"
+                          onClick={() => setEditingQuestion(prev => prev ? ({
+                            ...prev,
+                            optionImages: { ...prev.optionImages, [option]: '' }
+                          }) : null)}
+                          className="text-red-600 hover:text-red-800 text-xs"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1077,6 +1187,35 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Question Image (Optional)</label>
+                <div className="flex items-center gap-3">
+                  <label className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 cursor-pointer text-sm flex items-center gap-2">
+                    <Upload size={16} />
+                    {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'question')}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                  </label>
+                  {currentQuestion.questionImageUrl && (
+                    <div className="flex items-center gap-2">
+                      <img src={currentQuestion.questionImageUrl} alt="Question" className="h-16 w-16 object-cover rounded border" />
+                      <button
+                        type="button"
+                        onClick={() => setCurrentQuestion(prev => ({ ...prev, questionImageUrl: '' }))}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {['A', 'B', 'C', 'D'].map((option) => (
                   <div key={option}>
@@ -1091,6 +1230,32 @@ const TestFormWithSections: React.FC<TestFormWithSectionsProps> = ({ onSubmit, l
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       placeholder={`Enter option ${option}`}
                     />
+                    <label className="mt-1 px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 cursor-pointer inline-flex items-center gap-1">
+                      <Upload size={12} />
+                      Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'option', option)}
+                        className="hidden"
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                    {currentQuestion.optionImages?.[option as keyof typeof currentQuestion.optionImages] && (
+                      <div className="mt-1 flex items-center gap-2">
+                        <img src={currentQuestion.optionImages[option as keyof typeof currentQuestion.optionImages]} alt={`Option ${option}`} className="h-12 w-12 object-cover rounded border" />
+                        <button
+                          type="button"
+                          onClick={() => setCurrentQuestion(prev => ({
+                            ...prev,
+                            optionImages: { ...prev.optionImages, [option]: '' }
+                          }))}
+                          className="text-red-600 hover:text-red-800 text-xs"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

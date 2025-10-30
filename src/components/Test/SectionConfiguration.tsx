@@ -5,11 +5,18 @@ import QuestionPreviewModal from './QuestionPreviewModal';
 
 interface Question {
   questionText: string;
+  questionImageUrl?: string;
   options: {
     A: string;
     B: string;
     C: string;
     D: string;
+  };
+  optionImages?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
   };
   correctAnswer: 'A' | 'B' | 'C' | 'D';
   marks: number;

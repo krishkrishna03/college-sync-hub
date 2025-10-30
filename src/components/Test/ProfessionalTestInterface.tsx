@@ -10,11 +10,18 @@ import CodingInterface from '../Coding/CodingInterface';
 interface Question {
   _id: string;
   questionText: string;
+  questionImageUrl?: string;
   options: {
     A: string;
     B: string;
     C: string;
     D: string;
+  };
+  optionImages?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
   };
   correctAnswer?: 'A' | 'B' | 'C' | 'D';
   marks: number;
@@ -553,6 +560,16 @@ const ProfessionalTestInterface: React.FC<ProfessionalTestInterfaceProps> = ({
                 <h3 className="text-lg font-medium text-gray-900 mb-6 leading-relaxed">
                   {currentQuestion ? currentQuestion.questionText : 'Question not available'}
                 </h3>
+                {currentQuestion?.questionImageUrl && (
+                  <div className="mb-6">
+                    <img
+                      src={currentQuestion.questionImageUrl}
+                      alt="Question"
+                      className="max-w-full h-auto rounded-lg border shadow-sm"
+                      style={{ maxHeight: '400px' }}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   {currentQuestion && Object.entries(currentQuestion.options).map(([key, value]) => (
@@ -575,6 +592,14 @@ const ProfessionalTestInterface: React.FC<ProfessionalTestInterfaceProps> = ({
                       <div className="flex-1">
                         <span className="font-semibold text-gray-900 mr-2">{key}.</span>
                         <span className="text-gray-700">{value}</span>
+                        {currentQuestion.optionImages?.[key as keyof typeof currentQuestion.optionImages] && (
+                          <img
+                            src={currentQuestion.optionImages[key as keyof typeof currentQuestion.optionImages]}
+                            alt={`Option ${key}`}
+                            className="mt-2 max-w-full h-auto rounded border"
+                            style={{ maxHeight: '200px' }}
+                          />
+                        )}
                       </div>
                     </label>
                   ))}
