@@ -35,35 +35,40 @@ const TestAssignmentModal: React.FC<TestAssignmentModalProps> = ({
     loadColleges();
   }, []);
 
-  const loadColleges = async () => {
-    try {
-      setLoading(true);
-      const [allColleges, assignedData] = await Promise.all([
-        apiService.getColleges(),
-        apiService.getTestAssignedColleges(testId)
-      ]);
+const loadColleges = async () => {
+  try {
+    setLoading(true);
 
-      const assignedCollegeIds = new Set(assignedData.map((c: any) => c.collegeId?._id || c.collegeId));
+    const [allColleges, assignedData]: [College[], { collegeId: string | { _id: string } }[]] = await Promise.all([
+      apiService.getColleges() as Promise<College[]>,
+      apiService.getTestAssignedColleges(testId) as Promise<{ collegeId: string | { _id: string } }[]>
+    ]);
 
-      const collegesWithStatus = allColleges
-        .filter((college: College) => college.isActive)
-        .map((college: College) => ({
-          ...college,
-          isAssigned: assignedCollegeIds.has(college.id)
-        }));
+    const assignedCollegeIds = new Set(
+      assignedData.map((c) => (typeof c.collegeId === 'object' ? c.collegeId._id : c.collegeId))
+    );
 
-      setColleges(collegesWithStatus);
+    const collegesWithStatus: College[] = allColleges
+      .filter((college: College) => college.isActive)
+      .map((college: College) => ({
+        ...college,
+        isAssigned: assignedCollegeIds.has(college.id),
+      }));
 
-      const alreadyAssigned = collegesWithStatus
-        .filter(c => c.isAssigned)
-        .map(c => c.id);
-      setSelectedColleges(alreadyAssigned);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load colleges');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setColleges(collegesWithStatus);
+
+    const alreadyAssigned = collegesWithStatus
+      .filter((c: College) => c.isAssigned)
+      .map((c: College) => c.id);
+
+    setSelectedColleges(alreadyAssigned);
+  } catch (error) {
+    setError(error instanceof Error ? error.message : 'Failed to load colleges');
+  } finally {
+    setLoading(false);
+  }
+};
+;
 
   const handleCollegeToggle = (collegeId: string) => {
     setSelectedColleges(prev => 
