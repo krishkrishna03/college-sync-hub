@@ -1,10 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
-// Logs directory
-const logsDir = process.env.VERCEL ? '/tmp/logs' : path.join(__dirname, '../logs');
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+// Detect if running on Vercel (serverless)
+const isVercel = !!process.env.VERCEL;
+
+// Logs directory (only used locally)
+const logsDir = isVercel ? null : path.join(__dirname, '../logs');
+if (!isVercel) {
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
 }
 
 // Log levels
@@ -20,14 +25,15 @@ class Logger {
     this.logLevel = process.env.LOG_LEVEL || 'INFO';
   }
 
-  // Format log message
+  // Format message as JSON line
   formatMessage(level, message, meta = {}) {
     const timestamp = new Date().toISOString();
     return JSON.stringify({ timestamp, level, message, ...meta }) + '\n';
   }
 
-  // Write log to file
+  // Write logs to local files (skipped on Vercel)
   writeToFile(filename, content) {
+    if (!logsDir) return; // Skip file writing on Vercel
     try {
       fs.appendFileSync(path.join(logsDir, filename), content);
     } catch (err) {
@@ -35,12 +41,12 @@ class Logger {
     }
   }
 
-  // Main logging function
+  // Core logging function
   log(level, message, meta = {}) {
     if (LOG_LEVELS[level] <= LOG_LEVELS[this.logLevel]) {
       const formattedMessage = this.formatMessage(level, message, meta);
 
-      // Console output with colors
+      // Console output (always shown, works on Vercel)
       const colors = {
         ERROR: '\x1b[31m', // Red
         WARN: '\x1b[33m',  // Yellow
@@ -49,12 +55,15 @@ class Logger {
       };
       console.log(`${colors[level]}[${level}] ${new Date().toISOString()} - ${message}\x1b[0m`, meta);
 
-      // Write to files
-      this.writeToFile(`${level.toLowerCase()}.log`, formattedMessage);
-      this.writeToFile('combined.log', formattedMessage);
+      // Only write to file locally
+      if (!isVercel) {
+        this.writeToFile(`${level.toLowerCase()}.log`, formattedMessage);
+        this.writeToFile('combined.log', formattedMessage);
+      }
     }
   }
 
+  // Level-specific shortcuts
   error(message, meta = {}) { this.log('ERROR', message, meta); }
   warn(message, meta = {}) { this.log('WARN', message, meta); }
   info(message, meta = {}) { this.log('INFO', message, meta); }
@@ -73,7 +82,7 @@ class Logger {
         userAgent: headers['user-agent'],
         contentType: headers['content-type'],
         authorization: headers.authorization ? 'Bearer ***' : 'None',
-        body: ['POST', 'PUT'].includes(req.method) ? this.sanitizeBody(req.body) : undefined
+        body: ['POST', 'PUT'].includes(method) ? this.sanitizeBody(req.body) : undefined
       });
 
       const originalJson = res.json;
@@ -93,7 +102,7 @@ class Logger {
     };
   }
 
-  // Remove sensitive fields from request body or data
+  // Remove sensitive data
   sanitizeBody(body) {
     if (!body) return body;
     const sanitized = { ...body };
@@ -102,7 +111,7 @@ class Logger {
     return sanitized;
   }
 
-  // Log DB operations
+  // DB operation logging
   dbLog(operation, collection, query = {}, result = {}) {
     this.info('Database Operation', {
       operation,
@@ -113,7 +122,7 @@ class Logger {
     });
   }
 
-  // Log authentication events
+  // Auth event logging
   authLog(event, user = {}, meta = {}) {
     this.info('Authentication Event', {
       event,
@@ -124,7 +133,7 @@ class Logger {
     });
   }
 
-  // Log errors with stack trace
+  // Error log with stack trace
   errorLog(error, context = {}) {
     this.error('Application Error', {
       message: error.message,
