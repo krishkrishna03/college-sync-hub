@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "server": "cd server && npm run dev",
     "start-server": "cd server && npm start",
-    "full-dev": "concurrently \"npm run server\" \"npm run dev\""
+    "full-dev": "npm run dev & cd server && npm run dev"
+
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
